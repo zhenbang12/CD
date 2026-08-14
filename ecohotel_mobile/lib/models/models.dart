@@ -1,0 +1,245 @@
+// EcoHotel OS - Core Data Models for Ground Staff Flutter Mobile App
+
+class InventoryItem {
+  final String id;
+  final String name;
+  final String category;
+  double quantity;
+  final String unit;
+  final String batchNumber;
+  final String deliveryDate;
+  final String expiryDate;
+  final String storageLocation;
+  final double costPerKg;
+
+  InventoryItem({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.quantity,
+    required this.unit,
+    required this.batchNumber,
+    required this.deliveryDate,
+    required this.expiryDate,
+    required this.storageLocation,
+    this.costPerKg = 15.0,
+  });
+
+  int get daysUntilExpiry {
+    try {
+      final exp = DateTime.parse(expiryDate);
+      final now = DateTime(2026, 8, 13);
+      return exp.difference(now).inDays;
+    } catch (_) {
+      return 5;
+    }
+  }
+
+  String get expiryStatus {
+    final d = daysUntilExpiry;
+    if (d < 0) return 'EXPIRED';
+    if (d <= 2) return 'Expires in ${d}d (Urgent)';
+    if (d <= 4) return 'Expires in ${d}d';
+    return 'Fresh';
+  }
+}
+
+class FoodWasteLog {
+  final String id;
+  final String date;
+  final String mealPeriod;
+  final String item;
+  final String type; // 'Spoilage' or 'Prep Waste'
+  final String reason;
+  final double quantity;
+  final String unit;
+  final double costImpact;
+  final String loggedBy;
+
+  FoodWasteLog({
+    required this.id,
+    required this.date,
+    required this.mealPeriod,
+    required this.item,
+    required this.type,
+    required this.reason,
+    required this.quantity,
+    required this.unit,
+    required this.costImpact,
+    required this.loggedBy,
+  });
+}
+
+class DishItem {
+  final String id;
+  final String name;
+  final String category;
+  final int basePerGuestGrams;
+  double wasteMultiplier;
+  final List<String> ingredientRefs;
+
+  DishItem({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.basePerGuestGrams,
+    required this.wasteMultiplier,
+    required this.ingredientRefs,
+  });
+}
+
+class PlateWasteLog {
+  final String id;
+  final String date;
+  final String mealPeriod;
+  final String dishId;
+  final String dishName;
+  final double discardedKg;
+  final bool isAnomaly;
+  final String anomalyReason;
+  final String loggedBy;
+
+  PlateWasteLog({
+    required this.id,
+    required this.date,
+    required this.mealPeriod,
+    required this.dishId,
+    required this.dishName,
+    required this.discardedKg,
+    required this.isAnomaly,
+    this.anomalyReason = '',
+    required this.loggedBy,
+  });
+}
+
+class RoomModel {
+  final String roomNumber;
+  final int floor;
+  final String type;
+  final String guestName;
+  String status;
+  String servicePreference; // 'STANDARD', 'OPT_OUT_CLEANING', 'LINEN_DELAY', 'OVERRIDDEN'
+  int optOutDays;
+  int linenDelayDays;
+  bool towelReuse;
+  String cleaningStatus; // 'Active Clean List', 'Skipped (Opt-Out)', 'Light Service Only'
+  int ecoPointsEarned;
+  final String qrToken;
+
+  RoomModel({
+    required this.roomNumber,
+    required this.floor,
+    required this.type,
+    required this.guestName,
+    required this.status,
+    required this.servicePreference,
+    this.optOutDays = 0,
+    this.linenDelayDays = 0,
+    this.towelReuse = false,
+    required this.cleaningStatus,
+    this.ecoPointsEarned = 0,
+    required this.qrToken,
+  });
+}
+
+class EcoVoucher {
+  final String code;
+  final String roomNumber;
+  final String guestName;
+  final String rewardTitle;
+  final String description;
+  final int pointsCost;
+  final String expiryDate;
+  bool isRedeemed;
+
+  EcoVoucher({
+    required this.code,
+    required this.roomNumber,
+    required this.guestName,
+    required this.rewardTitle,
+    required this.description,
+    required this.pointsCost,
+    required this.expiryDate,
+    this.isRedeemed = false,
+  });
+}
+
+class UtilityMeter {
+  final String meterId;
+  final String zone;
+  final String type; // 'Water' | 'Electricity'
+  final double baselineDaily;
+  final String unit;
+  double lastReading;
+  String lastReadingTime;
+  String status;
+
+  UtilityMeter({
+    required this.meterId,
+    required this.zone,
+    required this.type,
+    required this.baselineDaily,
+    required this.unit,
+    required this.lastReading,
+    required this.lastReadingTime,
+    required this.status,
+  });
+
+  bool get isAnomaly => status.contains('Anomaly');
+}
+
+class RepairTicket {
+  final String id;
+  final String ticketNumber;
+  final String source;
+  final String zone;
+  final String defectCategory;
+  final String description;
+  final String severity;
+  final String estimatedLossRate;
+  final double estimatedDailyLossNum;
+  final String resourceType;
+  final String priority;
+  String assignedTechnician;
+  String status; // 'Assigned', 'In Progress', 'Completed'
+  final String createdAt;
+  String? completedAt;
+  String notes;
+
+  RepairTicket({
+    required this.id,
+    required this.ticketNumber,
+    required this.source,
+    required this.zone,
+    required this.defectCategory,
+    required this.description,
+    required this.severity,
+    required this.estimatedLossRate,
+    required this.estimatedDailyLossNum,
+    required this.resourceType,
+    required this.priority,
+    required this.assignedTechnician,
+    required this.status,
+    required this.createdAt,
+    this.completedAt,
+    required this.notes,
+  });
+}
+
+class Technician {
+  final String id;
+  final String name;
+  final String specialty;
+  String status;
+  int activeTickets;
+  final String phone;
+
+  Technician({
+    required this.id,
+    required this.name,
+    required this.specialty,
+    required this.status,
+    required this.activeTickets,
+    required this.phone,
+  });
+}
