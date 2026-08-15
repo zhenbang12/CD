@@ -1,6 +1,6 @@
 /**
- * Module 5: Facilities Utility Audit & Maintenance Log (PIC: Wan Ching)
- * Features: Interactive Hotel Zone / Floor Map, sub-meter logging, automated 15% anomaly flagger,
+ * Facilities Utility Audit & Maintenance Log
+ * Features: Hotel Zone map, sub-meter logging, automated 15% anomaly flagger,
  * housekeeping defect reporting, resource loss volume estimation, technician dispatch & ticket lifecycle status updates.
  */
 
@@ -53,18 +53,17 @@ export class Module5Facilities {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <span class="badge badge-primary">Module 5 • Engineering & Maintenance</span>
             <h1 class="view-title">Facilities Utility Audit & Maintenance Log</h1>
-            <p class="view-subtitle">Zone-level sub-meter monitoring, automated 15% anomaly flagger & repair dispatch (FR_01 - FR_12).</p>
+            <p class="view-subtitle">Zone-level sub-meter telemetry monitoring, anomaly detection, and repair work order management.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" id="btn-open-defect-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              Report Facility Defect (FR_05)
+            <button class="btn btn-sm btn-outline" id="btn-open-defect-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Report Facility Defect
             </button>
-            <button class="btn btn-primary" id="btn-open-meter-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
-              Log Meter Reading (FR_01)
+            <button class="btn btn-sm btn-primary" id="btn-open-meter-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+              Log Meter Reading
             </button>
           </div>
         </div>
@@ -78,7 +77,7 @@ export class Module5Facilities {
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg">${meters.length} <span class="kpi-unit">Meters</span></div>
-              <div class="kpi-desc">Water, Electricity & Chiller sub-meters</div>
+              <div class="kpi-desc">Water & Electricity sub-meters</div>
             </div>
           </div>
 
@@ -88,15 +87,15 @@ export class Module5Facilities {
               <span class="badge ${anomaliesCount > 0 ? 'badge-danger' : 'badge-success'}">${anomaliesCount} Active</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg text-danger">${anomaliesCount} <span class="kpi-unit">Spike Events</span></div>
+              <div class="kpi-value-lg text-danger">${anomaliesCount} <span class="kpi-unit">Spikes</span></div>
               <div class="kpi-desc">Auto-triggers High-Priority Ticket</div>
             </div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Ongoing Water Leak Loss</span>
-              <span class="badge badge-warning">At Risk</span>
+              <span class="kpi-label">Ongoing Leak Loss</span>
+              <span class="badge badge-warning">Active</span>
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-danger">${totalWaterLossDaily.toLocaleString()} <span class="kpi-unit">L / day</span></div>
@@ -116,57 +115,57 @@ export class Module5Facilities {
           </div>
         </div>
 
-        <!-- Section 1: Interactive Hotel Zone / Floor Sensor Map Visualizer -->
+        <!-- Section 1: Hotel Zone Visualizer -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Hotel Zone & Sub-Meter Interactive Telemetry Map</h3>
+              <h3 class="card-title">Zone Telemetry & Sensor Nodes</h3>
               <p class="card-subtitle">Live sensor nodes with anomaly detection flags (Click pin to inspect or update)</p>
             </div>
-            <span class="badge badge-primary">IoT Telemetry Feed</span>
+            <span class="badge badge-secondary">Telemetry</span>
           </div>
           
-          <div style="background: var(--bg-card-subtle); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); padding: 24px; position: relative; min-height: 220px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-around; align-items: center;">
+          <div style="background: var(--bg-card-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); padding: 16px; position: relative; min-height: 180px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-around; align-items: center;">
             ${meters.map(m => {
               const isAnomaly = m.status.includes('Anomaly');
               return `
-                <div class="zone-pin-card" style="background: var(--bg-card); border: 1px solid ${isAnomaly ? 'var(--danger)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 12px 16px; min-width: 200px; cursor: pointer; transition: all 0.2s; box-shadow: ${isAnomaly ? '0 0 15px rgba(239, 68, 68, 0.25)' : 'var(--shadow-sm)'};" data-meter-id="${m.meterId}">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                    <span style="font-size: 16px;">${m.icon || '⚡'}</span>
+                <div class="zone-pin-card" style="background: var(--bg-card); border: 1px solid ${isAnomaly ? 'var(--danger)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 10px 14px; min-width: 180px; cursor: pointer; transition: all 0.15s;" data-meter-id="${m.meterId}">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: 14px;">${m.icon || '⚡'}</span>
                     <span class="badge ${isAnomaly ? 'badge-danger' : 'badge-success'}">${isAnomaly ? 'Spike Flag' : 'Normal'}</span>
                   </div>
-                  <div style="font-weight: 800; font-size: 13px; color: var(--text-main);">${m.zone}</div>
-                  <div style="font-size: 11px; color: var(--text-muted);">${m.meterId} (${m.type})</div>
-                  <div style="margin-top: 8px; font-size: 14px; font-weight: 800; color: ${isAnomaly ? 'var(--danger)' : 'var(--primary)'};">
+                  <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">${m.zone}</div>
+                  <div style="font-size: 10.5px; color: var(--text-muted);">${m.meterId} (${m.type})</div>
+                  <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: ${isAnomaly ? 'var(--danger)' : 'var(--primary)'};">
                     ${m.lastReading || '—'} <small style="font-size: 10px; color: var(--text-muted);">${m.unit}</small>
                   </div>
-                  <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Baseline: ${m.baselineDaily} ${m.unit}</div>
+                  <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">Baseline: ${m.baselineDaily} ${m.unit}</div>
                 </div>
               `;
             }).join('')}
           </div>
         </div>
 
-        <!-- Section 2: Physical Zone Meter Telemetry Table (FR_01, FR_02, FR_03) -->
+        <!-- Section 2: Meter Telemetry Table -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Zone Utility Sub-Meters & 15% Spike Anomaly Radar (FR_01 / FR_03)</h3>
+              <h3 class="card-title">Zone Utility Sub-Meters</h3>
               <p class="card-subtitle">Daily meter readouts compared against calibrated baseline standards</p>
             </div>
-            <span class="badge badge-primary">Oracle SQL METER_READINGS</span>
+            <span class="badge badge-secondary">Telemetry Logs</span>
           </div>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
                   <th>Meter ID</th>
-                  <th>Hotel Zone / Floor</th>
-                  <th>Utility Type</th>
+                  <th>Zone</th>
+                  <th>Type</th>
                   <th>Baseline Target</th>
-                  <th>Latest Physical Reading</th>
+                  <th>Latest Reading</th>
                   <th>Last Inspected</th>
-                  <th>Anomaly Flagger Status (FR_03)</th>
+                  <th>Status</th>
                   <th>Quick Action</th>
                 </tr>
               </thead>
@@ -186,7 +185,7 @@ export class Module5Facilities {
                     </td>
                     <td>
                       <button class="btn btn-xs btn-outline btn-quick-meter" data-id="${m.meterId}">
-                        Update Reading (FR_01)
+                        Update
                       </button>
                     </td>
                   </tr>
@@ -196,15 +195,15 @@ export class Module5Facilities {
           </div>
         </div>
 
-        <!-- Section 3: High-Priority Repair Tickets Lifecycle & Dispatch Queue (FR_08 - FR_12) -->
+        <!-- Section 3: Repair Tickets Lifecycle & Dispatch Queue -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Repair Ticket Lifecycle & Dispatch Queue (FR_08 / FR_10 / FR_11)</h3>
-              <p class="card-subtitle">Dispatched tasks, resource loss rates & technician resolution tracking</p>
+              <h3 class="card-title">Repair Ticket Lifecycle & Dispatch Queue</h3>
+              <p class="card-subtitle">Dispatched tasks, resource loss rates, and technician resolution status</p>
             </div>
             <div class="tab-pills">
-              <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All Tickets (${tickets.length})</button>
+              <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All (${tickets.length})</button>
               <button class="tab-btn ${this.activeFilter === 'HIGH' ? 'active' : ''}" data-filter="HIGH">High Priority (${tickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length})</button>
               <button class="tab-btn ${this.activeFilter === 'IN_PROGRESS' ? 'active' : ''}" data-filter="IN_PROGRESS">In Progress</button>
               <button class="tab-btn ${this.activeFilter === 'COMPLETED' ? 'active' : ''}" data-filter="COMPLETED">Completed</button>
@@ -218,12 +217,12 @@ export class Module5Facilities {
                   <th>Ticket #</th>
                   <th>Location / Zone</th>
                   <th>Defect Category</th>
-                  <th>Trigger Source</th>
-                  <th>Loss Rate (FR_06/07)</th>
+                  <th>Source</th>
+                  <th>Loss Rate</th>
                   <th>Priority</th>
                   <th>Assigned Technician</th>
-                  <th>Lifecycle Status (FR_10)</th>
-                  <th>Technician Actions</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -248,11 +247,11 @@ export class Module5Facilities {
                         <div class="btn-group-xs">
                           ${t.status !== 'In Progress' ? `
                             <button class="btn btn-xs btn-outline btn-status-progress" data-id="${t.id}">
-                              Start Work
+                              Start
                             </button>
                           ` : ''}
                           <button class="btn btn-xs btn-success btn-status-complete" data-id="${t.id}" data-ticket="${t.ticketNumber}">
-                            Mark Fixed
+                            Fix
                           </button>
                         </div>
                       ` : `
@@ -270,32 +269,32 @@ export class Module5Facilities {
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Maintenance Technicians Workload & Duty Roster</h3>
-              <p class="card-subtitle">Real-time availability and assigned ticket queue position</p>
+              <h3 class="card-title">Maintenance Technicians Workload</h3>
+              <p class="card-subtitle">Availability and assigned ticket queue</p>
             </div>
-            <span class="badge badge-secondary">Ground Engineering</span>
+            <span class="badge badge-secondary">Ground Team</span>
           </div>
           <div class="grid grid-4">
             ${technicians.map(tech => `
-              <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                   <strong>${tech.name}</strong>
                   <span class="badge ${tech.status === 'Available' ? 'badge-success' : 'badge-warning'}">${tech.status}</span>
                 </div>
-                <div class="text-muted" style="font-size: 11px; margin-bottom: 4px;">🔧 ${tech.specialty}</div>
-                <div class="text-muted" style="font-size: 11px; margin-bottom: 6px;">📞 ${tech.phone}</div>
-                <div style="font-size: 12px;">Active Tasks: <strong>${tech.activeTickets}</strong></div>
+                <div class="text-muted" style="font-size: 11px; margin-bottom: 2px;">🔧 ${tech.specialty}</div>
+                <div class="text-muted" style="font-size: 11px; margin-bottom: 4px;">📞 ${tech.phone}</div>
+                <div style="font-size: 11.5px;">Active Tasks: <strong>${tech.activeTickets}</strong></div>
               </div>
             `).join('')}
           </div>
         </div>
       </div>
 
-      <!-- Modal 1: Log Physical Zone Meter (FR_01) -->
+      <!-- Modal 1: Log Physical Zone Meter -->
       <div class="modal-backdrop" id="meter-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Log Zone Meter Reading (FR_01 / FR_03)</h3>
+            <h3 class="modal-title">Log Zone Meter Reading</h3>
             <button class="modal-close" id="btn-close-meter-modal">&times;</button>
           </div>
           <form id="form-log-meter">
@@ -308,21 +307,21 @@ export class Module5Facilities {
             <div class="form-group">
               <label class="form-label">Current Meter Reading Value</label>
               <input type="number" step="0.1" min="0.1" class="form-input" id="meter-input-val" placeholder="Enter physical readout..." required />
-              <small class="form-help">Tip: If reading is &ge;15% above baseline, system will automatically trigger an Anomaly and dispatch a High-Priority Repair Ticket.</small>
+              <small class="form-help">If reading is &ge;15% above baseline, system will automatically trigger an Anomaly and dispatch a High-Priority Repair Ticket.</small>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-meter">Cancel</button>
-              <button type="submit" class="btn btn-primary">Submit Meter Reading</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-meter">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Submit Reading</button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Modal 2: Report Facility Defect (FR_05 & FR_07) -->
+      <!-- Modal 2: Report Facility Defect -->
       <div class="modal-backdrop" id="defect-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Report Facility Defect (Housekeeping FR_05)</h3>
+            <h3 class="modal-title">Report Facility Defect</h3>
             <button class="modal-close" id="btn-close-defect-modal">&times;</button>
           </div>
           <form id="form-report-defect">
@@ -360,12 +359,12 @@ export class Module5Facilities {
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Defect Description & Location Notes</label>
+              <label class="form-label">Defect Description & Notes</label>
               <textarea class="form-input" id="defect-desc" rows="3" placeholder="Describe issue (e.g., Cistern water continuously running into bowl)..." required></textarea>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-defect">Cancel</button>
-              <button type="submit" class="btn btn-danger">Dispatch Repair Ticket (FR_08)</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-defect">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-danger">Dispatch Repair Ticket</button>
             </div>
           </form>
         </div>
@@ -413,7 +412,7 @@ export class Module5Facilities {
         const val = this.container.querySelector('#meter-input-val').value;
 
         if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
-          alert('Invalid reading (A1 Step 6): Please enter a valid positive number.');
+          alert('Please enter a valid positive number.');
           return;
         }
 
@@ -421,9 +420,9 @@ export class Module5Facilities {
         meterModal.style.display = 'none';
 
         if (res && res.isAnomaly) {
-          window.showGlobalToast?.(`🚨 ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}% Spike)! High-Priority Ticket ${res.newTicket.ticketNumber} auto-generated and dispatched!`, 'warning');
+          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}% Spike)! High-Priority Ticket ${res.newTicket.ticketNumber} dispatched.`, 'warning');
         } else {
-          window.showGlobalToast?.(`Meter reading for ${meterId} recorded. Within normal operational baseline.`, 'success');
+          window.showGlobalToast?.(`Meter reading for ${meterId} recorded.`, 'success');
         }
       };
     }
@@ -468,16 +467,16 @@ export class Module5Facilities {
         });
 
         defectModal.style.display = 'none';
-        window.showGlobalToast?.(`Facility defect logged! Ticket ${ticket.ticketNumber} created (${ticket.estimatedLossRate}) and assigned to ${ticket.assignedTechnician}.`, 'success');
+        window.showGlobalToast?.(`Defect logged! Ticket ${ticket.ticketNumber} created and assigned to ${ticket.assignedTechnician}.`, 'success');
       };
     }
 
-    // Ticket Lifecycle Buttons (FR_10)
+    // Ticket Lifecycle Buttons
     this.container.querySelectorAll('.btn-status-progress').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;
         db.updateTicketStatus(id, 'In Progress', 'Technician arrived on site with repair tools.');
-        window.showGlobalToast?.(`Ticket status changed to In Progress!`, 'info');
+        window.showGlobalToast?.(`Ticket status changed to In Progress.`, 'info');
       };
     });
 
@@ -485,10 +484,10 @@ export class Module5Facilities {
       btn.onclick = () => {
         const id = btn.dataset.id;
         const ticketNum = btn.dataset.ticket;
-        const notes = prompt(`[FR_10 Maintenance Resolution Notes]\nEnter repair action taken for ${ticketNum}:`, 'Replaced silicone flapper seal and verified zero leak flow.');
+        const notes = prompt(`Enter repair action taken for ${ticketNum}:`, 'Replaced silicone flapper seal and verified zero leak flow.');
         if (notes !== null) {
           db.updateTicketStatus(id, 'Completed', notes);
-          window.showGlobalToast?.(`Repair ticket ${ticketNum} marked COMPLETED! Technician returned to Available pool.`, 'success');
+          window.showGlobalToast?.(`Repair ticket ${ticketNum} marked COMPLETED!`, 'success');
         }
       };
     });

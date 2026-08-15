@@ -1,19 +1,24 @@
 /**
  * EcoHotel OS - Master Application Router & Shell Controller
- * Visit Malaysia 2026 (VM2026) Sustainable Hospitality Operating System.
+ * Sustainable Hospitality Operating System.
  */
 
 import { db } from './db/storage.js';
 import { Module1Executive } from './modules/m1ExecutiveAnalytics.js';
 import { Module2Inventory } from './modules/m2InventoryTracker.js';
-import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js';
+import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=2.2';
 import { Module4GuestPWA } from './modules/m4GuestPWA.js';
 import { Module5Facilities } from './modules/m5FacilitiesUtility.js';
 import { DbSchemaView } from './modules/dbSchemaView.js';
 
 class App {
   constructor() {
-    this.activeTab = 'm1'; // 'm1' | 'm2' | 'm3' | 'm4' | 'm5' | 'db'
+    // Read initial page from hash (#/m3) or query parameter (?page=m3) or default to 'm1'
+    const hash = window.location.hash.replace('#/', '').trim();
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageParam = urlParams.get('page');
+
+    this.activeTab = hash || pageParam || 'm1';
     this.init();
   }
 
@@ -23,6 +28,14 @@ class App {
     this.renderShell();
     this.attachGlobalEvents();
     this.loadActiveModule();
+
+    // Listen to browser Back/Forward navigation and hash changes
+    window.addEventListener('hashchange', () => {
+      const newHash = window.location.hash.replace('#/', '').trim();
+      if (newHash && newHash !== this.activeTab) {
+        this.switchTab(newHash, false);
+      }
+    });
 
     // Subscribe to global db updates
     db.subscribe('all', () => this.updateAlertBadges());
@@ -44,6 +57,11 @@ class App {
       const container = document.getElementById('toast-container');
       if (!container) return;
 
+      // Limit to 2 toasts max to prevent screen flooding
+      while (container.children.length >= 2) {
+        container.removeChild(container.firstChild);
+      }
+
       const toast = document.createElement('div');
       toast.className = `toast toast-${type} fade-in`;
       
@@ -63,8 +81,8 @@ class App {
 
       setTimeout(() => {
         toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 4500);
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
     };
   }
 
@@ -80,20 +98,20 @@ class App {
             <span class="logo-mark">🌿</span>
             <div class="brand-text">
               <span class="brand-name">EcoHotel OS</span>
-              <span class="brand-sub">Visit Malaysia 2026 Directive</span>
+              <span class="brand-sub">Hospitality Management</span>
             </div>
           </div>
           
           <div class="hotel-pill">
             <span class="hotel-dot"></span>
-            <span>Grand Bay Eco-Resort & Spa (VM2026 Certified)</span>
+            <span>Grand Bay Eco-Resort & Spa</span>
           </div>
 
-          <!-- Live Simulated Clock Pill -->
+          <!-- Live Operational Clock -->
           <div class="sim-clock-pill">
             <span id="sim-clock-display">${system.currentDate} • ${system.currentTime}</span>
             <div class="sim-controls">
-              <button class="sim-btn ${system.isSimulating ? 'active' : ''}" id="btn-toggle-sim" title="${system.isSimulating ? 'Pause Live Simulation' : 'Start Live Telemetry Simulation'}">
+              <button class="sim-btn ${system.isSimulating ? 'active' : ''}" id="btn-toggle-sim" title="${system.isSimulating ? 'Pause Live Clock' : 'Start Live Clock'}">
                 ${system.isSimulating ? '⏸' : '▶'}
               </button>
               <button class="sim-btn ${system.simSpeed === 1 ? 'active' : ''}" data-speed="1" title="1x Speed">1x</button>
@@ -104,33 +122,33 @@ class App {
         </div>
 
         <div class="header-right">
-          <!-- Role Persona Switcher -->
+          <!-- Role Switcher -->
           <div class="role-selector-wrap">
-            <span class="role-label">Active Persona:</span>
-            <select class="form-input form-input-sm" id="global-role-switcher" style="width: 260px;">
-              <option value="executive" ${system.activeRole === 'executive' ? 'selected' : ''}>👔 Kar Hang (Sustainability Executive)</option>
-              <option value="chef" ${system.activeRole === 'chef' ? 'selected' : ''}>🍳 Sze Ping (Head Chef / Inventory)</option>
-              <option value="programmer" ${system.activeRole === 'programmer' ? 'selected' : ''}>⚙️ Zhen Bang (Batch Optimization Lead)</option>
-              <option value="guest_pwa" ${system.activeRole === 'guest_pwa' ? 'selected' : ''}>🌿 Simon (Guest PWA / Housekeeping)</option>
-              <option value="facilities" ${system.activeRole === 'facilities' ? 'selected' : ''}>⚡ Wan Ching (Facilities / Utility Lead)</option>
-              <option value="guest" ${system.activeRole === 'guest' ? 'selected' : ''}>📱 In-Room Guest (Room 304 Tourist)</option>
+            <span class="role-label">Role:</span>
+            <select class="form-input form-input-sm" id="global-role-switcher" style="width: 220px;">
+              <option value="executive" ${system.activeRole === 'executive' ? 'selected' : ''}>👔 Executive Management</option>
+              <option value="chef" ${system.activeRole === 'chef' ? 'selected' : ''}>🍳 Head Chef / Kitchen</option>
+              <option value="programmer" ${system.activeRole === 'programmer' ? 'selected' : ''}>⚙️ F&B Batch Operations</option>
+              <option value="guest_pwa" ${system.activeRole === 'guest_pwa' ? 'selected' : ''}>🌿 Housekeeping Supervisor</option>
+              <option value="facilities" ${system.activeRole === 'facilities' ? 'selected' : ''}>⚡ Facilities & Maintenance</option>
+              <option value="guest" ${system.activeRole === 'guest' ? 'selected' : ''}>📱 Guest (Room 304)</option>
             </select>
           </div>
 
           <!-- Notification Counter Pill -->
-          <div class="nav-alert-pill" id="global-alert-pill" title="Active System Exceptions">
+          <div class="nav-alert-pill" id="global-alert-pill" title="Active Alerts">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span id="alert-count-badge">0 Alerts</span>
           </div>
 
           <!-- Light / Dark Theme Switcher -->
-          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Light / Dark Mode">
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
             ${system.theme === 'light' ? '🌙' : '☀️'}
           </button>
 
           <!-- Quick Reset Data -->
-          <button class="btn btn-xs btn-outline" id="btn-global-reset-db" title="Reset all data to sample baseline">
-            Reset Demo Data
+          <button class="btn btn-xs btn-outline" id="btn-global-reset-db" title="Reset all data to baseline">
+            Reset Data
           </button>
         </div>
       </header>
@@ -140,33 +158,27 @@ class App {
         <div class="nav-tabs-container">
           <button class="nav-tab ${this.activeTab === 'm1' ? 'active' : ''}" data-tab="m1">
             <span class="tab-icon">📊</span>
-            <span class="tab-text">M1: Executive Analytics</span>
-            <span class="tab-pic">Kar Hang</span>
+            <span class="tab-text">Executive Analytics</span>
           </button>
           <button class="nav-tab ${this.activeTab === 'm2' ? 'active' : ''}" data-tab="m2">
             <span class="tab-icon">📦</span>
-            <span class="tab-text">M2: Inventory & Spoilage</span>
-            <span class="tab-pic">Sze Ping</span>
+            <span class="tab-text">Inventory & Spoilage</span>
           </button>
           <button class="nav-tab ${this.activeTab === 'm3' ? 'active' : ''}" data-tab="m3">
             <span class="tab-icon">🍳</span>
-            <span class="tab-text">M3: Batch Optimization</span>
-            <span class="tab-pic">Zhen Bang</span>
+            <span class="tab-text">Batch Optimization</span>
           </button>
           <button class="nav-tab ${this.activeTab === 'm4' ? 'active' : ''}" data-tab="m4">
             <span class="tab-icon">🌿</span>
-            <span class="tab-text">M4: Guest PWA & Route Sync</span>
-            <span class="tab-pic">Simon</span>
+            <span class="tab-text">Guest PWA & Rooms</span>
           </button>
           <button class="nav-tab ${this.activeTab === 'm5' ? 'active' : ''}" data-tab="m5">
             <span class="tab-icon">⚡</span>
-            <span class="tab-text">M5: Utility Audit & Repairs</span>
-            <span class="tab-pic">Wan Ching</span>
+            <span class="tab-text">Facilities & Repairs</span>
           </button>
           <button class="nav-tab ${this.activeTab === 'db' ? 'active' : ''}" data-tab="db">
             <span class="tab-icon">🗄️</span>
-            <span class="tab-text">Oracle SQL Studio</span>
-            <span class="tab-pic">Relational DB</span>
+            <span class="tab-text">Database Studio</span>
           </button>
         </div>
       </nav>
@@ -203,7 +215,7 @@ class App {
         db.setTheme(nextTheme);
         this.applyInitialTheme();
         themeBtn.innerHTML = nextTheme === 'light' ? '🌙' : '☀️';
-        window.showGlobalToast?.(`Switched to ${nextTheme.toUpperCase()} luxury theme!`, 'info');
+        window.showGlobalToast?.(`Theme updated!`, 'info');
       };
     }
 
@@ -214,10 +226,10 @@ class App {
         const sys = db.getSystem();
         if (sys.isSimulating) {
           db.stopSimulation();
-          window.showGlobalToast?.('Simulation paused.', 'info');
+          window.showGlobalToast?.('Clock paused.', 'info');
         } else {
           db.startSimulation();
-          window.showGlobalToast?.('Live telemetry simulation started (15s/tick)!', 'success');
+          window.showGlobalToast?.('Live telemetry active.', 'success');
         }
       };
     }
@@ -227,7 +239,6 @@ class App {
         const speed = parseInt(btn.dataset.speed, 10);
         db.setSimSpeed(speed);
         document.querySelectorAll('.sim-btn[data-speed]').forEach(b => b.classList.toggle('active', b === btn));
-        window.showGlobalToast?.(`Simulation speed adjusted to ${speed}x!`, 'info');
       };
     });
 
@@ -239,27 +250,26 @@ class App {
         let userDetails = { name: 'Executive Staff', role: 'Staff' };
 
         if (role === 'executive') {
-          userDetails = { name: 'Kar Hang', role: 'Sustainability Executive', department: 'Executive Board' };
+          userDetails = { name: 'Executive Management', role: 'Executive', department: 'Management' };
           this.switchTab('m1');
         } else if (role === 'chef') {
-          userDetails = { name: 'Sze Ping', role: 'Head Chef', department: 'Culinary Operations' };
+          userDetails = { name: 'Head Chef', role: 'Head Chef', department: 'Culinary' };
           this.switchTab('m2');
         } else if (role === 'programmer') {
-          userDetails = { name: 'Zhen Bang', role: 'Batch Optimization Lead', department: 'F&B Operations' };
+          userDetails = { name: 'F&B Operations', role: 'Batch Lead', department: 'F&B' };
           this.switchTab('m3');
         } else if (role === 'guest_pwa') {
-          userDetails = { name: 'Simon', role: 'Guest Experience / Housekeeping Lead', department: 'Rooms Division' };
+          userDetails = { name: 'Housekeeping Supervisor', role: 'Supervisor', department: 'Rooms' };
           this.switchTab('m4');
         } else if (role === 'facilities') {
-          userDetails = { name: 'Wan Ching', role: 'Facilities & Utility Director', department: 'Engineering' };
+          userDetails = { name: 'Facilities Engineer', role: 'Engineer', department: 'Engineering' };
           this.switchTab('m5');
         } else if (role === 'guest') {
-          userDetails = { name: 'Simon Wong (Guest Room 304)', role: 'In-House Tourist', department: 'Guest' };
+          userDetails = { name: 'Guest (Room 304)', role: 'Guest', department: 'Guest' };
           this.switchTab('m4');
         }
 
         db.setSystemRole(role, userDetails);
-        window.showGlobalToast?.(`Active persona switched to: ${userDetails.name}`, 'info');
       };
     }
 
@@ -267,10 +277,10 @@ class App {
     const resetBtn = document.getElementById('btn-global-reset-db');
     if (resetBtn) {
       resetBtn.onclick = () => {
-        if (confirm('Reset database to clean initial demonstration dataset?')) {
+        if (confirm('Reset database to clean baseline dataset?')) {
           db.resetDatabase();
           this.loadActiveModule();
-          window.showGlobalToast?.('Database successfully reset to initial VM2026 seed state!', 'success');
+          window.showGlobalToast?.('Database reset to baseline state.', 'success');
         }
       };
     }
@@ -296,8 +306,11 @@ class App {
     }
   }
 
-  switchTab(tabId) {
+  switchTab(tabId, updateHash = true) {
     this.activeTab = tabId;
+    if (updateHash) {
+      window.location.hash = `#/${tabId}`;
+    }
     document.querySelectorAll('.nav-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === tabId);
     });

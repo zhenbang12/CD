@@ -1,8 +1,8 @@
 /**
- * Module 1: Executive Sustainability Analytics Portal (PIC: Kar Hang)
- * Features: Cross-property environmental aggregation, VM2026 compliance scoring,
- * interactive SVG trend charts, parameterized report generator, official PDF export,
- * operational baselines updater with immutable audit logging.
+ * Executive Sustainability Analytics Portal
+ * Features: Cross-property environmental aggregation, compliance scoring,
+ * interactive trend charts, parameterized report generator, official PDF export,
+ * and operational baselines updater.
  */
 
 import { db } from '../db/storage.js';
@@ -48,28 +48,27 @@ export class Module1Executive {
         <!-- Module Header & Global Actions -->
         <div class="view-header">
           <div>
-            <span class="badge badge-primary">Module 1 • Executive Portal</span>
             <h1 class="view-title">Executive Sustainability Analytics</h1>
-            <p class="view-subtitle">Cross-property environmental aggregation & Visit Malaysia 2026 (VM2026) compliance engine (FR_01 - FR_08).</p>
+            <p class="view-subtitle">Cross-property environmental aggregation and sustainability compliance metrics.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" id="btn-export-m1-pdf">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export Compliance PDF (FR_07)
+            <button class="btn btn-sm btn-outline" id="btn-export-m1-pdf">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Compliance PDF
             </button>
-            <button class="btn btn-primary" id="btn-open-baseline-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              Update Baselines (FR_04)
+            <button class="btn btn-sm btn-primary" id="btn-open-baseline-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Update Baselines
             </button>
           </div>
         </div>
 
         <!-- Top Metric KPI Cards -->
         <div class="grid grid-4 kpi-row">
-          <div class="card kpi-card ${compliance.statusClass}">
+          <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">VM2026 Compliance Score</span>
-              <span class="badge ${compliance.gradeBadge}">Live Grade</span>
+              <span class="kpi-label">Sustainability Score</span>
+              <span class="badge badge-success">Certified</span>
             </div>
             <div class="kpi-body">
               <div class="kpi-score-main">${compliance.score}<span class="kpi-score-denom">/100</span></div>
@@ -89,12 +88,12 @@ export class Module1Executive {
               <div class="kpi-value-lg text-primary">${compliance.metrics.foodWasteSavedMTD.toLocaleString()} <span class="kpi-unit">kg MTD</span></div>
               <div class="kpi-desc">Avoided kitchen spoilage & over-prep</div>
             </div>
-            <div class="kpi-subtext text-muted">Target: 800 kg/month (Surpassed)</div>
+            <div class="kpi-subtext text-muted">Target: 800 kg/month</div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Water Conserved (Audit)</span>
+              <span class="kpi-label">Water Conserved</span>
               <span class="badge badge-info">+14.2%</span>
             </div>
             <div class="kpi-body">
@@ -117,20 +116,20 @@ export class Module1Executive {
           </div>
         </div>
 
-        <!-- 2-Column Section: Interactive SVG Visualizer & Monthly Trajectory -->
+        <!-- 2-Column Section: Trend Charts & Monthly Trajectory -->
         <div class="grid grid-2">
-          <!-- Interactive SVG Trajectory Trend Visualizer -->
+          <!-- Trajectory Trend Visualizer -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">VM2026 Historical Trajectory Visualizer</h3>
-                <p class="card-subtitle">Month-on-month trend telemetry against national benchmarks (FR_06)</p>
+                <h3 class="card-title">Historical Trajectory Visualizer</h3>
+                <p class="card-subtitle">Month-on-month trend telemetry against targets</p>
               </div>
               <div class="tab-pills">
                 <button class="tab-btn ${this.chartMetric === 'food' ? 'active' : ''}" data-metric="food">Food (kg)</button>
                 <button class="tab-btn ${this.chartMetric === 'water' ? 'active' : ''}" data-metric="water">Water (kL)</button>
                 <button class="tab-btn ${this.chartMetric === 'energy' ? 'active' : ''}" data-metric="energy">Power (kWh)</button>
-                <button class="tab-btn ${this.chartMetric === 'score' ? 'active' : ''}" data-metric="score">VM Score</button>
+                <button class="tab-btn ${this.chartMetric === 'score' ? 'active' : ''}" data-metric="score">Score</button>
               </div>
             </div>
             
@@ -140,12 +139,12 @@ export class Module1Executive {
             </div>
           </div>
 
-          <!-- Parameterized Compliance Trajectory Table (FR_02) -->
+          <!-- Parameterized Compliance Trajectory Table -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Parameterized Compliance Audit Log (FR_02)</h3>
-                <p class="card-subtitle">Filter resource reductions across specific quarters</p>
+                <h3 class="card-title">Compliance Audit Log</h3>
+                <p class="card-subtitle">Resource reductions across reporting quarters</p>
               </div>
               <div class="tab-pills">
                 <button class="tab-btn ${this.reportPeriod === 'all' ? 'active' : ''}" data-period="all">All 6M</button>
@@ -162,7 +161,7 @@ export class Module1Executive {
                     <th>Food Saved</th>
                     <th>Water Conserved</th>
                     <th>Energy Saved</th>
-                    <th>VM2026 Score</th>
+                    <th>Compliance Score</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -183,28 +182,27 @@ export class Module1Executive {
           </div>
         </div>
 
-        <!-- 2-Column Section: Departmental Offender Heatmap & Operational Baselines -->
+        <!-- 2-Column Section: Departmental Performance & Operational Baselines -->
         <div class="grid grid-2">
-          <!-- Departmental Offender Heatmap (FR_03) -->
+          <!-- Departmental Offender Heatmap -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Departmental Offender & Variance Heatmap (FR_03)</h3>
-                <p class="card-subtitle">Live cross-module resource telemetry by department</p>
+                <h3 class="card-title">Departmental Performance & Variance</h3>
+                <p class="card-subtitle">Live resource telemetry by hotel department</p>
               </div>
-              <span class="badge badge-warning">Live Telemetry</span>
+              <span class="badge badge-secondary">Active</span>
             </div>
             <div class="heatmap-list">
               ${heatmaps.map(h => `
-                <div class="heatmap-item level-${h.statusLevel}">
+                <div class="heatmap-item">
                   <div class="heatmap-info">
                     <div class="heatmap-title-row">
                       <span class="heatmap-dept">${h.department}</span>
-                      <span class="badge badge-${h.statusLevel === 'critical' ? 'danger' : h.statusLevel === 'good' ? 'success' : 'primary'}">${h.status}</span>
+                      <span class="badge badge-${h.statusLevel === 'critical' ? 'danger' : h.statusLevel === 'good' ? 'success' : 'secondary'}">${h.status}</span>
                     </div>
                     <div class="heatmap-meta">
-                      <span><strong>PIC:</strong> ${h.leadPIC}</span> • 
-                      <span><strong>Primary:</strong> ${h.primaryResource}</span>
+                      <span>Primary: ${h.primaryResource}</span>
                     </div>
                   </div>
                   <div class="heatmap-metric-block">
@@ -216,14 +214,14 @@ export class Module1Executive {
             </div>
           </div>
 
-          <!-- Operational Baselines (FR_04) & Audit Trail (FR_05 / FR_08) -->
+          <!-- Operational Baselines -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Operational Resource Baselines (Oracle SQL)</h3>
-                <p class="card-subtitle">Foundational constants with mandatory justification audit</p>
+                <h3 class="card-title">Operational Resource Baselines</h3>
+                <p class="card-subtitle">Calibrated targets and consumption standards</p>
               </div>
-              <span class="badge badge-secondary">FR_04 Configuration</span>
+              <span class="badge badge-secondary">Standard Configuration</span>
             </div>
             <div class="table-responsive">
               <table class="data-table">
@@ -243,7 +241,7 @@ export class Module1Executive {
                       <td><strong>${b.name}</strong></td>
                       <td><span class="font-bold text-primary">${b.value}</span> <small class="text-muted">${b.unit}</small></td>
                       <td><span class="badge badge-secondary">${b.category}</span></td>
-                      <td><small class="text-muted">${b.updatedAt} (${b.updatedBy})</small></td>
+                      <td><small class="text-muted">${b.updatedAt}</small></td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -252,22 +250,22 @@ export class Module1Executive {
           </div>
         </div>
 
-        <!-- Chronological Security Audit Trail (FR_05 / FR_08) -->
+        <!-- System Security Audit Trail -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">System Log & Immutable Baseline Audit Trail (FR_05 / FR_08)</h3>
-              <p class="card-subtitle">Cryptographically timestamped ledger recording all administrative parameter adjustments</p>
+              <h3 class="card-title">System Log & Parameter Adjustments</h3>
+              <p class="card-subtitle">Timestamped ledger recording administrative calibration changes</p>
             </div>
-            <span class="badge badge-primary">Oracle SQL USER_AUDIT</span>
+            <span class="badge badge-secondary">Audit Trail</span>
           </div>
           <div class="audit-stream">
             ${auditLogs.length === 0 ? `
-              <div class="empty-state">No baseline adjustments have been made.</div>
-            ` : auditLogs.slice(0, 8).map(log => `
+              <div class="text-muted text-center py-3">No baseline adjustments have been recorded.</div>
+            ` : auditLogs.slice(0, 6).map(log => `
               <div class="audit-entry">
                 <div class="audit-icon">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <div class="audit-content">
                   <div class="audit-top">
@@ -275,10 +273,10 @@ export class Module1Executive {
                     <span class="audit-time text-muted">${log.timestamp}</span>
                   </div>
                   <div class="audit-desc">
-                    <strong>${log.userName}</strong> modified baseline <code>${log.targetKey}</code>:
+                    <strong>${log.userName}</strong> adjusted <code>${log.targetKey}</code>:
                     <span class="audit-diff text-danger">${log.previousValue}</span> ➔ <span class="audit-diff text-success">${log.newValue}</span>
                   </div>
-                  <div class="audit-reason text-muted"><em>Justification: ${log.reason}</em></div>
+                  <div class="audit-reason text-muted"><em>Reason: ${log.reason}</em></div>
                 </div>
               </div>
             `).join('')}
@@ -286,11 +284,11 @@ export class Module1Executive {
         </div>
       </div>
 
-      <!-- Baseline Update Modal Form (FR_04 & FR_08) -->
+      <!-- Baseline Update Modal Form -->
       <div class="modal-backdrop" id="baseline-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Update Operational Baseline (FR_04)</h3>
+            <h3 class="modal-title">Update Operational Baseline</h3>
             <button class="modal-close" id="btn-close-baseline-modal">&times;</button>
           </div>
           <form id="form-update-baseline">
@@ -306,12 +304,12 @@ export class Module1Executive {
               <small class="form-help">Must be a positive numeric value.</small>
             </div>
             <div class="form-group">
-              <label class="form-label">Mandatory Operational Justification (Audit Trail FR_08)</label>
-              <textarea class="form-input" id="modal-baseline-reason" rows="3" placeholder="Explain engineering/culinary rationale (e.g., Aerator retrofit completed in Tower A)..." required></textarea>
+              <label class="form-label">Reason for Modification</label>
+              <textarea class="form-input" id="modal-baseline-reason" rows="3" placeholder="Explain rationale (e.g., Aerator retrofit completed in Tower A)..." required></textarea>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-baseline">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save & Record to Immutable Log</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-baseline">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
             </div>
           </form>
         </div>
@@ -324,24 +322,24 @@ export class Module1Executive {
   renderSVGChart(history, metricKey) {
     let dataPoints = [];
     let label = 'Food Saved (kg)';
-    let color = '#10b981';
+    let color = '#059669';
 
     if (metricKey === 'food') {
       dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.foodSavedKg }));
       label = 'Food Saved (kg)';
-      color = '#10b981';
+      color = '#059669';
     } else if (metricKey === 'water') {
       dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.waterConservedL / 1000 }));
       label = 'Water Conserved (kL)';
-      color = '#0ea5e9';
+      color = '#0284c7';
     } else if (metricKey === 'energy') {
       dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.energySavedKwh }));
       label = 'Power Saved (kWh)';
-      color = '#8b5cf6';
+      color = '#71717a';
     } else if (metricKey === 'score') {
       dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.vmScore }));
-      label = 'VM2026 Score (/100)';
-      color = '#f59e0b';
+      label = 'Compliance Score (/100)';
+      color = '#059669';
     }
 
     const maxY = Math.max(...dataPoints.map(d => d.y)) * 1.15 || 100;
@@ -363,25 +361,25 @@ export class Module1Executive {
       <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
         <defs>
           <linearGradient id="chartGrad-${metricKey}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="${color}" stop-opacity="0.35" />
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.2" />
             <stop offset="100%" stop-color="${color}" stop-opacity="0.0" />
           </linearGradient>
         </defs>
         <!-- Horizontal Gridlines -->
-        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
-        <line x1="${padding}" y1="${(height - padding) / 2}" x2="${width - padding}" y2="${(height - padding) / 2}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="4" />
+        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(128,128,128,0.15)" stroke-width="1" />
+        <line x1="${padding}" y1="${(height - padding) / 2}" x2="${width - padding}" y2="${(height - padding) / 2}" stroke="rgba(128,128,128,0.1)" stroke-dasharray="4" />
         
         <!-- Area fill -->
         <path d="${areaD}" fill="url(#chartGrad-${metricKey})" />
         
         <!-- Line stroke -->
-        <path d="${pathD}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" />
+        <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" />
         
         <!-- Data Dots & Labels -->
         ${points.map(p => `
-          <circle cx="${p.x}" cy="${p.y}" r="4" fill="${color}" stroke="#ffffff" stroke-width="2" />
-          <text x="${p.x}" y="${p.y - 8}" fill="${color}" font-size="10" font-weight="700" text-anchor="middle" font-family="sans-serif">${p.val.toLocaleString()}</text>
-          <text x="${p.x}" y="${height - 12}" fill="#94a3b8" font-size="11" text-anchor="middle" font-family="sans-serif">${p.label}</text>
+          <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          <text x="${p.x}" y="${p.y - 8}" fill="${color}" font-size="10" font-weight="600" text-anchor="middle" font-family="sans-serif">${p.val.toLocaleString()}</text>
+          <text x="${p.x}" y="${height - 12}" fill="#71717a" font-size="11" text-anchor="middle" font-family="sans-serif">${p.label}</text>
         `).join('')}
       </svg>
     `;
@@ -424,14 +422,14 @@ export class Module1Executive {
         const reason = this.container.querySelector('#modal-baseline-reason').value;
 
         if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
-          alert('Validation Error (A1 Step 2): Baseline value must be a positive numeric number.');
+          alert('Baseline value must be a positive numeric number.');
           return;
         }
 
         const success = db.updateBaseline(id, val, reason);
         if (success) {
           modal.style.display = 'none';
-          window.showGlobalToast?.('Operational baseline updated and recorded to Oracle SQL Audit Trail!', 'success');
+          window.showGlobalToast?.('Operational baseline updated!', 'success');
         }
       };
     }
@@ -443,41 +441,41 @@ export class Module1Executive {
 
   exportComplianceReportPDF() {
     const compliance = ComplianceEngine.calculateLiveScore();
-    const printWindow = window.open('', '_blank', 'width=950,height=750');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>VM2026 Sustainability Compliance Report</title>
+        <title>Sustainability Compliance Report</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #0f172a; background: #ffffff; }
-          .header { border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; }
-          .title { font-size: 24px; font-weight: 900; color: #0f172a; margin: 0; }
-          .subtitle { color: #64748b; margin-top: 6px; font-size: 13px; }
-          .seal { border: 2px solid #059669; color: #059669; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 12px; text-transform: uppercase; text-align: center; }
-          .score-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-          .score-num { font-size: 52px; font-weight: 900; color: #059669; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
-          th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; color: #64748b; }
-          .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; display: flex; justify-content: space-between; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #18181b; background: #ffffff; }
+          .header { border-bottom: 2px solid #059669; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .title { font-size: 20px; font-weight: 800; color: #18181b; margin: 0; }
+          .subtitle { color: #71717a; margin-top: 5px; font-size: 12px; }
+          .seal { border: 1.5px solid #059669; color: #059669; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; text-align: center; }
+          .score-box { background: #f9fafb; border: 1px solid #e4e4e7; border-radius: 8px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+          .score-num { font-size: 44px; font-weight: 800; color: #059669; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e4e4e7; font-size: 12px; }
+          th { background: #f4f4f5; font-size: 10px; text-transform: uppercase; color: #71717a; }
+          .footer { margin-top: 40px; font-size: 11px; color: #71717a; border-top: 1px solid #e4e4e7; padding-top: 15px; display: flex; justify-content: space-between; }
         </style>
       </head>
       <body>
         <div class="header">
           <div>
-            <div class="title">VISIT MALAYSIA 2026 (VM2026) SUSTAINABILITY COMPLIANCE AUDIT</div>
-            <div class="subtitle">Property: Grand Bay Eco-Resort & Spa (VM2026 Certified) • Date: ${new Date().toLocaleDateString()} • Lead: Kar Hang (Exec Director)</div>
+            <div class="title">SUSTAINABILITY COMPLIANCE AUDIT REPORT</div>
+            <div class="subtitle">Property: Grand Bay Eco-Resort & Spa • Date: ${new Date().toLocaleDateString()}</div>
           </div>
           <div class="seal">
-            VM2026 Verified<br/>Platinum Tier
+            Verified Report<br/>Platinum Tier
           </div>
         </div>
         <div class="score-box">
           <div>
-            <h3 style="margin: 0 0 6px 0; font-size: 18px;">Overall Environmental Conformance Grade</h3>
-            <p style="margin: 0; color: #475569; font-weight: 600;">${compliance.grade}</p>
-            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">GHG Avoided: ${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} metric tons CO2e • Net Operational Cost Savings: RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()}</p>
+            <h3 style="margin: 0 0 4px 0; font-size: 16px;">Overall Environmental Conformance Grade</h3>
+            <p style="margin: 0; color: #18181b; font-weight: 600;">${compliance.grade}</p>
+            <p style="margin: 4px 0 0 0; color: #71717a; font-size: 11px;">GHG Avoided: ${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} metric tons CO2e • Net Operational Cost Savings: RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()}</p>
           </div>
           <div class="score-num">${compliance.score} / 100</div>
         </div>
@@ -495,17 +493,17 @@ export class Module1Executive {
             <tr>
               <td>F&B Spoilage & Prep Waste Prevented</td>
               <td>${compliance.metrics.foodWasteSavedMTD} kg</td>
-              <td>+18.4% (Optimized via Module 3 Smart Prep)</td>
+              <td>+18.4% (Optimized Batching)</td>
               <td>${(compliance.metrics.foodWasteSavedMTD * 2.5).toFixed(0)} kg CO2e</td>
             </tr>
             <tr>
-              <td>Water Conserved (Guest Opt-Outs & Rapid Leak Fixes)</td>
+              <td>Water Conserved (Guest Opt-Outs & Leak Fixes)</td>
               <td>${(compliance.metrics.waterConservedMTD / 1000).toFixed(1)} kL (122,000 Liters)</td>
-              <td>+14.2% Conformance (Module 4 & 5 Sync)</td>
+              <td>+14.2% Conformance</td>
               <td>${((compliance.metrics.waterConservedMTD / 1000) * 0.35).toFixed(0)} kg CO2e</td>
             </tr>
             <tr>
-              <td>Decarbonized Electricity Consumption</td>
+              <td>Electricity Conservation</td>
               <td>${compliance.metrics.energySavedMTD} kWh</td>
               <td>+12.0% Target Compliant</td>
               <td>${(compliance.metrics.energySavedMTD * 0.65).toFixed(0)} kg CO2e</td>
@@ -513,8 +511,8 @@ export class Module1Executive {
           </tbody>
         </table>
         <div class="footer">
-          <span>Verified by Oracle SQL Audit Engine • Immutable Hash: SEC-${Date.now()}</span>
-          <span>Approved by Sustainability Board</span>
+          <span>Verified System Hash: SEC-${Date.now()}</span>
+          <span>Grand Bay Eco-Resort & Spa</span>
         </div>
         <script>
           window.onload = () => { window.print(); };

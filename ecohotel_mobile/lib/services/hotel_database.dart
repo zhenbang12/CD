@@ -23,21 +23,21 @@ class HotelDatabase extends ChangeNotifier {
     FoodWasteLog(id: 'WST-104', date: '2026-08-11', mealPeriod: 'Breakfast Shift', item: 'Grade A Omega-3 Eggs', type: 'Prep Waste', reason: 'Eggshells (Sent to Hotel Composter)', quantity: 6.2, unit: 'kg', costImpact: 0.00, loggedBy: 'Prep Cook Mei'),
   ];
 
-  // Dishes (Module 3)
+  // Dishes (Module 3 - PIC: Zhen Bang)
   final List<DishItem> dishes = [
-    DishItem(id: 'DSH-01', name: 'Traditional Nasi Lemak w/ Rendang', category: 'Main / Asian', basePerGuestGrams: 160, wasteMultiplier: 0.96, ingredientRefs: ['Jasmine Rice', 'Chicken', 'Coconut Milk']),
-    DishItem(id: 'DSH-02', name: 'Grilled Herb Atlantic Salmon', category: 'Western Grill', basePerGuestGrams: 110, wasteMultiplier: 0.86, ingredientRefs: ['Salmon Fillet', 'Butter', 'Herbs']),
-    DishItem(id: 'DSH-03', name: 'Live Omelette Station', category: 'Live Station', basePerGuestGrams: 90, wasteMultiplier: 0.95, ingredientRefs: ['Eggs', 'Dairy', 'Vegetables']),
-    DishItem(id: 'DSH-04', name: 'Tiger Prawn Mee Mamak', category: 'Asian Noodle', basePerGuestGrams: 130, wasteMultiplier: 0.92, ingredientRefs: ['Tiger Prawns', 'Noodles', 'Spices']),
-    DishItem(id: 'DSH-05', name: 'Organic Garden Salad Bar', category: 'Salad / Cold', basePerGuestGrams: 75, wasteMultiplier: 0.82, ingredientRefs: ['Hydroponic Lettuce', 'Tomatoes', 'Dressing']),
-    DishItem(id: 'DSH-06', name: 'Australian Beef Striploin', category: 'Carvery', basePerGuestGrams: 120, wasteMultiplier: 0.88, ingredientRefs: ['Beef Strips', 'Rosemary Jus']),
+    DishItem(id: 'DSH-01', name: 'Traditional Nasi Lemak w/ Rendang', category: 'Main / Asian', station: 'Hot Line', basePerGuestGrams: 160, wasteMultiplier: 0.96, cookingYield: 0.88, costPerKg: 18.50, ingredientRefs: ['Jasmine Rice', 'Chicken', 'Coconut Milk']),
+    DishItem(id: 'DSH-02', name: 'Grilled Herb Atlantic Salmon', category: 'Western Grill', station: 'Hot Line', basePerGuestGrams: 110, wasteMultiplier: 0.86, cookingYield: 0.85, costPerKg: 48.00, ingredientRefs: ['Salmon Fillet', 'Butter', 'Herbs']),
+    DishItem(id: 'DSH-03', name: 'Live Omelette Station', category: 'Live Station', station: 'Live Counter', basePerGuestGrams: 90, wasteMultiplier: 0.95, cookingYield: 0.95, costPerKg: 12.00, ingredientRefs: ['Eggs', 'Dairy', 'Vegetables']),
+    DishItem(id: 'DSH-04', name: 'Tiger Prawn Mee Mamak', category: 'Asian Noodle', station: 'Live Counter', basePerGuestGrams: 130, wasteMultiplier: 0.92, cookingYield: 0.90, costPerKg: 28.00, ingredientRefs: ['Tiger Prawns', 'Noodles', 'Spices']),
+    DishItem(id: 'DSH-05', name: 'Organic Garden Salad Bar', category: 'Salad / Cold', station: 'Cold Pantry', basePerGuestGrams: 75, wasteMultiplier: 0.82, cookingYield: 0.95, costPerKg: 14.50, ingredientRefs: ['Hydroponic Lettuce', 'Tomatoes', 'Dressing']),
+    DishItem(id: 'DSH-06', name: 'Australian Beef Striploin', category: 'Carvery', station: 'Hot Line', basePerGuestGrams: 120, wasteMultiplier: 0.88, cookingYield: 0.82, costPerKg: 62.00, ingredientRefs: ['Beef Strips', 'Rosemary Jus']),
   ];
 
   // Plate Waste Logs (Module 3)
   final List<PlateWasteLog> plateWasteLogs = [
-    PlateWasteLog(id: 'PW-001', date: '2026-08-12', mealPeriod: 'Dinner', dishId: 'DSH-02', dishName: 'Grilled Herb Atlantic Salmon', discardedKg: 4.8, isAnomaly: false, loggedBy: 'Chef Zhen Bang'),
-    PlateWasteLog(id: 'PW-002', date: '2026-08-12', mealPeriod: 'Dinner', dishId: 'DSH-05', dishName: 'Organic Garden Salad Bar', discardedKg: 3.2, isAnomaly: false, loggedBy: 'Prep Cook Mei'),
-    PlateWasteLog(id: 'PW-003', date: '2026-08-11', mealPeriod: 'Dinner', dishId: 'DSH-06', dishName: 'Australian Beef Striploin', discardedKg: 6.5, isAnomaly: true, anomalyReason: 'Dropped hot tray during carvery restock', loggedBy: 'Chef Zhen Bang'),
+    PlateWasteLog(id: 'PW-001', date: '2026-08-12', mealPeriod: 'Dinner', dishId: 'DSH-02', dishName: 'Grilled Herb Atlantic Salmon', discardedKg: 4.8, isAnomaly: false, photoAttached: false, note: 'Slight over-batching during late dinner peak', loggedBy: 'Chef Zhen Bang'),
+    PlateWasteLog(id: 'PW-002', date: '2026-08-12', mealPeriod: 'Dinner', dishId: 'DSH-05', dishName: 'Organic Garden Salad Bar', discardedKg: 3.2, isAnomaly: false, photoAttached: false, note: 'Guests preferred warm dishes due to rain', loggedBy: 'Prep Cook Mei'),
+    PlateWasteLog(id: 'PW-003', date: '2026-08-11', mealPeriod: 'Dinner', dishId: 'DSH-06', dishName: 'Australian Beef Striploin', discardedKg: 6.5, isAnomaly: true, anomalyReason: 'Dropped hot tray during carvery restock', photoAttached: true, note: 'Operational spill', loggedBy: 'Chef Zhen Bang'),
   ];
 
   // Rooms & Housekeeping (Module 4)
@@ -50,6 +50,12 @@ class HotelDatabase extends ChangeNotifier {
     RoomModel(roomNumber: '302', floor: 3, type: 'Deluxe Ocean Suite', guestName: 'Vacant Ready', status: 'Vacant Ready', servicePreference: 'STANDARD', cleaningStatus: 'Inspection Passed', qrToken: 'RM302-SEC-110'),
     RoomModel(roomNumber: '304', floor: 3, type: 'Executive Seaview Room', guestName: 'Simon Wong (Demo Tourist)', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 25, qrToken: 'RM304-SEC-426'),
   ];
+
+  // Track if room 304 submitted today
+  final Map<String, bool> submittedToday = {'304': true};
+
+  // Base points before today's submission
+  final Map<String, int> baseHistoricalPoints = {'304': 5};
 
   // Eco Vouchers (Module 4)
   final List<EcoVoucher> ecoVouchers = [
@@ -152,38 +158,48 @@ class HotelDatabase extends ChangeNotifier {
     }
   }
 
-  // ================= MODULE 4 METHODS =================
-  void updateGuestPreference(String roomNumber, String pref, bool towel) {
+  void updateDishPrepStatus(String dishId, String status) {
+    final idx = dishes.indexWhere((d) => d.id == dishId);
+    if (idx != -1) {
+      dishes[idx].prepStatus = status;
+      notifyListeners();
+    }
+  }
+
+  // ================= MODULE 4 METHODS (FIXED: RADIO STATE + NON-ACCUMULATIVE) =================
+  void setGuestSelection(String roomNumber, String pref, bool towel) {
     final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
     if (idx != -1) {
       final room = rooms[idx];
       room.servicePreference = pref;
       room.towelReuse = towel;
 
-      int points = 0;
       if (pref == 'OPT_OUT_CLEANING') {
         room.cleaningStatus = 'Skipped (Opt-Out)';
-        room.optOutDays += 1;
-        points += 15;
       } else if (pref == 'LINEN_DELAY') {
         room.cleaningStatus = 'Light Service Only';
-        points += 10;
       } else {
         room.cleaningStatus = 'Active Clean List';
       }
 
-      if (towel) points += 5;
-      room.ecoPointsEarned += points;
+      // Recompute today's total points without spamming
+      int todayPoints = 0;
+      if (pref == 'OPT_OUT_CLEANING') todayPoints += 15;
+      if (pref == 'LINEN_DELAY') todayPoints += 10;
+      if (towel) todayPoints += 5;
 
-      // Check Voucher Milestone
+      final base = baseHistoricalPoints[roomNumber] ?? 5;
+      room.ecoPointsEarned = base + todayPoints;
+
+      // Check Voucher Milestone (Unlock voucher at >= 25 points)
       if (room.ecoPointsEarned >= 25) {
-        final exists = ecoVouchers.any((v) => v.roomNumber == roomNumber && !v.isRedeemed);
+        final exists = ecoVouchers.any((v) => v.roomNumber == roomNumber);
         if (!exists) {
           ecoVouchers.insert(0, EcoVoucher(
             code: 'VM26-ECO-${Random().nextInt(9000) + 1000}',
             roomNumber: roomNumber,
             guestName: room.guestName,
-            rewardTitle: '15% Farm-to-Table Dining Voucher',
+            rewardTitle: '15% Sustainable Dining Voucher',
             description: 'Valid across all sustainable outlets for VM2026.',
             pointsCost: 25,
             expiryDate: '2026-08-25',

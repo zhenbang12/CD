@@ -1,4 +1,5 @@
 // EcoHotel OS - Core Data Models for Ground Staff Flutter Mobile App
+// Module 3 PIC: Zhen Bang (Predictive F&B Batch Optimization Engine)
 
 class InventoryItem {
   final String id;
@@ -74,17 +75,25 @@ class DishItem {
   final String id;
   final String name;
   final String category;
+  final String station; // 'Hot Line', 'Live Counter', 'Cold Pantry', 'Bakery'
   final int basePerGuestGrams;
   double wasteMultiplier;
+  final double cookingYield;
+  final double costPerKg;
   final List<String> ingredientRefs;
+  String prepStatus; // 'Pending', 'Prepping Wave 1', 'Batch Ready'
 
   DishItem({
     required this.id,
     required this.name,
     required this.category,
+    this.station = 'Hot Line',
     required this.basePerGuestGrams,
     required this.wasteMultiplier,
+    this.cookingYield = 0.90,
+    this.costPerKg = 24.50,
     required this.ingredientRefs,
+    this.prepStatus = 'Pending',
   });
 }
 
@@ -97,6 +106,8 @@ class PlateWasteLog {
   final double discardedKg;
   final bool isAnomaly;
   final String anomalyReason;
+  final bool photoAttached;
+  final String note;
   final String loggedBy;
 
   PlateWasteLog({
@@ -108,6 +119,8 @@ class PlateWasteLog {
     required this.discardedKg,
     required this.isAnomaly,
     this.anomalyReason = '',
+    this.photoAttached = false,
+    this.note = '',
     required this.loggedBy,
   });
 }

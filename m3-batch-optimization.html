@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module 3: Predictive F&B Batch Optimization Engine • EcoHotel OS</title>
+  <meta name="description" content="Predictive F&B Batch Optimization Engine - Lead PIC: Zhen Bang. Multi-factor algorithmic batching matching 48h guest influx, recipe BOM yields, and decayed plate-waste feedback loops." />
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <a href="./index.html" class="brand-logo" style="text-decoration: none;">
+          <span class="logo-mark">🌿</span>
+          <div class="brand-text">
+            <span class="brand-name">EcoHotel OS</span>
+            <span class="brand-sub">Hospitality Management</span>
+          </div>
+        </a>
+        
+        <div class="hotel-pill">
+          <span class="hotel-dot"></span>
+          <span>Grand Bay Eco-Resort & Spa</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <span class="badge badge-primary" style="font-size: 11px;">Module 3 Standalone View</span>
+        <a href="./m3-guide.html" class="btn btn-sm btn-outline" style="border-color: var(--primary); color: var(--primary); text-decoration: none;">
+          📖 Full Operations Guide
+        </a>
+        <a href="./index.html" class="btn btn-sm btn-outline" style="text-decoration: none;">
+          🏠 Master Portal
+        </a>
+      </div>
+    </header>
+
+    <!-- Page Navigation Bar -->
+    <nav class="main-navbar">
+      <div class="nav-tabs-container">
+        <a href="./m1-executive.html" class="nav-tab" style="text-decoration: none;">
+          <span class="tab-icon">📊</span>
+          <span class="tab-text">Executive Analytics</span>
+        </a>
+        <a href="./m2-inventory.html" class="nav-tab" style="text-decoration: none;">
+          <span class="tab-icon">📦</span>
+          <span class="tab-text">Inventory & Spoilage</span>
+        </a>
+        <a href="./m3-batch-optimization.html" class="nav-tab active" style="text-decoration: none;">
+          <span class="tab-icon">🍳</span>
+          <span class="tab-text">Batch Optimization (M3)</span>
+        </a>
+        <a href="./m4-guest-pwa.html" class="nav-tab" style="text-decoration: none;">
+          <span class="tab-icon">🌿</span>
+          <span class="tab-text">Guest PWA & Rooms</span>
+        </a>
+        <a href="./m5-facilities.html" class="nav-tab" style="text-decoration: none;">
+          <span class="tab-icon">⚡</span>
+          <span class="tab-text">Facilities & Repairs</span>
+        </a>
+        <a href="./m3-guide.html" class="nav-tab" style="text-decoration: none;">
+          <span class="tab-icon">📖</span>
+          <span class="tab-text">M3 User Guide</span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Dedicated Mount Point for Module 3 -->
+    <main class="main-content" id="m3-standalone-mount"></main>
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Script initialization for standalone Module 3 -->
+  <script type="module">
+    import { db } from './js/db/storage.js';
+    import { Module3BatchOptimizer } from './js/modules/m3BatchOptimization.js?v=2.2';
+
+    // Global toast handler
+    window.showGlobalToast = (message, type = 'info') => {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type} fade-in`;
+      const icon = type === 'success' ? '🌿' : type === 'warning' ? '⚠️' : type === 'danger' ? '🚨' : 'ℹ️';
+      toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${icon}</span>
+          <div class="toast-content">${message}</div>
+        </div>
+        <button class="toast-close">&times;</button>
+      `;
+      container.appendChild(toast);
+      toast.querySelector('.toast-close').onclick = () => toast.remove();
+      setTimeout(() => { toast.remove(); }, 3500);
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const mount = document.getElementById('m3-standalone-mount');
+      if (mount) {
+        new Module3BatchOptimizer(mount);
+      }
+    });
+  </script>
+</body>
+</html>

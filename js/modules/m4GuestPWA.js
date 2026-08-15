@@ -1,7 +1,7 @@
 /**
- * Module 4: Guest Eco-Engagement PWA & Service Sync (PIC: Simon)
- * Features: Zero-install Tourist Green PWA in-room mobile view, real-time housekeeping queue sync,
- * Eco-rewards point validation engine, voucher generation & redemption, supervisor override.
+ * Guest Eco-Engagement PWA & Service Sync
+ * Features: In-room mobile view, real-time housekeeping queue sync,
+ * Eco-rewards point validation, voucher generation & redemption, supervisor override.
  */
 
 import { db } from '../db/storage.js';
@@ -28,7 +28,7 @@ export class Module4GuestPWA {
     const currentRoom = rooms.find(r => r.roomNumber === this.activeRoomNumber) || rooms[0];
     const roomVouchers = vouchers.filter(v => v.roomNumber === currentRoom.roomNumber);
 
-    // Active Cleaning List (Excludes Opted-Out Rooms, unless supervisor overridden)
+    // Active Cleaning List
     const activeCleaningQueue = rooms.filter(r => r.cleaningStatus.includes('Active Clean') || r.cleaningStatus.includes('Light Service'));
     const optedOutRooms = rooms.filter(r => r.cleaningStatus.includes('Skipped'));
 
@@ -43,20 +43,19 @@ export class Module4GuestPWA {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <span class="badge badge-primary">Module 4 • Guest & Ground Sync</span>
-            <h1 class="view-title">Guest Eco-Engagement PWA & Housekeeping Sync</h1>
-            <p class="view-subtitle">Zero-install in-room guest PWA connected in real-time to master housekeeping dispatch (FR_01 - FR_12).</p>
+            <h1 class="view-title">Guest Eco-Engagement & Housekeeping Sync</h1>
+            <p class="view-subtitle">In-room guest preferences connected in real-time to the housekeeping dispatch schedule.</p>
           </div>
           <div class="header-actions">
             <div class="room-switcher-wrap" style="display: flex; align-items: center; gap: 8px;">
-              <label class="text-muted" style="font-size:12px; font-weight:600;">Simulate In-Room QR Scan:</label>
-              <select class="form-input" id="select-active-room" style="width: 250px;">
+              <label class="text-muted" style="font-size:12px; font-weight:500;">Simulate In-Room QR Scan:</label>
+              <select class="form-input form-input-sm" id="select-active-room" style="width: 240px;">
                 ${rooms.map(r => `<option value="${r.roomNumber}" ${r.roomNumber === this.activeRoomNumber ? 'selected' : ''}>Room ${r.roomNumber} - ${r.guestName} (${r.type})</option>`).join('')}
               </select>
             </div>
-            <button class="btn btn-outline" id="btn-open-supervisor-override">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-              Supervisor Override (FR_11)
+            <button class="btn btn-sm btn-outline" id="btn-open-supervisor-override">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Supervisor Override
             </button>
           </div>
         </div>
@@ -64,7 +63,7 @@ export class Module4GuestPWA {
         <!-- 2-Column Split: Mobile PWA Simulator (Left) + Live Housekeeping Queue (Right) -->
         <div class="grid grid-2 pwa-split-layout">
           
-          <!-- LEFT COLUMN: Mobile PWA Screen (In-Room Zero Install View) -->
+          <!-- LEFT COLUMN: Mobile PWA Screen -->
           <div class="mobile-phone-frame-wrap">
             <div class="phone-frame">
               <div class="phone-notch">
@@ -75,7 +74,7 @@ export class Module4GuestPWA {
                 <!-- PWA In-Room Header -->
                 <div class="pwa-header">
                   <div class="pwa-brand">
-                    <span class="pwa-leaf" style="font-size: 20px;">🌿</span>
+                    <span class="pwa-leaf" style="font-size: 18px;">🌿</span>
                     <div>
                       <div class="pwa-hotel-title">GRAND BAY ECO-RESORT</div>
                       <div class="pwa-room-sub">Room ${currentRoom.roomNumber} • ${currentRoom.guestName}</div>
@@ -86,22 +85,22 @@ export class Module4GuestPWA {
                   </div>
                 </div>
 
-                <!-- Eco-Points Balance Badge (FR_08/FR_09) -->
+                <!-- Eco-Points Balance Badge -->
                 <div class="pwa-points-card">
                   <div class="pwa-points-header">
-                    <span>MY ECO-REWARDS BALANCE</span>
-                    <span class="badge badge-success">VM2026 Tier</span>
+                    <span>ECO-REWARDS BALANCE</span>
+                    <span class="badge badge-success">Active Member</span>
                   </div>
                   <div class="pwa-points-val">${currentRoom.ecoPointsEarned || 0} <span class="pts-unit">Pts</span></div>
                   <div class="pwa-milestone-text">
-                    ${(currentRoom.ecoPointsEarned || 0) >= 25 ? '🎉 Milestone reached! Reward voucher unlocked in wallet below.' : `${25 - (currentRoom.ecoPointsEarned || 0)} pts until next Eco-Dining reward`}
+                    ${(currentRoom.ecoPointsEarned || 0) >= 25 ? 'Milestone reached! 15% discount voucher available below.' : `${25 - (currentRoom.ecoPointsEarned || 0)} pts until next reward voucher`}
                   </div>
                   <div class="progress-bar-wrap">
                     <div class="progress-bar" style="width: ${Math.min(100, (((currentRoom.ecoPointsEarned || 0) % 25 || 25) / 25) * 100)}%;"></div>
                   </div>
                 </div>
 
-                <!-- Daily Sustainable Preferences Selector (FR_02, FR_03, FR_04) -->
+                <!-- Daily Sustainable Preferences Selector -->
                 <div class="pwa-section-title">TODAY'S SUSTAINABILITY CHOICES</div>
                 <form id="pwa-preference-form" class="pwa-form">
                   
@@ -113,7 +112,7 @@ export class Module4GuestPWA {
                         <strong>Skip Daily Room Cleaning</strong>
                         <span class="pts-badge">+15 Pts</span>
                       </div>
-                      <p>Saves ~180L water & chemical runoff. Housekeeping bypasses room today.</p>
+                      <p>Saves ~180L water & chemical runoff. Housekeeping skips today.</p>
                     </div>
                   </label>
 
@@ -125,7 +124,7 @@ export class Module4GuestPWA {
                         <strong>Delay Bed Linen Change</strong>
                         <span class="pts-badge">+10 Pts</span>
                       </div>
-                      <p>Retain bed linen for an extra 2 nights. Trash clearing maintained.</p>
+                      <p>Retain bed linen for 2 more days. Trash clearing maintained.</p>
                     </div>
                   </label>
 
@@ -141,7 +140,7 @@ export class Module4GuestPWA {
                     </div>
                   </label>
 
-                  <!-- Towel Reuse Checkbox (FR_04) -->
+                  <!-- Towel Reuse Checkbox -->
                   <div class="pwa-towel-box">
                     <label class="checkbox-label">
                       <input type="checkbox" id="pwa-towel-reuse" ${currentRoom.towelReuse ? 'checked' : ''} />
@@ -152,17 +151,17 @@ export class Module4GuestPWA {
                     </label>
                   </div>
 
-                  <button type="submit" class="btn btn-primary btn-block pwa-submit-btn" style="margin-top: 4px;">
-                    Confirm Green Choices (FR_05)
+                  <button type="submit" class="btn btn-sm btn-primary btn-block pwa-submit-btn" style="margin-top: 4px;">
+                    Confirm Choices
                   </button>
                 </form>
 
-                <!-- Vouchers Wallet in PWA (FR_10 & UC8) -->
-                <div class="pwa-section-title" style="margin-top: 10px;">MY EARNED ECO-VOUCHERS (UC8)</div>
+                <!-- Vouchers Wallet in PWA -->
+                <div class="pwa-section-title" style="margin-top: 10px;">MY EARNED REWARD VOUCHERS</div>
                 <div class="pwa-voucher-stream">
                   ${roomVouchers.length === 0 ? `
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 12px; border: 1px dashed var(--border-subtle); border-radius: var(--radius-md);">
-                      No vouchers earned yet. Earn 25 Eco-Points to generate your first discount voucher!
+                      No vouchers earned yet. Reach 25 points to unlock your first discount voucher.
                     </div>
                   ` : roomVouchers.map(v => `
                     <div class="pwa-voucher-card">
@@ -175,9 +174,9 @@ export class Module4GuestPWA {
                         <code>${v.code}</code>
                         ${!v.isRedeemed ? `
                           <button class="btn btn-xs btn-outline btn-redeem-voucher" data-code="${v.code}">
-                            Redeem Now
+                            Redeem
                           </button>
-                        ` : '<span class="text-muted" style="font-size: 10px;">Used</span>'}
+                        ` : '<span class="text-muted" style="font-size: 10px;">Redeemed</span>'}
                       </div>
                     </div>
                   `).join('')}
@@ -187,28 +186,28 @@ export class Module4GuestPWA {
           </div>
 
           <!-- RIGHT COLUMN: Housekeeping Supervisor Master Schedule & Route Sync -->
-          <div class="housekeeping-dispatch-column" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="housekeeping-dispatch-column" style="display: flex; flex-direction: column; gap: 14px;">
             <!-- Top Route Stats -->
             <div class="card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">Housekeeping Route Telemetry & Queue Sync</h3>
-                  <p class="card-subtitle">Dynamic route recalculated upon guest PWA selections (FR_06 / FR_07)</p>
+                  <h3 class="card-title">Housekeeping Route Schedule</h3>
+                  <p class="card-subtitle">Dynamic cleaning queue updated automatically from guest preferences</p>
                 </div>
-                <span class="badge badge-success">Live Oracle SQL Stream</span>
+                <span class="badge badge-secondary">Live Queue</span>
               </div>
               <div class="grid grid-3">
-                <div style="background: var(--bg-card-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-                  <div class="text-muted" style="font-size: 11px; text-transform: uppercase;">Occupied Rooms</div>
-                  <div style="font-size: 20px; font-weight: 800;">${rooms.length} Rooms</div>
+                <div style="background: var(--bg-card-subtle); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                  <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Occupied Rooms</div>
+                  <div style="font-size: 18px; font-weight: 700;">${rooms.length} Rooms</div>
                 </div>
-                <div style="background: var(--bg-card-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-                  <div class="text-muted" style="font-size: 11px; text-transform: uppercase;">Active Clean Queue</div>
-                  <div style="font-size: 20px; font-weight: 800; color: var(--secondary);">${activeCleaningQueue.length} Rooms</div>
+                <div style="background: var(--bg-card-subtle); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                  <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Active Clean Queue</div>
+                  <div style="font-size: 18px; font-weight: 700; color: var(--secondary);">${activeCleaningQueue.length} Rooms</div>
                 </div>
-                <div style="background: var(--bg-card-subtle); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-                  <div class="text-muted" style="font-size: 11px; text-transform: uppercase;">Skipped (Opted Out)</div>
-                  <div style="font-size: 20px; font-weight: 800; color: var(--primary);">${optedOutRooms.length} Rooms</div>
+                <div style="background: var(--bg-card-subtle); padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                  <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Skipped (Opt-Out)</div>
+                  <div style="font-size: 18px; font-weight: 700; color: var(--primary);">${optedOutRooms.length} Rooms</div>
                 </div>
               </div>
             </div>
@@ -217,8 +216,8 @@ export class Module4GuestPWA {
             <div class="card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">Master Housekeeping Dispatch & Route (FR_07)</h3>
-                  <p class="card-subtitle">Pushed directly to ground staff mobile apps</p>
+                  <h3 class="card-title">Master Housekeeping Dispatch Route</h3>
+                  <p class="card-subtitle">Ground staff room turnover schedule</p>
                 </div>
                 <div class="tab-pills">
                   <button class="tab-btn ${this.floorFilter === 'ALL' ? 'active' : ''}" data-floor="ALL">All Floors</button>
@@ -233,9 +232,9 @@ export class Module4GuestPWA {
                     <tr>
                       <th>Room</th>
                       <th>Guest In-House</th>
-                      <th>PWA Selection</th>
+                      <th>Guest Selection</th>
                       <th>Towel</th>
-                      <th>Master Status (FR_05)</th>
+                      <th>Cleaning Status</th>
                       <th>Points</th>
                       <th>Action</th>
                     </tr>
@@ -259,7 +258,7 @@ export class Module4GuestPWA {
                         <td><strong>${r.ecoPointsEarned || 0} pts</strong></td>
                         <td>
                           <button class="btn btn-xs btn-outline btn-quick-override" data-room="${r.roomNumber}">
-                            Override (FR_11)
+                            Override
                           </button>
                         </td>
                       </tr>
@@ -269,14 +268,14 @@ export class Module4GuestPWA {
               </div>
             </div>
 
-            <!-- Interaction & Audit Ledger (FR_12) -->
+            <!-- Interaction & Audit Ledger -->
             <div class="card">
               <div class="card-header">
                 <div>
-                  <h3 class="card-title">Guest Interaction & Eco-Points Ledger (FR_12)</h3>
-                  <p class="card-subtitle">Persisted timestamped events in Oracle SQL <code>GUEST_INTERACTION_LOG</code></p>
+                  <h3 class="card-title">Guest Interaction & Points Ledger</h3>
+                  <p class="card-subtitle">Timestamped guest service selections</p>
                 </div>
-                <span class="badge badge-primary">FR_12 Audit</span>
+                <span class="badge badge-secondary">Interaction Log</span>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
@@ -284,9 +283,9 @@ export class Module4GuestPWA {
                     <tr>
                       <th>Room</th>
                       <th>Timestamp</th>
-                      <th>Interaction Action</th>
+                      <th>Action</th>
                       <th>Details</th>
-                      <th>Points Earned</th>
+                      <th>Points</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -307,11 +306,11 @@ export class Module4GuestPWA {
         </div>
       </div>
 
-      <!-- Modal: Supervisor Override (FR_11) -->
+      <!-- Modal: Supervisor Override -->
       <div class="modal-backdrop" id="override-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Supervisor Housekeeping Override (FR_11)</h3>
+            <h3 class="modal-title">Supervisor Housekeeping Override</h3>
             <button class="modal-close" id="btn-close-override-modal">&times;</button>
           </div>
           <form id="form-supervisor-override">
@@ -322,12 +321,12 @@ export class Module4GuestPWA {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Mandatory Override Justification (FR_11)</label>
+              <label class="form-label">Reason for Override</label>
               <textarea class="form-input" id="override-reason" rows="3" placeholder="Enter reason (e.g., Guest complaint, plumbing inspection, hygiene schedule)..." required></textarea>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-override">Cancel</button>
-              <button type="submit" class="btn btn-danger">Confirm Override & Reinstate</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-override">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-danger">Confirm Override</button>
             </div>
           </form>
         </div>
@@ -375,7 +374,11 @@ export class Module4GuestPWA {
         });
 
         if (result) {
-          window.showGlobalToast?.(`Preferences saved for Room ${this.activeRoomNumber}! +${result.pointsAwarded} Eco-Points credited. Housekeeping queue synced.`, 'success');
+          if (result.isUnchanged) {
+            window.showGlobalToast?.(`Preferences for Room ${this.activeRoomNumber} are already confirmed (${result.room.ecoPointsEarned} Pts total).`, 'info');
+          } else {
+            window.showGlobalToast?.(`Preferences updated for Room ${this.activeRoomNumber}! Eco-Rewards: ${result.room.ecoPointsEarned} Pts total.`, 'success');
+          }
         }
       };
     }
@@ -385,7 +388,7 @@ export class Module4GuestPWA {
       btn.onclick = () => {
         const code = btn.dataset.code;
         db.redeemVoucher(code);
-        window.showGlobalToast?.(`Voucher ${code} successfully redeemed for 15% discount!`, 'success');
+        window.showGlobalToast?.(`Voucher ${code} redeemed!`, 'success');
       };
     });
 
@@ -407,13 +410,13 @@ export class Module4GuestPWA {
         const reason = this.container.querySelector('#override-reason').value;
 
         if (!reason || reason.trim() === '') {
-          alert('An override reason is required (A1 Step 4).');
+          alert('An override reason is required.');
           return;
         }
 
         db.supervisorOverrideRoom(roomNum, reason);
         modal.style.display = 'none';
-        window.showGlobalToast?.(`Room ${roomNum} successfully reinstated to Active Cleaning Queue!`, 'success');
+        window.showGlobalToast?.(`Room ${roomNum} reinstated to Active Cleaning Queue!`, 'success');
       };
     }
 

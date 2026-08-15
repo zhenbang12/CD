@@ -1,7 +1,7 @@
 /**
- * Module 2: Back-of-House Inventory & Spoilage Tracker (PIC: Sze Ping)
- * Features: Stock lifecycle logging, smart expiry radar, dual-waste classification (Spoilage vs Prep Waste),
- * instant debounced search & filter, stock adjustment modal, and visual waste ratio breakdown.
+ * Back-of-House Inventory & Spoilage Tracker
+ * Features: Stock lifecycle logging, smart expiry radar, dual-waste classification,
+ * search & filter, stock adjustment modal, and visual waste ratio breakdown.
  */
 
 import { db } from '../db/storage.js';
@@ -31,7 +31,7 @@ export class Module2Inventory {
       const diffTime = exp - currentDate;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      let status = 'Good';
+      let status = 'Fresh';
       let statusClass = 'badge-success';
       if (diffDays < 0) {
         status = 'EXPIRED';
@@ -85,37 +85,36 @@ export class Module2Inventory {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <span class="badge badge-primary">Module 2 • Culinary Operations</span>
             <h1 class="view-title">Back-of-House Inventory & Spoilage Tracker</h1>
-            <p class="view-subtitle">Raw ingredient shelf-life lifecycle & dual-waste categorization (FR_01 - FR_10).</p>
+            <p class="view-subtitle">Raw ingredient shelf-life lifecycle, storage registry, and food waste management.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" id="btn-open-waste-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Record Food Waste (FR_08/FR_09)
+            <button class="btn btn-sm btn-outline" id="btn-open-waste-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Record Food Waste
             </button>
-            <button class="btn btn-primary" id="btn-open-stock-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Log Incoming Stock (FR_01/FR_02)
+            <button class="btn btn-sm btn-primary" id="btn-open-stock-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Log Incoming Stock
             </button>
           </div>
         </div>
 
-        <!-- Expiry Alert High-Visibility Banner (FR_07) -->
+        <!-- Expiry Alert High-Visibility Banner -->
         ${expiryAlerts.length > 0 ? `
           <div class="alert-banner alert-warning-strip">
             <div class="alert-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="alert-content">
-              <strong>Smart Expiry Alert (Head Chef Action Required):</strong>
+              <strong>Smart Expiry Alert (Kitchen Action Required):</strong>
               ${expiryAlerts.map(a => `<span class="alert-tag">${a.name} (${a.quantity} ${a.unit} • ${a.status})</span>`).join('')}
-              <div class="alert-action-text">Prioritize these items in Module 3 Smart Prep batching today to prevent avoidable spoilage.</div>
+              <div class="alert-action-text">Prioritize these items in today's kitchen prep batching to avoid spoilage.</div>
             </div>
           </div>
         ` : ''}
 
-        <!-- Top Overview Stats: Dual-Waste Separation (FR_10) -->
+        <!-- Top Overview Stats -->
         <div class="grid grid-4 kpi-row">
           <div class="card kpi-card">
             <div class="kpi-header">
@@ -135,7 +134,7 @@ export class Module2Inventory {
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-danger">${expiryAlerts.length} <span class="kpi-unit">Items &le; 2 Days</span></div>
-              <div class="kpi-desc">Scheduled daily shelf-life monitor</div>
+              <div class="kpi-desc">Monitored daily</div>
             </div>
           </div>
 
@@ -146,14 +145,14 @@ export class Module2Inventory {
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-danger">${totalSpoilageKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
-              <div class="kpi-desc">Expired / rotten raw ingredients</div>
+              <div class="kpi-desc">Expired / damaged raw items</div>
             </div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Prep Waste (Repurposed/Compost)</span>
-              <span class="badge badge-info">Bi-Product</span>
+              <span class="kpi-label">Prep Waste (Composted)</span>
+              <span class="badge badge-info">Diverted</span>
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-success">${totalPrepWasteKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
@@ -162,15 +161,15 @@ export class Module2Inventory {
           </div>
         </div>
 
-        <!-- Inventory Master Table with Search & Category Tabs (FR_03 & FR_04) -->
+        <!-- Inventory Master Table with Search & Category Tabs -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Live Kitchen Inventory & Shelf-Life Register</h3>
-              <p class="card-subtitle">Real-time stock levels, batch numbers and automated expiry thresholds (FR_03)</p>
+              <h3 class="card-title">Kitchen Inventory & Stock Register</h3>
+              <p class="card-subtitle">Real-time stock levels, batch identifiers and expiration monitoring</p>
             </div>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <input type="text" class="form-input form-input-sm" id="search-inventory" placeholder="🔍 Search SKU, name, location..." value="${this.searchQuery}" style="width: 220px;" />
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <input type="text" class="form-input form-input-sm" id="search-inventory" placeholder="🔍 Search SKU, name, location..." value="${this.searchQuery}" style="width: 200px;" />
               <div class="tab-pills">
                 <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All Items</button>
                 <button class="tab-btn ${this.activeFilter === 'EXPIRING' ? 'active' : ''}" data-filter="EXPIRING">Expiring &le; 3d</button>
@@ -193,8 +192,8 @@ export class Module2Inventory {
                   <th>Delivered</th>
                   <th>Expiry Date</th>
                   <th>Storage Location</th>
-                  <th>Shelf-Life Status</th>
-                  <th>Action (FR_04)</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,7 +214,7 @@ export class Module2Inventory {
                     <td><span class="badge ${item.statusClass}">${item.status}</span></td>
                     <td>
                       <button class="btn btn-xs btn-outline btn-quick-adjust" data-id="${item.id}" data-name="${item.name}" data-qty="${item.quantity}">
-                        Adjust Qty
+                        Adjust
                       </button>
                     </td>
                   </tr>
@@ -225,16 +224,16 @@ export class Module2Inventory {
           </div>
         </div>
 
-        <!-- 2-Column Section: Dual Waste Ledger & Visual Ratio Breakdown (FR_09 / FR_10) -->
+        <!-- 2-Column Section: Waste Ledger & Circular Breakdown -->
         <div class="grid grid-2">
-          <!-- Dual Waste Log History (FR_10) -->
+          <!-- Waste Log History -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Dual-Classification Waste Ledger (FR_10)</h3>
-                <p class="card-subtitle">Separates avoidable ingredient losses from unavoidable operational bi-products</p>
+                <h3 class="card-title">Food Waste Ledger</h3>
+                <p class="card-subtitle">Separates avoidable ingredient losses from composted prep bi-products</p>
               </div>
-              <span class="badge badge-secondary">Oracle SQL SPOILAGE_LOG</span>
+              <span class="badge badge-secondary">Waste Registry</span>
             </div>
             <div class="table-responsive">
               <table class="data-table">
@@ -268,41 +267,41 @@ export class Module2Inventory {
             </div>
           </div>
 
-          <!-- Visual Dual-Waste Donut Ratio & Circular Economy Stream -->
+          <!-- Circular Economy Breakdown -->
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Kitchen Circular Economy & Waste Ratio (FR_10)</h3>
+                <h3 class="card-title">Kitchen Circular Economy Ratio</h3>
                 <p class="card-subtitle">Avoidable Spoilage vs Repurposed Prep Waste Diverted to Composter</p>
               </div>
-              <span class="badge badge-success">Eco Diverted</span>
+              <span class="badge badge-success">Diverted</span>
             </div>
             
-            <div style="display: flex; align-items: center; justify-content: space-around; padding: 20px 0;">
-              <!-- Simple SVG Donut Chart -->
-              <svg width="140" height="140" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#1e293b" stroke-width="5"></circle>
+            <div style="display: flex; align-items: center; justify-content: space-around; padding: 16px 0;">
+              <!-- Donut Chart -->
+              <svg width="120" height="120" viewBox="0 0 42 42">
+                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#e4e4e7" stroke-width="4"></circle>
                 <!-- Prep waste slice (Green) -->
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#10b981" stroke-width="5" stroke-dasharray="${prepPct} ${100 - prepPct}" stroke-dashoffset="25"></circle>
+                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#059669" stroke-width="4" stroke-dasharray="${prepPct} ${100 - prepPct}" stroke-dashoffset="25"></circle>
                 <!-- Spoilage slice (Red) -->
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#ef4444" stroke-width="5" stroke-dasharray="${spoilagePct} ${100 - spoilagePct}" stroke-dashoffset="${25 - prepPct}"></circle>
+                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#e11d48" stroke-width="4" stroke-dasharray="${spoilagePct} ${100 - spoilagePct}" stroke-dashoffset="${25 - prepPct}"></circle>
                 <text x="21" y="22" font-size="6" font-weight="bold" fill="currentColor" text-anchor="middle" dominant-baseline="central">${totalWasteKg.toFixed(1)}kg</text>
               </svg>
 
-              <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="width: 12px; height: 12px; border-radius: 3px; background: #10b981;"></span>
+                  <span style="width: 10px; height: 10px; border-radius: 2px; background: #059669;"></span>
                   <div>
-                    <div style="font-size: 13px; font-weight: 700;">Prep Waste: ${totalPrepWasteKg.toFixed(1)} kg (${prepPct}%)</div>
-                    <small class="text-muted">100% diverted to on-site organic composter</small>
+                    <div style="font-size: 12.5px; font-weight: 600;">Prep Waste: ${totalPrepWasteKg.toFixed(1)} kg (${prepPct}%)</div>
+                    <small class="text-muted">Diverted to on-site organic composter</small>
                   </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="width: 12px; height: 12px; border-radius: 3px; background: #ef4444;"></span>
+                  <span style="width: 10px; height: 10px; border-radius: 2px; background: #e11d48;"></span>
                   <div>
-                    <div style="font-size: 13px; font-weight: 700;">Spoilage Loss: ${totalSpoilageKg.toFixed(1)} kg (${spoilagePct}%)</div>
-                    <small class="text-danger">Direct financial loss (RM ${(totalSpoilageKg * 18.5).toFixed(2)})</small>
+                    <div style="font-size: 12.5px; font-weight: 600;">Spoilage Loss: ${totalSpoilageKg.toFixed(1)} kg (${spoilagePct}%)</div>
+                    <small class="text-danger">Direct financial cost (RM ${(totalSpoilageKg * 18.5).toFixed(2)})</small>
                   </div>
                 </div>
               </div>
@@ -311,11 +310,11 @@ export class Module2Inventory {
         </div>
       </div>
 
-      <!-- Modal 1: Log Incoming Stock (FR_01 / FR_02) -->
+      <!-- Modal 1: Log Incoming Stock -->
       <div class="modal-backdrop" id="stock-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Log Incoming Stock (FR_01 / FR_02)</h3>
+            <h3 class="modal-title">Log Incoming Stock</h3>
             <button class="modal-close" id="btn-close-stock-modal">&times;</button>
           </div>
           <form id="form-log-stock">
@@ -370,36 +369,36 @@ export class Module2Inventory {
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-stock">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save to Stock Register</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-stock">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Save Stock Item</button>
             </div>
           </form>
         </div>
       </div>
 
-      <!-- Modal 2: Record End-of-Shift Food Waste (FR_08 & FR_09) -->
+      <!-- Modal 2: Record End-of-Shift Food Waste -->
       <div class="modal-backdrop" id="waste-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Record Food Waste (Dual Architecture FR_08/FR_09)</h3>
+            <h3 class="modal-title">Record Food Waste</h3>
             <button class="modal-close" id="btn-close-waste-modal">&times;</button>
           </div>
           <form id="form-log-waste">
             <div class="form-group">
-              <label class="form-label">Mandatory Waste Classification (FR_09)</label>
+              <label class="form-label">Waste Classification</label>
               <div class="radio-card-group">
                 <label class="radio-card">
                   <input type="radio" name="waste-type" value="Spoilage" checked />
                   <div class="radio-card-body">
                     <strong>Spoilage (Avoidable Loss)</strong>
-                    <p>Expired, rotten, improperly chilled or damaged raw items.</p>
+                    <p>Expired, rotten, or damaged raw items.</p>
                   </div>
                 </label>
                 <label class="radio-card">
                   <input type="radio" name="waste-type" value="Prep Waste" />
                   <div class="radio-card-body">
                     <strong>Prep Waste (Bi-Product)</strong>
-                    <p>Peelings, bones, trimmings diverted to broth or composter.</p>
+                    <p>Peelings, bones, trimmings diverted to composter.</p>
                   </div>
                 </label>
               </div>
@@ -433,12 +432,12 @@ export class Module2Inventory {
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Reason / Disposal Destination Notes</label>
-              <input type="text" class="form-input" id="waste-reason" placeholder="e.g., Walk-in Chiller door left ajar / Sent to organic composter" required />
+              <label class="form-label">Reason / Disposal Notes</label>
+              <input type="text" class="form-input" id="waste-reason" placeholder="e.g., Door left ajar / Sent to organic composter" required />
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-waste">Cancel</button>
-              <button type="submit" class="btn btn-primary">Submit Waste Log</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-waste">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Save Waste Log</button>
             </div>
           </form>
         </div>
@@ -463,7 +462,6 @@ export class Module2Inventory {
       searchInput.oninput = (e) => {
         this.searchQuery = e.target.value;
         this.render();
-        // Restore focus
         const newSearch = this.container.querySelector('#search-inventory');
         if (newSearch) {
           newSearch.focus();
@@ -500,7 +498,7 @@ export class Module2Inventory {
 
         db.addInventoryItem(newItem);
         stockModal.style.display = 'none';
-        window.showGlobalToast?.(`Incoming stock "${newItem.name}" successfully recorded to Oracle SQL inventory!`, 'success');
+        window.showGlobalToast?.(`Stock "${newItem.name}" saved!`, 'success');
       };
     }
 
@@ -536,17 +534,17 @@ export class Module2Inventory {
         });
 
         wasteModal.style.display = 'none';
-        window.showGlobalToast?.(`Food waste (${type}) recorded and stored separately in Oracle SQL!`, 'success');
+        window.showGlobalToast?.(`Food waste recorded!`, 'success');
       };
     }
 
-    // Quick Qty Adjustment (FR_04)
+    // Quick Qty Adjustment
     this.container.querySelectorAll('.btn-quick-adjust').forEach(btn => {
       btn.onclick = () => {
         const id = btn.dataset.id;
         const name = btn.dataset.name;
         const currentQty = btn.dataset.qty;
-        const input = prompt(`[FR_04 Inventory Manager Override]\nEnter corrected stock quantity for "${name}":`, currentQty);
+        const input = prompt(`Enter corrected stock quantity for "${name}":`, currentQty);
         if (input !== null && !isNaN(parseFloat(input))) {
           db.updateInventoryQuantity(id, input);
           window.showGlobalToast?.(`Stock quantity for ${name} updated to ${input}!`, 'success');

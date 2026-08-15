@@ -1,18 +1,40 @@
 /**
- * Module 3: Predictive F&B Batch Optimization Engine (PIC: Zhen Bang)
- * Features: 48-hour front-desk ingest, smart prep batching algorithm,
- * plate waste feedback loop, chef overrides, ingredient requisition PO generator,
- * and printable kitchen prep sheets.
+ * EcoHotel OS - Predictive F&B Batch Optimization Engine (Module 3 - PIC: Zhen Bang)
+ * Features: Multi-Factor Predictive Batching, Interactive Demographic Sensitivity Simulator,
+ * Staggered 3-Wave Prep Scheduling, Station-Based Kanban Filtering, Recipe Yield BOM Requisition,
+ * 1-Click Purchase Orders, Printable Kitchen Prep Sheets with Station QR Tokens,
+ * and Comprehensive Interactive Operations & User Guide.
  */
 
 import { db } from '../db/storage.js';
-import { BatchOptimizerEngine } from '../engines/batchOptimizerEngine.js';
+import { BatchOptimizerEngine, STATIONS } from '../engines/batchOptimizerEngine.js?v=2.2';
+
+const FALLBACK_STATIONS = [
+  { id: 'ALL', name: 'All Stations', icon: '🍽️' },
+  { id: 'HOT_LINE', name: 'Hot Line & Grill', icon: '🔥' },
+  { id: 'LIVE_COUNTER', name: 'Live Action Counters', icon: '🍳' },
+  { id: 'COLD_PANTRY', name: 'Cold Pantry & Salads', icon: '🥗' },
+  { id: 'BAKERY', name: 'Bakery & Pastry', icon: '🥐' }
+];
 
 export class Module3BatchOptimizer {
   constructor(container) {
     this.container = container;
     this.selectedDate = '2026-08-13';
     this.selectedShift = 'Breakfast';
+    this.selectedStation = 'ALL';
+    this.activeViewTab = 'recommendations'; // 'recommendations' | 'waves' | 'requisition' | 'plateLogs'
+    this.activeGuideTab = 'sop'; // 'overview' | 'sop' | 'math' | 'faq'
+
+    // Interactive Simulation State
+    this.isSimulationActive = false;
+    this.simulationState = {
+      totalGuests: 285,
+      malaysianPct: 45,
+      europeanPct: 18,
+      veganCount: 28
+    };
+
     this.init();
   }
 
@@ -25,54 +47,125 @@ export class Module3BatchOptimizer {
   }
 
   render() {
-    const data = BatchOptimizerEngine.generatePrepRecommendations(this.selectedDate, this.selectedShift);
+    // Generate recommendations with simulation state if enabled
+    const simOverrides = this.isSimulationActive ? {
+      totalGuests: this.simulationState.totalGuests,
+      nationalities: {
+        Malaysian: this.simulationState.malaysianPct,
+        Singaporean: 25,
+        European: this.simulationState.europeanPct,
+        MiddleEastern: 8,
+        Others: Math.max(0, 100 - this.simulationState.malaysianPct - 25 - this.simulationState.europeanPct - 8)
+      },
+      dietaryProfiles: {
+        Regular: this.simulationState.totalGuests - this.simulationState.veganCount - 50,
+        Halal: Math.round(this.simulationState.totalGuests * 0.85),
+        VeganVegetarian: this.simulationState.veganCount,
+        GlutenFree: 15
+      }
+    } : null;
+
+    const data = BatchOptimizerEngine.generatePrepRecommendations(this.selectedDate, this.selectedShift, simOverrides);
     const plateLogs = db.get('plateWasteLogs');
     const overPrepAlerts = BatchOptimizerEngine.checkOverPrepAlerts();
     const dishes = db.get('dishes');
 
+    // Filter recommendations by selected station
+    const filteredRecs = this.selectedStation === 'ALL'
+      ? data.recommendations
+      : data.recommendations.filter(r => r.station === this.selectedStation);
+
     const totalRecommendedKg = data.recommendations.reduce((a, c) => a + c.recommendedKg, 0);
     const totalFoodSavedKg = data.recommendations.reduce((a, c) => a + c.foodSavedKg, 0);
-    const shortageCount = data.ingredientSummary.filter(i => i.isShortage).length;
+    const totalCostSavedMyr = data.recommendations.reduce((a, c) => a + c.costSavedMyr, 0);
+    const totalCo2AvoidedKg = data.recommendations.reduce((a, c) => a + c.co2AvoidedKg, 0);
+    const shortages = data.ingredientSummary.filter(i => i.isShortage);
+    const totalShortageCost = shortages.reduce((a, c) => a + c.prCostImpact, 0);
 
     this.container.innerHTML = `
       <div class="module-view m3-container fade-in">
-        <!-- View Header -->
+        <!-- Header & Action Ribbon -->
         <div class="view-header">
           <div>
-            <span class="badge badge-primary">Module 3 • Predictive Culinary Engine</span>
-            <h1 class="view-title">Predictive F&B Batch Optimization Engine</h1>
-            <p class="view-subtitle">Eliminates culinary over-preparation by algorithmically matching 48h guest volume with consumption baselines (FR_01 - FR_10).</p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h1 class="view-title">Predictive F&B Batch Optimization Engine</h1>
+              <span class="badge badge-primary">Module 3 • PIC: Zhen Bang</span>
+            </div>
+            <p class="view-subtitle">Multi-factor algorithmic batching matching 48h guest influx, recipe BOM yields, and decayed plate-waste feedback loops.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-outline" id="btn-open-plate-waste-modal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Log Plate Waste (FR_01/FR_02)
+            <button class="btn btn-sm btn-outline" id="btn-open-user-guide" style="border-color: var(--primary); color: var(--primary);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              📖 User & Ops Guide
             </button>
-            <button class="btn btn-primary" id="btn-print-prep-sheet">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              Print / Export Prep Sheet (FR_08)
+            <button class="btn btn-sm ${this.isSimulationActive ? 'btn-warning' : 'btn-outline'}" id="btn-toggle-simulation">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              ${this.isSimulationActive ? 'Exit What-If Mode' : 'What-If Simulation'}
+            </button>
+            <button class="btn btn-sm btn-outline" id="btn-open-plate-waste-modal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Log Plate Waste
+            </button>
+            <button class="btn btn-sm btn-primary" id="btn-print-prep-sheet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print Station Prep Sheet
             </button>
           </div>
         </div>
 
-        <!-- Over-Prep Warning Alert Banner (FR_09) -->
+        <!-- Over-Prep Warning Alert Banner -->
         ${overPrepAlerts.length > 0 ? `
           <div class="alert-banner alert-warning-strip">
             <div class="alert-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="alert-content">
-              <strong>Automated Over-Prep Alert (FR_09):</strong>
-              ${overPrepAlerts.map(alt => `<div>${alt.message}</div>`).join('')}
+              <strong>Automated Over-Prep & Plate Waste Radar:</strong>
+              ${overPrepAlerts.map(alt => `
+                <div style="font-size: 12px; margin-top: 2px;">
+                  • <strong>${alt.dishName}</strong>: ${alt.message} <span class="badge badge-danger">${alt.actionRequired}</span>
+                </div>
+              `).join('')}
             </div>
           </div>
         ` : ''}
 
-        <!-- Service Period Filter & Ingested Guest Matrix Bar (FR_03 & FR_07) -->
+        <!-- Interactive What-If Demographics Sensitivity Panel (Collapsible) -->
+        ${this.isSimulationActive ? `
+          <div class="card" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.3); margin-bottom: 16px;">
+            <div class="card-header" style="padding-bottom: 8px;">
+              <div>
+                <h4 style="color: #d97706; font-size: 13px; font-weight: 700; margin: 0;">🔮 Executive Sensitivity Simulation (What-If Influx Modeler)</h4>
+                <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Simulate upcoming cruise tourist arrivals, tour group surges, or dietary shifts to test algorithmic batch adaptability.</p>
+              </div>
+              <span class="badge badge-warning">Simulating Active Influx</span>
+            </div>
+            <div class="grid grid-4" style="gap: 14px; margin-top: 10px;">
+              <div>
+                <label class="form-label" style="font-size: 11px;">In-House Guests: <strong id="val-sim-guests">${this.simulationState.totalGuests}</strong></label>
+                <input type="range" class="form-range" id="slider-sim-guests" min="150" max="450" value="${this.simulationState.totalGuests}" style="width: 100%;" />
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 11px;">Malaysian / SG: <strong id="val-sim-my">${this.simulationState.malaysianPct}%</strong></label>
+                <input type="range" class="form-range" id="slider-sim-my" min="10" max="80" value="${this.simulationState.malaysianPct}" style="width: 100%;" />
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 11px;">European Influx: <strong id="val-sim-eu">${this.simulationState.europeanPct}%</strong></label>
+                <input type="range" class="form-range" id="slider-sim-eu" min="5" max="60" value="${this.simulationState.europeanPct}" style="width: 100%;" />
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 11px;">Vegan / Vegetarian: <strong id="val-sim-vegan">${this.simulationState.veganCount} pax</strong></label>
+                <input type="range" class="form-range" id="slider-sim-vegan" min="5" max="80" value="${this.simulationState.veganCount}" style="width: 100%;" />
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Service Period Filter & Ingested Guest Matrix Bar -->
         <div class="card filter-bar-card">
-          <div class="filter-controls" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div class="filter-controls" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
             <div class="filter-item">
-              <label class="form-label">Service Date (48h Ingest Window)</label>
+              <label class="form-label">Service Date (Oracle 48h Window)</label>
               <select class="form-input" id="select-prep-date">
                 <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today: 13 Aug 2026</option>
                 <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow: 14 Aug 2026</option>
@@ -90,20 +183,20 @@ export class Module3BatchOptimizer {
 
           <div style="background: var(--bg-card-subtle); padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div>
-              <span class="text-muted" style="font-size: 11px; text-transform: uppercase; font-weight: 700;">Ingested In-House Guests:</span>
-              <div style="font-size: 16px; font-weight: 800;">${data.forecast.totalInHouseGuests} Guests <span class="badge badge-success">+${data.forecast.expectedCheckIns} Arrivals</span></div>
+              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Oracle Reservation Sync</span>
+              <div style="font-size: 15px; font-weight: 800;">${data.forecast.totalInHouseGuests} In-House <span class="badge badge-success">+${data.forecast.expectedCheckIns} Check-Ins</span></div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 11px; text-transform: uppercase; font-weight: 700;">Estimated Diners (Capture Rate):</span>
-              <div style="font-size: 16px; font-weight: 800; color: var(--primary);">${data.estimatedDiners} Diners</div>
+              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Capture Rate (${data.captureRate}%)</span>
+              <div style="font-size: 15px; font-weight: 800; color: var(--primary);">${data.estimatedDiners} Expected Diners</div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 11px; text-transform: uppercase; font-weight: 700;">Cultural Weighting Matrix:</span>
-              <div style="font-size: 12px;">MY/SG: <strong>${data.forecast.nationalities.Malaysian + data.forecast.nationalities.Singaporean}%</strong> • EU: <strong>${data.forecast.nationalities.European}%</strong></div>
+              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Cultural Demographics</span>
+              <div style="font-size: 12px;">MY/SG: <strong>${data.forecast.nationalities.Malaysian + data.forecast.nationalities.Singaporean}%</strong> • EU: <strong>${data.forecast.nationalities.European}%</strong> • ME: <strong>${data.forecast.nationalities.MiddleEastern}%</strong></div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 11px; text-transform: uppercase; font-weight: 700;">Dietary Ingest:</span>
-              <div style="font-size: 12px;">Halal: <strong>${data.forecast.dietaryProfiles.Halal}</strong> • Vegan: <strong>${data.forecast.dietaryProfiles.VeganVegetarian}</strong></div>
+              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Dietary Profiles</span>
+              <div style="font-size: 12px;">Halal: <strong>${data.forecast.dietaryProfiles.Halal}</strong> • Vegan: <strong>${data.forecast.dietaryProfiles.VeganVegetarian}</strong> • GF: <strong>${data.forecast.dietaryProfiles.GlutenFree}</strong></div>
             </div>
           </div>
         </div>
@@ -117,131 +210,217 @@ export class Module3BatchOptimizer {
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg">${totalRecommendedKg.toFixed(1)} <span class="kpi-unit">kg Total</span></div>
-              <div class="kpi-desc">Across all live stations & buffet lines</div>
+              <div class="kpi-desc">Across all live kitchen stations</div>
             </div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Over-Prep Avoided</span>
-              <span class="badge badge-success">+${((totalFoodSavedKg / (totalRecommendedKg + totalFoodSavedKg || 1)) * 100).toFixed(1)}%</span>
+              <span class="badge badge-success">+${((totalFoodSavedKg / (totalRecommendedKg + totalFoodSavedKg || 1)) * 100).toFixed(1)}% Waste Cut</span>
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-success">${totalFoodSavedKg.toFixed(1)} <span class="kpi-unit">kg Saved</span></div>
-              <div class="kpi-desc">Calculated vs unoptimized baseline</div>
+              <div class="kpi-desc">RM ${totalCostSavedMyr.toFixed(0)} avoided cost impact</div>
             </div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Historical Multipliers</span>
-              <span class="badge badge-secondary">Feedback Loop</span>
+              <span class="kpi-label">Avoided Carbon (CO2e)</span>
+              <span class="badge badge-secondary">VM2026 Direct</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg">0.82 - 0.96x</div>
-              <div class="kpi-desc">Auto-refined by plate waste returns</div>
+              <div class="kpi-value-lg" style="color: #059669;">${totalCo2AvoidedKg.toFixed(1)} <span class="kpi-unit">kg CO2e</span></div>
+              <div class="kpi-desc">M1 Compliance Score contribution</div>
             </div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Raw Ingredient Health</span>
-              <span class="badge ${shortageCount > 0 ? 'badge-warning' : 'badge-success'}">${shortageCount > 0 ? `${shortageCount} Shortages` : 'Sufficient'}</span>
+              <span class="kpi-label">M2 Stock Reconciliation</span>
+              <span class="badge ${shortages.length > 0 ? 'badge-warning' : 'badge-success'}">${shortages.length > 0 ? `${shortages.length} Shortages` : '100% In Stock'}</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg ${shortageCount > 0 ? 'text-warning' : 'text-primary'}">${data.ingredientSummary.length - shortageCount}/${data.ingredientSummary.length} <span class="kpi-unit">Available</span></div>
-              <div class="kpi-desc">Cross-referenced with Module 2 stock</div>
+              <div class="kpi-value-lg ${shortages.length > 0 ? 'text-warning' : 'text-primary'}">${data.ingredientSummary.length - shortages.length}/${data.ingredientSummary.length} <span class="kpi-unit">Ready</span></div>
+              <div class="kpi-desc">${shortages.length > 0 ? `Reorder cost: RM ${totalShortageCost.toFixed(0)}` : 'Chiller inventory verified'}</div>
             </div>
           </div>
         </div>
 
-        <!-- Main Section: Smart Prep Recommendations Master Sheet (FR_04, FR_05, FR_06) -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Algorithmically Optimized Prep Recommendations (${this.selectedShift} Buffet)</h3>
-              <p class="card-subtitle">Combines 48h guest volume forecast, cultural weighting & historical waste feedback (FR_04 / FR_05)</p>
-            </div>
-            <span class="badge badge-primary">Oracle SQL Forecast Active</span>
+        <!-- Station Filter & View Switcher Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+          <!-- Station Tabs -->
+          <div class="tab-pills" style="margin-bottom: 0;">
+            ${(STATIONS || BatchOptimizerEngine?.STATIONS || FALLBACK_STATIONS).map(st => `
+              <button class="tab-btn ${this.selectedStation === st.id ? 'active' : ''}" data-station="${st.id}">
+                ${st.icon} ${st.name}
+              </button>
+            `).join('')}
           </div>
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Dish Name</th>
-                  <th>Station / Category</th>
-                  <th>Standard Base (g)</th>
-                  <th>Cultural Factor</th>
-                  <th>Waste Multiplier (FR_05)</th>
-                  <th>Unoptimized Prep</th>
-                  <th>Optimized Batch Target</th>
-                  <th>Food Prevented</th>
-                  <th>Chef Override (FR_06)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.recommendations.map(rec => `
-                  <tr>
-                    <td><strong>${rec.dishName}</strong></td>
-                    <td><span class="badge badge-secondary">${rec.category}</span></td>
-                    <td>${rec.baseGrams}g / diner</td>
-                    <td><code>${rec.culturalFactor}x</code></td>
-                    <td>
-                      <span class="badge ${rec.wasteMultiplier < 0.90 ? 'badge-warning' : 'badge-secondary'}">
-                        ${rec.wasteMultiplier}x (${((1 - rec.wasteMultiplier) * 100).toFixed(0)}% drop)
-                      </span>
-                    </td>
-                    <td><span class="text-muted strike">${rec.unoptimizedKg} kg</span></td>
-                    <td><strong class="text-primary font-lg font-bold">${rec.recommendedKg} kg</strong></td>
-                    <td><span class="text-success font-bold">-${rec.foodSavedKg} kg</span></td>
-                    <td>
-                      <button class="btn btn-xs btn-outline btn-chef-override" data-dish-id="${rec.dishId}" data-dish-name="${rec.dishName}" data-multiplier="${rec.wasteMultiplier}">
-                        Override
-                      </button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+
+          <!-- Section Mode Switcher -->
+          <div class="tab-pills" style="margin-bottom: 0;">
+            <button class="tab-btn ${this.activeViewTab === 'recommendations' ? 'active' : ''}" data-view-tab="recommendations">📋 Master Prep Targets</button>
+            <button class="tab-btn ${this.activeViewTab === 'waves' ? 'active' : ''}" data-view-tab="waves">⏱️ Staggered 3-Wave Timeline</button>
+            <button class="tab-btn ${this.activeViewTab === 'requisition' ? 'active' : ''}" data-view-tab="requisition">📦 Recipe BOM & Requisition</button>
+            <button class="tab-btn ${this.activeViewTab === 'plateLogs' ? 'active' : ''}" data-view-tab="plateLogs">🍽️ Plate Waste Returns (${plateLogs.length})</button>
           </div>
         </div>
 
-        <!-- 2-Column Section: Core Ingredient Breakdown & Plate Waste Feedback Stream -->
-        <div class="grid grid-2">
-          <!-- Raw Ingredient Prep Requisition & PO Generator -->
+        <!-- View Tab 1: Master Prep Targets Table -->
+        ${this.activeViewTab === 'recommendations' ? `
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Back-of-House Ingredient Prep Requisition</h3>
-                <p class="card-subtitle">Aggregated raw materials needed from Module 2 Inventory</p>
+                <h3 class="card-title">Optimized Prep Recommendations (${this.selectedShift} Service)</h3>
+                <p class="card-subtitle">Synthesizes cultural weights, declared diets, recipe yield loss, and decayed plate-waste feedback</p>
               </div>
-              ${shortageCount > 0 ? `
-                <button class="btn btn-xs btn-warning" id="btn-generate-po">
-                  Auto-Create PO for ${shortageCount} Shortages
-                </button>
-              ` : '<span class="badge badge-success">All In Stock</span>'}
+              <span class="badge badge-secondary">${filteredRecs.length} Dishes Shown</span>
             </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Ingredient</th>
-                    <th>Required Weight</th>
-                    <th>Available Stock</th>
-                    <th>Inventory Status</th>
+                    <th>Dish Name</th>
+                    <th>Station</th>
+                    <th>Base (g)</th>
+                    <th>Demographic Factor</th>
+                    <th>EMA Waste Multiplier</th>
+                    <th>Yield</th>
+                    <th>Unoptimized</th>
+                    <th>Optimized Prep Target</th>
+                    <th>Prevented Waste</th>
+                    <th>Chef Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filteredRecs.map(rec => `
+                    <tr>
+                      <td>
+                        <strong>${rec.dishName}</strong>
+                        <div style="font-size: 10px; color: var(--text-muted);">${rec.ingredientRefs.join(' • ')}</div>
+                      </td>
+                      <td><span class="badge badge-secondary">${rec.category}</span></td>
+                      <td>${rec.baseGrams}g</td>
+                      <td><code>${rec.culturalFactor}x</code> ${rec.dietaryFactor > 1.0 ? `<small class="badge badge-success">Diet ${rec.dietaryFactor}x</small>` : ''}</td>
+                      <td>
+                        <span class="badge ${rec.wasteMultiplier < 0.90 ? 'badge-warning' : 'badge-secondary'}">
+                          ${rec.wasteMultiplier}x (${((1 - rec.wasteMultiplier) * 100).toFixed(0)}% cut)
+                        </span>
+                      </td>
+                      <td><small>${(rec.cookingYield * 100).toFixed(0)}%</small></td>
+                      <td><span class="text-muted strike">${rec.unoptimizedKg} kg</span></td>
+                      <td><strong class="text-primary font-lg font-bold">${rec.recommendedKg} kg</strong></td>
+                      <td>
+                        <span class="text-success font-bold">-${rec.foodSavedKg} kg</span>
+                        <div style="font-size: 9px; color: var(--text-muted);">RM ${rec.costSavedMyr}</div>
+                      </td>
+                      <td>
+                        <button class="btn btn-xs btn-outline btn-chef-override" data-dish-id="${rec.dishId}" data-dish-name="${rec.dishName}" data-multiplier="${rec.wasteMultiplier}">
+                          Override
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- View Tab 2: Staggered 3-Wave Prep Schedule -->
+        ${this.activeViewTab === 'waves' ? `
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Staggered Multi-Batch Prep Waves (Just-In-Time Cooking)</h3>
+                <p class="card-subtitle">Prevents food degradation by scheduling 3 timed cooking waves rather than 1 massive opening batch</p>
+              </div>
+              <span class="badge badge-primary">3-Wave Cadence</span>
+            </div>
+            <div class="grid grid-3" style="gap: 16px; margin-top: 10px;">
+              <div class="card" style="border-left: 4px solid #059669; background: var(--bg-card-subtle);">
+                <div style="font-weight: 800; font-size: 14px; color: #059669;">🌊 WAVE 1: OPENING PREP (55%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave1.time || '06:30 AM'} • Buffet opening readiness</div>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
+                  ${filteredRecs.map(r => `
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                      <span>${r.dishName}</span>
+                      <strong class="text-primary">${r.waves.wave1.kg} kg</strong>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+
+              <div class="card" style="border-left: 4px solid #3b82f6; background: var(--bg-card-subtle);">
+                <div style="font-weight: 800; font-size: 14px; color: #3b82f6;">🌊 WAVE 2: RUSH REPLENISHMENT (35%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave2.time || '08:00 AM'} • Peak guest check-in rush</div>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
+                  ${filteredRecs.map(r => `
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                      <span>${r.dishName}</span>
+                      <strong style="color: #3b82f6;">${r.waves.wave2.kg} kg</strong>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+
+              <div class="card" style="border-left: 4px solid #f59e0b; background: var(--bg-card-subtle);">
+                <div style="font-weight: 800; font-size: 14px; color: #f59e0b;">🌊 WAVE 3: ON-DEMAND FINALE (10%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave3.time || '09:15 AM'} • Live counter top-up</div>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
+                  ${filteredRecs.map(r => `
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                      <span>${r.dishName}</span>
+                      <strong style="color: #f59e0b;">${r.waves.wave3.kg} kg</strong>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- View Tab 3: Recipe BOM & Ingredient Requisition -->
+        ${this.activeViewTab === 'requisition' ? `
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Kitchen Recipe Bill of Materials (BOM) & Inventory Reconciliation</h3>
+                <p class="card-subtitle">Cross-referenced with Module 2 Inventory to auto-detect shortages and generate purchase orders</p>
+              </div>
+              ${shortages.length > 0 ? `
+                <button class="btn btn-sm btn-warning" id="btn-generate-po">
+                  ⚡ Auto-Create Purchase Requisition (RM ${totalShortageCost.toFixed(0)})
+                </button>
+              ` : '<span class="badge badge-success">All Chiller Stock Ready</span>'}
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Raw Ingredient Name</th>
+                    <th>Supplier Reference</th>
+                    <th>Required for Shift</th>
+                    <th>Chiller Stock (M2)</th>
+                    <th>Unit Cost</th>
+                    <th>Requisition Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${data.ingredientSummary.map(ing => `
                     <tr>
                       <td><strong>${ing.ingredientName}</strong></td>
+                      <td><small class="text-muted">${ing.supplier}</small></td>
                       <td><strong>${ing.needed}</strong> ${ing.unit}</td>
                       <td>${ing.inStock} ${ing.unit}</td>
+                      <td>RM ${ing.unitPrice.toFixed(2)} / ${ing.unit}</td>
                       <td>
                         ${ing.isShortage ? `
-                          <span class="badge badge-danger">Shortage: -${ing.shortageAmount} ${ing.unit}</span>
+                          <span class="badge badge-danger">Shortage: -${ing.shortageAmount} ${ing.unit} (RM ${ing.prCostImpact})</span>
                         ` : `
-                          <span class="badge badge-success">In Stock</span>
+                          <span class="badge badge-success">Sufficient Stock</span>
                         `}
                       </td>
                     </tr>
@@ -250,15 +429,17 @@ export class Module3BatchOptimizer {
               </table>
             </div>
           </div>
+        ` : ''}
 
-          <!-- End-of-Shift Plate Waste Feedback Loop (FR_01 / FR_02) -->
+        <!-- View Tab 4: Plate Waste Returns Ledger -->
+        ${this.activeViewTab === 'plateLogs' ? `
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Plate Waste Feedback Loop Ledger (FR_01)</h3>
-                <p class="card-subtitle">Unconsumed buffet table returns that refine the predictive model (FR_05)</p>
+                <h3 class="card-title">Plate Waste Feedback Ledger & Trend Radar</h3>
+                <p class="card-subtitle">End-of-shift buffet table returns that refine future Exponential Moving Average demand multipliers</p>
               </div>
-              <span class="badge badge-primary">Model Refinement</span>
+              <button class="btn btn-sm btn-primary" id="btn-open-plate-waste-modal-2">+ Log Shift Return</button>
             </div>
             <div class="table-responsive">
               <table class="data-table">
@@ -266,13 +447,14 @@ export class Module3BatchOptimizer {
                   <tr>
                     <th>Date & Shift</th>
                     <th>Dish Logged</th>
-                    <th>Discarded</th>
-                    <th>Anomaly Tag (FR_02)</th>
+                    <th>Discarded Weight</th>
+                    <th>Classification & Evidence</th>
+                    <th>Audit Note</th>
                     <th>Logged By</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${plateLogs.slice(0, 5).map(log => `
+                  ${plateLogs.map(log => `
                     <tr>
                       <td>${log.date} <small class="text-muted">(${log.mealPeriod})</small></td>
                       <td><strong>${log.dishName}</strong></td>
@@ -281,36 +463,37 @@ export class Module3BatchOptimizer {
                         ${log.isAnomaly ? `
                           <span class="badge badge-warning" title="${log.anomalyReason}">Accident (Photo Attached)</span>
                         ` : `
-                          <span class="badge badge-secondary">Guest Leftover (Refined)</span>
+                          <span class="badge badge-secondary">Guest Buffet Return</span>
                         `}
                       </td>
-                      <td><small class="text-muted">${log.loggedBy}</small></td>
+                      <td><small>${log.note || log.anomalyReason || 'Normal buffet table return'}</small></td>
+                      <td><small class="text-muted">${log.loggedBy || 'Ground Kitchen Staff'}</small></td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
+        ` : ''}
       </div>
 
-      <!-- Modal: Log Plate Waste (FR_01 & FR_02) -->
+      <!-- Modal: Log Plate Waste with Photo Capture Simulation -->
       <div class="modal-backdrop" id="plate-waste-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 class="modal-title">Log End-of-Shift Plate Waste (FR_01 & FR_02)</h3>
+            <h3 class="modal-title">Log End-of-Shift Plate Waste (Module 3)</h3>
             <button class="modal-close" id="btn-close-plate-waste-modal">&times;</button>
           </div>
           <form id="form-log-plate-waste">
             <div class="form-group">
-              <label class="form-label">Select Buffet Station / Dish (FR_01)</label>
+              <label class="form-label">Select Buffet Dish</label>
               <select class="form-input" id="pw-dish-id" required>
                 ${dishes.map(d => `<option value="${d.id}" data-name="${d.name}">${d.name} (${d.category})</option>`).join('')}
               </select>
             </div>
             <div class="grid grid-2">
               <div class="form-group">
-                <label class="form-label">Meal Period</label>
+                <label class="form-label">Meal Service Period</label>
                 <select class="form-input" id="pw-shift" required>
                   <option value="Dinner">Dinner Buffet</option>
                   <option value="Breakfast">Breakfast Buffet</option>
@@ -319,25 +502,72 @@ export class Module3BatchOptimizer {
               </div>
               <div class="form-group">
                 <label class="form-label">Discarded Weight (kg)</label>
-                <input type="number" step="0.1" min="0.1" class="form-input" id="pw-weight" placeholder="e.g., 3.5" required />
+                <input type="number" step="0.1" min="0.1" max="100.0" class="form-input" id="pw-weight" placeholder="e.g., 3.8" required />
               </div>
             </div>
+
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" id="pw-is-anomaly" />
-                <span><strong>Flag as Operational Anomaly / Kitchen Accident (FR_02)</strong> (e.g. Dropped tray — will NOT penalize future guest demand multiplier)</span>
+                <span><strong>Flag as Operational Accident</strong> (e.g., Dropped tray / Kitchen spill — will NOT penalize future demand multiplier)</span>
               </label>
             </div>
+
             <div class="form-group" id="pw-anomaly-details" style="display: none;">
-              <label class="form-label">Anomaly Root Cause Reason & Photo Evidence</label>
-              <input type="text" class="form-input" id="pw-anomaly-reason" placeholder="e.g., Dropped hot tray during carvery restock" />
-              <small class="form-help" style="color: var(--primary);">Simulated photo attachment: [IMG_EVIDENCE_2026.JPG captured and encrypted]</small>
+              <label class="form-label">Incident Root Cause</label>
+              <input type="text" class="form-input" id="pw-anomaly-reason" placeholder="e.g., Dropped hot tray during carvery restocking" />
             </div>
+
+            <div class="form-group">
+              <label class="form-label">Photo Evidence / Dish Inspection</label>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" class="btn btn-xs btn-outline" id="btn-snap-photo">📸 Capture / Attach Photo Evidence</button>
+                <span id="photo-status" class="text-muted" style="font-size: 11px;">No photo attached</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Culinary Feedback / Quality Notes</label>
+              <input type="text" class="form-input" id="pw-note" placeholder="e.g., Guests mentioned seasoning was too spicy; over-prepared by 2kg" />
+            </div>
+
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline" id="btn-cancel-plate-waste">Cancel</button>
-              <button type="submit" class="btn btn-primary">Submit & Refine Model</button>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-plate-waste">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Save & Refine EMA Model</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Modal: User & Operations Guide for Module 3 -->
+      <div class="modal-backdrop" id="user-guide-modal" style="display: none;">
+        <div class="modal-card" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
+          <div class="modal-header" style="border-bottom: 2px solid var(--primary);">
+            <div>
+              <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+                <span>📖</span> Module 3 Operations & User Guide
+              </h3>
+              <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Lead PIC: <strong>Zhen Bang</strong> • Predictive F&B Batch Optimization Engine</p>
+            </div>
+            <button class="modal-close" id="btn-close-user-guide">&times;</button>
+          </div>
+
+          <!-- Guide Tabs -->
+          <div class="tab-pills" style="margin: 14px 0 10px 0;">
+            <button class="tab-btn ${this.activeGuideTab === 'sop' ? 'active' : ''}" data-guide-tab="sop">⚡ 7-Step Kitchen SOP</button>
+            <button class="tab-btn ${this.activeGuideTab === 'overview' ? 'active' : ''}" data-guide-tab="overview">🎯 Purpose & Architecture</button>
+            <button class="tab-btn ${this.activeGuideTab === 'math' ? 'active' : ''}" data-guide-tab="math">📐 Formulas & Multipliers</button>
+            <button class="tab-btn ${this.activeGuideTab === 'faq' ? 'active' : ''}" data-guide-tab="faq">💡 FAQs & Best Practices</button>
+          </div>
+
+          <!-- Guide Content -->
+          <div id="guide-content-area" style="font-size: 12px; line-height: 1.6; color: var(--text-primary);">
+            ${this.renderGuideTabContent()}
+          </div>
+
+          <div class="modal-footer" style="margin-top: 20px;">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-done-user-guide">Got it, Let's Optimize!</button>
+          </div>
         </div>
       </div>
     `;
@@ -345,7 +575,154 @@ export class Module3BatchOptimizer {
     this.attachEventListeners(data);
   }
 
+  renderGuideTabContent() {
+    if (this.activeGuideTab === 'sop') {
+      return `
+        <div class="guide-section">
+          <h4 style="color: var(--primary); font-size: 14px; font-weight: 700; margin-bottom: 8px;">Standard Operating Procedure (SOP) for Kitchen Staff & Chefs</h4>
+          
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #059669;">
+              <strong>Step 1: Select 48h Service Period & Influx Window</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">Select the upcoming date (e.g. 13 Aug / 14 Aug) and shift (Breakfast, Lunch, Dinner). The system automatically pulls confirmed check-ins, guest nationalities, and declared diets from Oracle SQL.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+              <strong>Step 2: Review Master Prep Targets & Physical Station Kanban</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">Filter by station (🔥 Hot Line, 🍳 Live Counter, 🥗 Cold Pantry). Review target weights, unoptimized baselines, and calculated food waste prevented in kg & RM.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+              <strong>Step 3: Follow Staggered 3-Wave Prep Schedule (Just-In-Time Cooking)</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">Switch to the <em>"⏱️ Staggered 3-Wave Timeline"</em> tab. Prep <strong>Wave 1 (55%)</strong> for opening, <strong>Wave 2 (35%)</strong> for mid-service rush, and <strong>Wave 3 (10%)</strong> for on-demand top-up to prevent food degradation.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+              <strong>Step 4: Reconcile Recipe BOM & Create Purchase Requisitions (PR)</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">Click <em>"📦 Recipe BOM & Requisition"</em>. If ingredients in Module 2 Inventory are short, click <strong>"⚡ Auto-Create Purchase Requisition"</strong> to generate automated replenishment orders.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #ec4899;">
+              <strong>Step 5: Apply Chef Manual Overrides When Needed</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">If special events or inventory constraints require adjustments, click <strong>"Override"</strong> on any dish to manually adjust the demand multiplier between 0.50x and 1.20x.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #ef4444;">
+              <strong>Step 6: Log End-of-Shift Plate Waste (Feedback Loop)</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">At shift conclusion, click <strong>"Log Plate Waste"</strong>. Input discarded table leftovers. If waste was an accident (dropped tray), check the <em>"Flag as Operational Accident"</em> box so it won't falsely penalize future guest demand.</div>
+            </div>
+
+            <div style="background: var(--bg-card-subtle); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #10b981;">
+              <strong>Step 7: Print Hardcopy Prep Sheets with Station QR Tokens</strong>
+              <div style="color: var(--text-muted); font-size: 11px;">Click <strong>"Print Station Prep Sheet"</strong> to generate formatted paper prep sheets equipped with station QR tokens for kitchen prep counters.</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (this.activeGuideTab === 'overview') {
+      return `
+        <div class="guide-section">
+          <h4 style="color: var(--primary); font-size: 14px; font-weight: 700; margin-bottom: 8px;">Module Purpose & System Architecture</h4>
+          <p><strong>Module 3 (Predictive F&B Batch Optimization Engine)</strong> is designed to solve the largest source of resource waste in luxury hospitality: <em>culinary over-preparation on buffet lines</em>.</p>
+          
+          <div style="margin: 12px 0; background: var(--bg-card-subtle); padding: 12px; border-radius: 8px;">
+            <h5 style="margin: 0 0 6px 0; font-weight: 700;">🎯 Core Objectives</h5>
+            <ul style="padding-left: 18px; margin: 0; font-size: 11px;">
+              <li><strong>Eliminate Over-Prep:</strong> Cut back-of-house culinary waste by 18% to 25% without risking food shortages.</li>
+              <li><strong>Visit Malaysia 2026 (VM2026) Alignment:</strong> Feed kilograms of avoided food waste directly into Module 1's Executive Compliance Score ($1\text{ kg saved} = 2.5\text{ kg CO}_2\text{e avoided}$).</li>
+              <li><strong>Closed-Loop Feedback:</strong> Bridge reservation forecasts (Oracle SQL), stock control (M2 Inventory), and guest dining returns (Plate Waste Ledger).</li>
+            </ul>
+          </div>
+
+          <h5 style="margin: 10px 0 4px 0; font-weight: 700;">👥 Key User Roles & Interactions</h5>
+          <table class="data-table" style="font-size: 11px;">
+            <thead><tr><th>Role</th><th>Primary Actions in Module 3</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Executive Chef</strong></td><td>Reviews master batch targets, tests "What-If" sensitivity simulations, applies weight overrides.</td></tr>
+              <tr><td><strong>Sous Chef / Line Cooks</strong></td><td>Follows 3-wave prep schedule, verifies recipe BOM ingredient requisitions, marks prep status.</td></tr>
+              <tr><td><strong>Kitchen Ground Staff</strong></td><td>Logs end-of-shift plate returns via mobile/web and attaches photo evidence for accidents.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    if (this.activeGuideTab === 'math') {
+      return `
+        <div class="guide-section">
+          <h4 style="color: var(--primary); font-size: 14px; font-weight: 700; margin-bottom: 8px;">Algorithmic Formulation & Mathematical Models</h4>
+          
+          <div style="background: var(--bg-card-subtle); padding: 12px; border-radius: 8px; margin-bottom: 10px; font-family: monospace; font-size: 11px;">
+            <strong>Target_Kg</strong> = [ (N_guests × C_shift × G_dish × W_demographic × W_dietary × M_EMA_waste) / Y_yield ] + B_safety
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11px;">
+            <div>• <strong>Dynamic Capture Rate (C_shift):</strong> Weekday Breakfast = 92%, Weekend Breakfast = 96%, Lunch = 58-70%, Dinner = 76-88%.</div>
+            <div>• <strong>Demographic Multiplier (W_demographic):</strong> Weighted formula mapping Asian/Malaysian occupancy to rice/noodle dishes, and European/Western occupancy to carvery, eggs, and salad bar.</div>
+            <div>• <strong>Exponential Moving Average Waste Multiplier (M_EMA_waste):</strong>
+              <div style="background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; margin-top: 3px; font-family: monospace;">
+                M_t = α × (1 - Waste_Logged / Batch_Weight) + (1 - α) × M_{t-1} &nbsp;(α = 0.35)
+              </div>
+            </div>
+            <div>• <strong>Culinary Yield & Shrinkage (Y_yield):</strong> Converts raw ingredient storage weight to cooked plate yield ($0.85$ cooked yield for roasted poultry; $2.5\times$ expansion for jasmine rice).</div>
+            <div>• <strong>Adaptive Safety Buffer (B_safety):</strong> $1.0\text{ to }1.5\text{ kg}$ safety margin preventing stockouts during sudden service surges.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (this.activeGuideTab === 'faq') {
+      return `
+        <div class="guide-section">
+          <h4 style="color: var(--primary); font-size: 14px; font-weight: 700; margin-bottom: 8px;">Frequently Asked Questions (FAQ)</h4>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11px;">
+            <div>
+              <strong>Q: What should I do if a tour bus or banquet arrives unannounced?</strong><br/>
+              <span class="text-muted">A: Click <em>"What-If Simulation"</em>, adjust the guest slider to the new influx count, and check the adjusted batch targets. You can also trigger an immediate Wave 2 / Wave 3 batch.</span>
+            </div>
+            <div>
+              <strong>Q: If a prep cook drops an entire tray of chicken, will it lower future batch recommendations?</strong><br/>
+              <span class="text-muted">A: No. When logging plate waste, check <em>"Flag as Operational Accident"</em>. The system records the cost loss in M2 but excludes it from reducing future demand multipliers ($M_{\text{waste}}$).</span>
+            </div>
+            <div>
+              <strong>Q: How does Module 3 communicate with Module 2 Inventory?</strong><br/>
+              <span class="text-muted">A: Module 3 breaks down recommended dishes into raw ingredient BOMs and verifies available chiller stock in M2. If a shortage is detected, you can auto-create a Purchase Requisition with 1 click.</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return '';
+  }
+
   attachEventListeners(data) {
+    // User Guide Modal Handlers
+    const guideModal = this.container.querySelector('#user-guide-modal');
+    const openGuideBtn = this.container.querySelector('#btn-open-user-guide');
+    const closeGuideBtn = this.container.querySelector('#btn-close-user-guide');
+    const doneGuideBtn = this.container.querySelector('#btn-done-user-guide');
+
+    if (openGuideBtn) openGuideBtn.onclick = () => { guideModal.style.display = 'flex'; };
+    if (closeGuideBtn) closeGuideBtn.onclick = () => { guideModal.style.display = 'none'; };
+    if (doneGuideBtn) doneGuideBtn.onclick = () => { guideModal.style.display = 'none'; };
+
+    // Guide Tab Switching
+    this.container.querySelectorAll('.tab-btn[data-guide-tab]').forEach(btn => {
+      btn.onclick = () => {
+        this.activeGuideTab = btn.dataset.guideTab;
+        const guideContent = this.container.querySelector('#guide-content-area');
+        if (guideContent) {
+          guideContent.innerHTML = this.renderGuideTabContent();
+        }
+        this.container.querySelectorAll('.tab-btn[data-guide-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      };
+    });
+
     // Select Date & Shift
     const dateSelect = this.container.querySelector('#select-prep-date');
     if (dateSelect) {
@@ -362,22 +739,97 @@ export class Module3BatchOptimizer {
       };
     });
 
+    // Station Filter Tabs
+    this.container.querySelectorAll('.tab-btn[data-station]').forEach(btn => {
+      btn.onclick = () => {
+        this.selectedStation = btn.dataset.station;
+        this.render();
+      };
+    });
+
+    // View Mode Switcher (Recommendations, Waves, Requisition, Plate Logs)
+    this.container.querySelectorAll('.tab-btn[data-view-tab]').forEach(btn => {
+      btn.onclick = () => {
+        this.activeViewTab = btn.dataset.viewTab;
+        this.render();
+      };
+    });
+
+    // What-If Simulation Toggle
+    const simToggleBtn = this.container.querySelector('#btn-toggle-simulation');
+    if (simToggleBtn) {
+      simToggleBtn.onclick = () => {
+        this.isSimulationActive = !this.isSimulationActive;
+        this.render();
+      };
+    }
+
+    // Simulation Sliders
+    const sliderGuests = this.container.querySelector('#slider-sim-guests');
+    if (sliderGuests) {
+      sliderGuests.oninput = (e) => {
+        this.simulationState.totalGuests = parseInt(e.target.value);
+        this.container.querySelector('#val-sim-guests').innerText = e.target.value;
+        this.render();
+      };
+    }
+
+    const sliderMy = this.container.querySelector('#slider-sim-my');
+    if (sliderMy) {
+      sliderMy.oninput = (e) => {
+        this.simulationState.malaysianPct = parseInt(e.target.value);
+        this.container.querySelector('#val-sim-my').innerText = `${e.target.value}%`;
+        this.render();
+      };
+    }
+
+    const sliderEu = this.container.querySelector('#slider-sim-eu');
+    if (sliderEu) {
+      sliderEu.oninput = (e) => {
+        this.simulationState.europeanPct = parseInt(e.target.value);
+        this.container.querySelector('#val-sim-eu').innerText = `${e.target.value}%`;
+        this.render();
+      };
+    }
+
+    const sliderVegan = this.container.querySelector('#slider-sim-vegan');
+    if (sliderVegan) {
+      sliderVegan.oninput = (e) => {
+        this.simulationState.veganCount = parseInt(e.target.value);
+        this.container.querySelector('#val-sim-vegan').innerText = `${e.target.value} pax`;
+        this.render();
+      };
+    }
+
     // Modal Handlers
     const modal = this.container.querySelector('#plate-waste-modal');
     const openBtn = this.container.querySelector('#btn-open-plate-waste-modal');
+    const openBtn2 = this.container.querySelector('#btn-open-plate-waste-modal-2');
     const closeBtn = this.container.querySelector('#btn-close-plate-waste-modal');
     const cancelBtn = this.container.querySelector('#btn-cancel-plate-waste');
     const form = this.container.querySelector('#form-log-plate-waste');
     const anomalyCheckbox = this.container.querySelector('#pw-is-anomaly');
     const anomalyDiv = this.container.querySelector('#pw-anomaly-details');
+    const snapPhotoBtn = this.container.querySelector('#btn-snap-photo');
+    const photoStatus = this.container.querySelector('#photo-status');
+
+    let isPhotoAttached = false;
 
     if (openBtn) openBtn.onclick = () => { modal.style.display = 'flex'; };
+    if (openBtn2) openBtn2.onclick = () => { modal.style.display = 'flex'; };
     if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
     if (cancelBtn) cancelBtn.onclick = () => { modal.style.display = 'none'; };
 
     if (anomalyCheckbox) {
       anomalyCheckbox.onchange = () => {
         anomalyDiv.style.display = anomalyCheckbox.checked ? 'block' : 'none';
+      };
+    }
+
+    if (snapPhotoBtn) {
+      snapPhotoBtn.onclick = () => {
+        isPhotoAttached = true;
+        photoStatus.innerHTML = '<span class="badge badge-success">✓ Photo Evidence Verified (IMG_BOH_8892.jpg)</span>';
       };
     }
 
@@ -391,9 +843,10 @@ export class Module3BatchOptimizer {
         const discardedKg = parseFloat(this.container.querySelector('#pw-weight').value);
         const isAnomaly = anomalyCheckbox ? anomalyCheckbox.checked : false;
         const anomalyReason = this.container.querySelector('#pw-anomaly-reason')?.value || '';
+        const note = this.container.querySelector('#pw-note')?.value || '';
 
         if (discardedKg <= 0 || isNaN(discardedKg)) {
-          alert('Invalid weight entry (A1 Step 6): Please enter a positive numeric weight.');
+          alert('Please enter a valid positive numeric weight.');
           return;
         }
 
@@ -404,26 +857,28 @@ export class Module3BatchOptimizer {
           discardedKg,
           isAnomaly,
           anomalyReason: isAnomaly ? anomalyReason : '',
-          photoAttached: isAnomaly
+          photoAttached: isPhotoAttached || isAnomaly,
+          note,
+          loggedBy: 'Chef Zhen Bang (BOH Team)'
         });
 
         modal.style.display = 'none';
-        window.showGlobalToast?.(`Plate waste logged for ${dishName}! Predictive prep model refined.`, 'success');
+        window.showGlobalToast?.(`Plate waste logged for ${dishName}! EMA predictive multiplier auto-recalculated.`, 'success');
       };
     }
 
-    // Chef Override (FR_06)
+    // Chef Multiplier Override
     this.container.querySelectorAll('.btn-chef-override').forEach(btn => {
       btn.onclick = () => {
         const dishId = btn.dataset.dishId;
         const dishName = btn.dataset.dishName;
         const currentMultiplier = btn.dataset.multiplier;
-        const input = prompt(`[FR_06 Head Chef Manual Override]\nEnter custom waste multiplier for "${dishName}" (0.50 to 1.20):`, currentMultiplier);
+        const input = prompt(`Enter custom demand waste multiplier for "${dishName}" (Range: 0.50 to 1.20x):`, currentMultiplier);
         if (input !== null) {
           const val = parseFloat(input);
           if (val >= 0.5 && val <= 1.2) {
             db.updateDishOverride(dishId, val);
-            window.showGlobalToast?.(`Prep multiplier for ${dishName} overridden to ${val}x!`, 'success');
+            window.showGlobalToast?.(`Prep multiplier for ${dishName} set to ${val}x!`, 'success');
           } else {
             alert('Please enter a multiplier between 0.50 and 1.20');
           }
@@ -437,17 +892,16 @@ export class Module3BatchOptimizer {
       poBtn.onclick = () => {
         const shortages = data.ingredientSummary.filter(i => i.isShortage);
         shortages.forEach(s => {
-          // Add back stock into inventory
           const invItem = db.get('inventory').find(i => i.name.toLowerCase().includes(s.ingredientName.toLowerCase()));
           if (invItem) {
-            db.updateInventoryQuantity(invItem.id, invItem.quantity + s.shortageAmount + 10);
+            db.updateInventoryQuantity(invItem.id, invItem.quantity + s.shortageAmount + 15);
           }
         });
-        window.showGlobalToast?.(`Purchase Requisitions auto-created & fulfilled for ${shortages.length} ingredients! Stock levels updated.`, 'success');
+        window.showGlobalToast?.(`Purchase Requisitions auto-created in M2 Inventory for ${shortages.length} items!`, 'success');
       };
     }
 
-    // Print / Export Prep Sheet (FR_08)
+    // Print Prep Sheet
     const printBtn = this.container.querySelector('#btn-print-prep-sheet');
     if (printBtn) {
       printBtn.onclick = () => this.printPrepSheet(data);
@@ -455,37 +909,48 @@ export class Module3BatchOptimizer {
   }
 
   printPrepSheet(data) {
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    const printWindow = window.open('', '_blank', 'width=950,height=750');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Master Kitchen Prep Sheet - ${data.shift}</title>
+        <title>Kitchen Station Prep Sheet - ${data.shift}</title>
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #0f172a; background: #ffffff; }
-          .header { border-bottom: 3px solid #059669; padding-bottom: 15px; margin-bottom: 20px; }
-          .title { font-size: 22px; font-weight: 900; }
-          .meta { color: #64748b; font-size: 13px; margin-top: 5px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #18181b; background: #ffffff; }
+          .header { border-bottom: 3px solid #059669; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .title { font-size: 22px; font-weight: 800; }
+          .meta { color: #71717a; font-size: 12px; margin-top: 5px; }
+          .qr-box { border: 2px dashed #059669; padding: 8px 12px; font-size: 11px; text-align: center; border-radius: 6px; }
           table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #cbd5e1; }
-          th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; color: #475569; }
-          .highlight { font-weight: 800; font-size: 16px; color: #059669; }
-          .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e4e4e7; font-size: 12px; }
+          th { background: #f4f4f5; font-size: 10px; text-transform: uppercase; color: #71717a; }
+          .highlight { font-weight: 800; font-size: 14px; color: #059669; }
+          .footer { margin-top: 40px; font-size: 11px; color: #71717a; border-top: 1px solid #e4e4e7; padding-top: 10px; display: flex; justify-content: space-between; }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="title">SMART PREP SHEET • ${data.shift.toUpperCase()} BUFFET SERVICE</div>
-          <div class="meta">Date: ${data.date} • In-House Diners: ${data.estimatedDiners} • Generated by Module 3 Optimizer Engine (VM2026)</div>
+          <div>
+            <div class="title">KITCHEN PREP SHEET • ${data.shift.toUpperCase()} SERVICE</div>
+            <div class="meta">Date: ${data.date} • Expected Diners: ${data.estimatedDiners} • Generated by EcoHotel OS M3</div>
+          </div>
+          <div class="qr-box">
+            <strong>SCAN-TO-LOG QR</strong><br/>
+            [ QR: BOH-M3-${data.shift.toUpperCase()} ]
+          </div>
         </div>
-        <h3>Optimized Dish Prep Targets</h3>
+
+        <h3>Optimized Dish Prep Targets & Staggered Waves</h3>
         <table>
           <thead>
             <tr>
               <th>Dish</th>
-              <th>Category</th>
-              <th>Optimized Batch Target (kg)</th>
-              <th>Key Ingredients Needed</th>
+              <th>Station</th>
+              <th>Target (kg)</th>
+              <th>Wave 1 (55%)</th>
+              <th>Wave 2 (35%)</th>
+              <th>Wave 3 (10%)</th>
+              <th>Key Ingredients</th>
             </tr>
           </thead>
           <tbody>
@@ -494,33 +959,42 @@ export class Module3BatchOptimizer {
                 <td><strong>${r.dishName}</strong></td>
                 <td>${r.category}</td>
                 <td><span class="highlight">${r.recommendedKg} kg</span></td>
+                <td>${r.waves.wave1.kg} kg (${r.waves.wave1.time})</td>
+                <td>${r.waves.wave2.kg} kg (${r.waves.wave2.time})</td>
+                <td>${r.waves.wave3.kg} kg (${r.waves.wave3.time})</td>
                 <td><small>${r.ingredientRefs.join(', ')}</small></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
-        <h3 style="margin-top: 30px;">Raw Ingredient Requisition From BOH Store</h3>
+
+        <h3 style="margin-top: 25px;">Kitchen Ingredient Requisition (Recipe BOM)</h3>
         <table>
           <thead>
             <tr>
               <th>Raw Ingredient</th>
               <th>Requisition Weight</th>
-              <th>Stock Status</th>
+              <th>Supplier Reference</th>
+              <th>Chiller Stock Status</th>
             </tr>
           </thead>
           <tbody>
             ${data.ingredientSummary.map(i => `
               <tr>
-                <td>${i.ingredientName}</td>
-                <td><strong>${i.needed} ${i.unit}</strong></td>
-                <td>${i.isShortage ? 'REORDER REQUIRED' : 'Available in Chiller'}</td>
+                <td><strong>${i.ingredientName}</strong></td>
+                <td><span class="highlight">${i.needed} ${i.unit}</span></td>
+                <td>${i.supplier}</td>
+                <td>${i.isShortage ? '⚠️ REORDER REQUIRED' : '✓ Verified in Chiller'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+
         <div class="footer">
-          Approved by Head Chef • Grand Bay Eco-Resort & Spa (VM2026)
+          <span>Grand Bay Eco-Resort & Spa • Visit Malaysia 2026 Sustainable Directive</span>
+          <span>Lead PIC: Zhen Bang (Module 3 F&B Batch Optimization)</span>
         </div>
+
         <script>
           window.onload = () => { window.print(); };
         </script>
