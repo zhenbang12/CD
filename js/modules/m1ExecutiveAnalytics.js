@@ -13,11 +13,13 @@ export class Module1Executive {
     this.container = container;
     this.chartMetric = 'food'; // 'food' | 'water' | 'energy' | 'co2' | 'cost'
     this.reportPeriod = 'all'; // 'all' | 'q1' | 'q2' | 'mtd'
+    this.selectedDepartment = '';
     this.init();
   }
 
   init() {
     this.render();
+    db.subscribe('system', () => this.render());
     db.subscribe('baselines', () => this.render());
     db.subscribe('auditLogs', () => this.render());
     db.subscribe('repairTickets', () => this.render());
@@ -27,11 +29,40 @@ export class Module1Executive {
   }
 
   render() {
-    const compliance = ComplianceEngine.calculateLiveScore();
-    const heatmaps = ComplianceEngine.getDepartmentHeatmaps();
-    const baselines = db.getBaselines();
-    const auditLogs = db.get('auditLogs');
-    const complianceHistory = db.get('complianceLogs');
+    let compliance;
+    let departmentPerformance = null;
+    let isOperationsDirector = false;
+    let baselines;
+    let auditLogs;
+    let complianceHistory;
+
+    try {
+      const databaseError = db.getLastDatabaseError();
+
+      if (databaseError) {
+        throw databaseError;
+      }
+
+      compliance = ComplianceEngine.calculateLiveScore();
+
+      const system = db.getSystem();
+      isOperationsDirector =
+        system?.activeUser?.role === 'Operations Director';
+
+      if (isOperationsDirector && this.selectedDepartment) {
+        departmentPerformance =
+          ComplianceEngine.getDepartmentPerformance(
+            this.selectedDepartment
+          );
+      }
+
+      baselines = db.getBaselines();
+      auditLogs = db.get('auditLogs');
+      complianceHistory = db.get('complianceLogs');
+    } catch (error) {
+      this.renderDashboardError(error);
+      return;
+    }
 
     // Filter compliance history by selected report period
     let filteredHistory = complianceHistory;
@@ -81,38 +112,38 @@ export class Module1Executive {
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Food Waste Avoided</span>
-              <span class="badge badge-success">+18.4% YoY</span>
+              <span class="kpi-label">Food Waste Logged</span>
+              <span class="badge badge-success">Live</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg text-primary">${compliance.metrics.foodWasteSavedMTD.toLocaleString()} <span class="kpi-unit">kg MTD</span></div>
-              <div class="kpi-desc">Avoided kitchen spoilage & over-prep</div>
+              <div class="kpi-value-lg text-primary">${compliance.metrics.foodWasteCurrentKg.toFixed(1)} <span class="kpi-unit">kg current</span></div>
+              <div class="kpi-desc">Aggregated from current waste records</div>
             </div>
-            <div class="kpi-subtext text-muted">Target: 800 kg/month</div>
+            <div class="kpi-subtext text-muted">Current operational waste total</div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Water Conserved</span>
-              <span class="badge badge-info">+14.2%</span>
+              <span class="kpi-label">Current Water Usage</span>
+              <span class="badge badge-info">Live</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg text-info">${(compliance.metrics.waterConservedMTD / 1000).toFixed(1)} <span class="kpi-unit">kL MTD</span></div>
-              <div class="kpi-desc">Guest opt-outs & fast leak repairs</div>
+              <div class="kpi-value-lg text-info">${(compliance.metrics.waterUseCurrentL / 1000).toFixed(1)} <span class="kpi-unit">kL current</span></div>
+              <div class="kpi-desc">Aggregated from current meter readings</div>
             </div>
-            <div class="kpi-subtext text-muted">122,000 Liters cumulative saving</div>
+            <div class="kpi-subtext text-muted">Current hotel-wide water consumption</div>
           </div>
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">GHG Decarbonization</span>
-              <span class="badge badge-primary">ESG Certified</span>
+              <span class="kpi-label">Current Electricity Usage</span>
+              <span class="badge badge-primary">Live</span>
             </div>
             <div class="kpi-body">
-              <div class="kpi-value-lg">${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} <span class="kpi-unit">t CO2e</span></div>
-              <div class="kpi-desc">RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()} estimated savings</div>
+              <div class="kpi-value-lg">${compliance.metrics.energyUseCurrentKwh.toFixed(1)} <span class="kpi-unit">kWh current</span></div>
+              <div class="kpi-desc">Aggregated from current meter readings</div>
             </div>
-            <div class="kpi-subtext text-muted">Energy: 10,400 kWh saved MTD</div>
+            <div class="kpi-subtext text-muted">Current hotel-wide electricity consumption</div>
           </div>
         </div>
 
@@ -188,30 +219,35 @@ export class Module1Executive {
           <div class="card">
             <div class="card-header">
               <div>
-                <h3 class="card-title">Departmental Performance & Variance</h3>
-                <p class="card-subtitle">Live resource telemetry by hotel department</p>
+                <h3 class="card-title">Departmental Performance</h3>
+                <p class="card-subtitle">
+                  Performance, spoilage logs and utility anomalies
+                </p>
               </div>
-              <span class="badge badge-secondary">Active</span>
             </div>
-            <div class="heatmap-list">
-              ${heatmaps.map(h => `
-                <div class="heatmap-item">
-                  <div class="heatmap-info">
-                    <div class="heatmap-title-row">
-                      <span class="heatmap-dept">${h.department}</span>
-                      <span class="badge badge-${h.statusLevel === 'critical' ? 'danger' : h.statusLevel === 'good' ? 'success' : 'secondary'}">${h.status}</span>
-                    </div>
-                    <div class="heatmap-meta">
-                      <span>Primary: ${h.primaryResource}</span>
-                    </div>
-                  </div>
-                  <div class="heatmap-metric-block">
-                    <div class="heatmap-val">${h.wasteMetric}</div>
-                    <div class="heatmap-variance ${h.varianceVsBaseline.startsWith('+') ? 'text-danger' : 'text-success'}">${h.varianceVsBaseline} vs target</div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
+
+            ${!isOperationsDirector ? `
+              <p class="text-muted">
+                Operations Director access is required.
+              </p>
+            ` : `
+              <select class="form-input form-input-sm"
+                      id="department-selector">
+                <option value="">Select a department</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="housekeeping">Housekeeping</option>
+                <option value="laundry">Laundry</option>
+                <option value="facilities">Facilities</option>
+                <option value="front-office">Front Office</option>
+              </select>
+            
+              ${!this.selectedDepartment
+        ? '<p class="text-muted">Select a department to review.</p>'
+        : !departmentPerformance?.hasData
+          ? '<p class="text-muted">No records found for this department</p>'
+          : this.renderDepartmentBreakdown(departmentPerformance)
+      }
+            `}
           </div>
 
           <!-- Operational Baselines -->
@@ -319,6 +355,63 @@ export class Module1Executive {
     this.attachEventListeners();
   }
 
+  renderDepartmentBreakdown(data) {
+    return `
+      <h4>Performance Data</h4>
+      ${data.performanceData.map(meter => `
+        <div class="heatmap-item">
+          <strong>${meter.zone}</strong>
+          <span>
+            ${meter.lastReading} ${meter.unit} - ${meter.status}
+          </span>
+        </div>
+      `).join('')}
+
+      <h4>Spoilage Logs</h4>
+      ${data.spoilageLogs.length
+        ? data.spoilageLogs.map(log => `
+            <div class="heatmap-item">
+              <strong>${log.item}</strong>
+              <span>${log.quantity} ${log.unit} - ${log.reason}</span>
+            </div>
+          `).join('')
+        : '<p class="text-muted">No spoilage records.</p>'
+      }
+
+      <h4>Utility Anomalies</h4>
+      ${data.utilityAnomalies.length
+        ? data.utilityAnomalies.map(meter => `
+            <div class="heatmap-item">
+              <strong>${meter.zone}</strong>
+              <span>${meter.status}</span>
+            </div>
+          `).join('')
+        : '<p class="text-muted">No utility anomalies.</p>'
+      }
+    `;
+  }
+
+  renderDashboardError(error) {
+    console.error('Dashboard loading failed:', error);
+
+    this.container.innerHTML = `
+    <div class="card">
+      <h2>Unable to load dashboard data</h2>
+      <p class="text-muted">
+        The dashboard metrics could not be retrieved.
+      </p>
+      <button class="btn btn-sm btn-primary" id="retry-dashboard">
+        Refresh
+      </button>
+    </div>
+  `;
+
+    this.container.querySelector('#retry-dashboard').onclick = () => {
+      db.clearLastDatabaseError();
+      this.render();
+    };
+  }
+
   renderSVGChart(history, metricKey) {
     let dataPoints = [];
     let label = 'Food Saved (kg)';
@@ -386,6 +479,18 @@ export class Module1Executive {
   }
 
   attachEventListeners() {
+    const departmentSelector =
+      this.container.querySelector('#department-selector');
+
+    if (departmentSelector) {
+      departmentSelector.value = this.selectedDepartment;
+
+      departmentSelector.onchange = event => {
+        this.selectedDepartment = event.target.value;
+        this.render();
+      };
+    }
+    
     // Chart metric tabs
     this.container.querySelectorAll('.tab-btn[data-metric]').forEach(btn => {
       btn.onclick = () => {

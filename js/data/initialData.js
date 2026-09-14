@@ -60,11 +60,11 @@ export const INITIAL_DATA = {
 
   // Module 2: Waste Logs (Spoilage vs Prep Waste)
   foodWasteLogs: [
-    { id: "WST-101", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Cameron Highland Hydroponic Lettuce", type: "Spoilage", reason: "Expired / Wilted in Chiller B", quantity: 3.4, unit: "kg", costImpact: 31.28, loggedBy: "Sze Ping (Head Chef)" },
-    { id: "WST-102", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Fresh Farm Poultry", type: "Prep Waste", reason: "Bones & Trimmings (Repurposed for Broth)", quantity: 5.8, unit: "kg", costImpact: 0.00, loggedBy: "Kitchen Prep Team" },
-    { id: "WST-103", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Organic Coconut Milk", type: "Spoilage", reason: "Sour batch due to door left ajar", quantity: 4.0, unit: "L", costImpact: 34.00, loggedBy: "Sous Chef Ahmad" },
-    { id: "WST-104", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Grade A Omega-3 Eggs", type: "Prep Waste", reason: "Eggshells (Sent to Hotel Composter)", quantity: 6.2, unit: "kg", costImpact: 0.00, loggedBy: "Prep Cook Mei" },
-    { id: "WST-105", date: "2026-08-10", mealPeriod: "Dinner Shift", item: "Atlantic Salmon Skin & Bones", type: "Prep Waste", reason: "Fish Stock Boiling Extraction", quantity: 4.5, unit: "kg", costImpact: 0.00, loggedBy: "Sous Chef Ahmad" }
+    { id: "WST-101", departmentId: "kitchen", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Cameron Highland Hydroponic Lettuce", type: "Spoilage", reason: "Expired / Wilted in Chiller B", quantity: 3.4, unit: "kg", costImpact: 31.28, loggedBy: "Sze Ping (Head Chef)" },
+    { id: "WST-102", departmentId: "kitchen", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Fresh Farm Poultry", type: "Prep Waste", reason: "Bones & Trimmings", quantity: 5.8, unit: "kg", costImpact: 0, loggedBy: "Kitchen Prep Team" },
+    { id: "WST-103", departmentId: "kitchen", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Organic Coconut Milk", type: "Spoilage", reason: "Sour batch due to door left ajar", quantity: 4, unit: "L", costImpact: 34, loggedBy: "Sous Chef Ahmad" },
+    { id: "WST-104", departmentId: "kitchen", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Grade A Omega-3 Eggs", type: "Prep Waste", reason: "Eggshells sent to composter", quantity: 6.2, unit: "kg", costImpact: 0, loggedBy: "Prep Cook Mei" },
+    { id: "WST-105", departmentId: "kitchen", date: "2026-08-10", mealPeriod: "Dinner Shift", item: "Atlantic Salmon Skin & Bones", type: "Prep Waste", reason: "Fish stock extraction", quantity: 4.5, unit: "kg", costImpact: 0, loggedBy: "Sous Chef Ahmad" }
   ],
 
   // Module 3: 48-Hour Ingest Forecast (Hotel Reservation Engine)
@@ -122,17 +122,28 @@ export const INITIAL_DATA = {
 
   // Module 5: Hotel Zones & Sub-Meters
   utilityMeters: [
-    { meterId: "MTR-W-F1", zone: "Floor 1 Guest Wing", type: "Water", baselineDaily: 1800, unit: "L/day", lastReading: 1650, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "💧" },
-    { meterId: "MTR-E-F1", zone: "Floor 1 Guest Wing", type: "Electricity", baselineDaily: 140, unit: "kWh/day", lastReading: 132, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-W-F2", zone: "Floor 2 Guest Wing", type: "Water", baselineDaily: 1750, unit: "L/day", lastReading: 1710, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "💧" },
-    { meterId: "MTR-E-F2", zone: "Floor 2 Guest Wing", type: "Electricity", baselineDaily: 145, unit: "kWh/day", lastReading: 140, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-W-F3", zone: "Floor 3 Executive Wing", type: "Water", baselineDaily: 1600, unit: "L/day", lastReading: 2150, lastReadingTime: "2026-08-12 18:00", status: "Anomaly Flagged (+34.3%)", icon: "💧" },
-    { meterId: "MTR-E-F3", zone: "Floor 3 Executive Wing", type: "Electricity", baselineDaily: 155, unit: "kWh/day", lastReading: 150, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-W-KIT", zone: "Main Culinary Kitchen", type: "Water", baselineDaily: 4500, unit: "L/day", lastReading: 4320, lastReadingTime: "2026-08-12 21:00", status: "Normal", icon: "💧" },
-    { meterId: "MTR-E-KIT", zone: "Main Culinary Kitchen", type: "Electricity", baselineDaily: 380, unit: "kWh/day", lastReading: 460, lastReadingTime: "2026-08-12 21:00", status: "Anomaly Flagged (+21.0%)", icon: "⚡" },
-    { meterId: "MTR-W-LDY", zone: "Commercial Eco-Laundry", type: "Water", baselineDaily: 6200, unit: "L/day", lastReading: 5890, lastReadingTime: "2026-08-12 20:30", status: "Normal", icon: "💧" },
-    { meterId: "MTR-E-LDY", zone: "Commercial Eco-Laundry", type: "Electricity", baselineDaily: 290, unit: "kWh/day", lastReading: 275, lastReadingTime: "2026-08-12 20:30", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-E-HVAC", zone: "Central Chiller Plant", type: "Electricity", baselineDaily: 850, unit: "kWh/day", lastReading: 820, lastReadingTime: "2026-08-12 22:00", status: "Normal", icon: "⚡" }
+    // Housekeeping
+    { meterId: "MTR-W-F1", departmentId: "housekeeping", zone: "Floor 1 Guest Wing", type: "Water", baselineDaily: 1800, unit: "L/day", lastReading: 1650, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-F1", departmentId: "housekeeping", zone: "Floor 1 Guest Wing", type: "Electricity", baselineDaily: 140, unit: "kWh/day", lastReading: 132, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\u26A1" },
+    { meterId: "MTR-W-F2", departmentId: "housekeeping", zone: "Floor 2 Guest Wing", type: "Water", baselineDaily: 1750, unit: "L/day", lastReading: 1710, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-F2", departmentId: "housekeeping", zone: "Floor 2 Guest Wing", type: "Electricity", baselineDaily: 145, unit: "kWh/day", lastReading: 140, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\u26A1" },
+    { meterId: "MTR-W-F3", departmentId: "housekeeping", zone: "Floor 3 Executive Wing", type: "Water", baselineDaily: 1600, unit: "L/day", lastReading: 2150, lastReadingTime: "2026-08-12 18:00", status: "Anomaly Flagged (+34.3%)", icon: "\uD83D\uDCA7" },
+
+    // Kitchen
+    { meterId: "MTR-W-KIT", departmentId: "kitchen", zone: "Main Culinary Kitchen", type: "Water", baselineDaily: 4500, unit: "L/day", lastReading: 4320, lastReadingTime: "2026-08-12 21:00", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-KIT", departmentId: "kitchen", zone: "Main Culinary Kitchen", type: "Electricity", baselineDaily: 380, unit: "kWh/day", lastReading: 460, lastReadingTime: "2026-08-12 21:00", status: "Anomaly Flagged (+21.0%)", icon: "\u26A1" },
+
+    // Laundry
+    { meterId: "MTR-W-LDY", departmentId: "laundry", zone: "Commercial Eco-Laundry", type: "Water", baselineDaily: 6200, unit: "L/day", lastReading: 5890, lastReadingTime: "2026-08-12 20:30", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-LDY", departmentId: "laundry", zone: "Commercial Eco-Laundry", type: "Electricity", baselineDaily: 290, unit: "kWh/day", lastReading: 275, lastReadingTime: "2026-08-12 20:30", status: "Normal", icon: "\u26A1" },
+
+    // Facilities
+    { meterId: "MTR-E-HVAC", departmentId: "facilities", zone: "Central Chiller Plant", type: "Electricity", baselineDaily: 850, unit: "kWh/day", lastReading: 820, lastReadingTime: "2026-08-12 22:00", status: "Normal", icon: "\u26A1" },
+    { meterId: "MTR-W-FAC", departmentId: "facilities", zone: "Maintenance Workshop", type: "Water", baselineDaily: 500, unit: "L/day", lastReading: 620, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+24.0%)", icon: "\uD83D\uDCA7" },
+
+    // Front Office
+    { meterId: "MTR-W-FO", departmentId: "front-office", zone: "Front Office & Lobby", type: "Water", baselineDaily: 700, unit: "L/day", lastReading: 680, lastReadingTime: "2026-08-13 08:00", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-FO", departmentId: "front-office", zone: "Front Office & Lobby", type: "Electricity", baselineDaily: 120, unit: "kWh/day", lastReading: 148, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+23.3%)", icon: "\u26A1" }
   ],
 
   // Maintenance Technicians Pool

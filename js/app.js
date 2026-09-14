@@ -64,9 +64,9 @@ class App {
 
       const toast = document.createElement('div');
       toast.className = `toast toast-${type} fade-in`;
-      
+
       const icon = type === 'success' ? '🌿' : type === 'warning' ? '⚠️' : type === 'danger' ? '🚨' : 'ℹ️';
-      
+
       toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
           <span>${icon}</span>
@@ -127,6 +127,7 @@ class App {
             <span class="role-label">Role:</span>
             <select class="form-input form-input-sm" id="global-role-switcher" style="width: 220px;">
               <option value="executive" ${system.activeRole === 'executive' ? 'selected' : ''}>👔 Executive Management</option>
+              <option value="operations_director"${system.activeRole === 'operations_director' ? 'selected' : ''}>Operations Director</option>
               <option value="chef" ${system.activeRole === 'chef' ? 'selected' : ''}>🍳 Head Chef / Kitchen</option>
               <option value="programmer" ${system.activeRole === 'programmer' ? 'selected' : ''}>⚙️ F&B Batch Operations</option>
               <option value="guest_pwa" ${system.activeRole === 'guest_pwa' ? 'selected' : ''}>🌿 Housekeeping Supervisor</option>
@@ -251,6 +252,9 @@ class App {
 
         if (role === 'executive') {
           userDetails = { name: 'Executive Management', role: 'Executive', department: 'Management' };
+          this.switchTab('m1');
+        } else if (role === 'operations_director') {
+          userDetails = { name: 'Operations Director', role: 'Operations Director', department: 'Operations' };
           this.switchTab('m1');
         } else if (role === 'chef') {
           userDetails = { name: 'Head Chef', role: 'Head Chef', department: 'Culinary' };

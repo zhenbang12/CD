@@ -46,7 +46,7 @@ export class ComplianceEngine {
 
     // 3. F&B Waste Score
     const totalFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || 0), 0) +
-                             plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
+      plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
     // Baseline: 45kg max daily allowable waste across 300+ guests
     const foodScore = Math.min(100, Math.max(45, 100 - (totalFoodWasteKg * 0.6)));
 
@@ -108,6 +108,9 @@ export class ComplianceEngine {
       statusClass,
       gradeBadge,
       metrics: {
+        foodWasteCurrentKg: totalFoodWasteKg,
+        waterUseCurrentL: totalWaterActual,
+        energyUseCurrentKwh: totalEleActual,
         waterScore: Math.round(waterScore),
         eleScore: Math.round(eleScore),
         foodScore: Math.round(foodScore),
@@ -175,5 +178,35 @@ export class ComplianceEngine {
         primaryResource: 'Water & Thermal Steam'
       }
     ];
+  }
+
+  static getDepartmentPerformance(departmentId) {
+    const currentMonth = db.getSystem().currentDate.slice(0, 7);
+
+    const performanceData = db.get('utilityMeters').filter(
+      meter =>
+        meter.departmentId === departmentId &&
+        meter.lastReadingTime?.startsWith(currentMonth)
+    );
+
+    const spoilageLogs = db.get('foodWasteLogs').filter(
+      log =>
+        log.departmentId === departmentId &&
+        log.type === 'Spoilage' &&
+        log.date?.startsWith(currentMonth)
+    );
+
+    const utilityAnomalies = performanceData.filter(
+      meter => meter.status.includes('Anomaly')
+    );
+
+    return {
+      performanceData,
+      spoilageLogs,
+      utilityAnomalies,
+      hasData:
+        performanceData.length > 0 ||
+        spoilageLogs.length > 0
+    };
   }
 }

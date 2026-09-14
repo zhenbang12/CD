@@ -12,6 +12,7 @@ class StorageEngine {
   constructor() {
     this.subscribers = new Map();
     this.simInterval = null;
+    this.lastDatabaseError = null;
     this.data = this.loadDatabase();
     this.ensureDataIntegrity();
   }
@@ -24,6 +25,7 @@ class StorageEngine {
         return JSON.parse(stored);
       }
     } catch (e) {
+      this.lastDatabaseError = e;
       console.warn('LocalStorage load error, resetting to initial seed', e);
     }
     const seed = JSON.parse(JSON.stringify(INITIAL_DATA));
@@ -94,6 +96,14 @@ class StorageEngine {
 
   getSystem() {
     return this.data.system;
+  }
+
+  getLastDatabaseError() {
+    return this.lastDatabaseError;
+  }
+
+  clearLastDatabaseError() {
+    this.lastDatabaseError = null;
   }
 
   setTheme(theme) {
@@ -196,7 +206,7 @@ class StorageEngine {
       const delta = (Math.random() * 6 - 3); // -3 to +3
       meter.lastReading = Math.max(10, Math.round((meter.lastReading + delta) * 10) / 10);
       meter.lastReadingTime = `${this.data.system.currentDate} ${this.data.system.currentTime.substring(0, 5)}`;
-      
+
       const deviationPct = ((meter.lastReading - meter.baselineDaily) / meter.baselineDaily) * 100;
       if (deviationPct >= 15.0 && !meter.status.includes('Anomaly')) {
         meter.status = `Anomaly Flagged (+${deviationPct.toFixed(1)}%)`;
@@ -300,7 +310,7 @@ class StorageEngine {
     }
 
     const [, columnsStr, tableNameRaw, whereClause, orderByClause, limitClause] = selectMatch;
-    
+
     // Map SQL table name alias to JS collection
     const tableMap = {
       'compliance_log': 'complianceLogs',

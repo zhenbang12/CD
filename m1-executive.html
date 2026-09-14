@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Module 1: Executive Sustainability Analytics • EcoHotel OS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="./css/style.css" />
 </head>
+
 <body>
   <div id="app">
     <header class="app-header">
@@ -30,12 +34,18 @@
 
     <nav class="main-navbar">
       <div class="nav-tabs-container">
-        <a href="./m1-executive.html" class="nav-tab active" style="text-decoration: none;"><span class="tab-icon">📊</span><span class="tab-text">Executive Analytics</span></a>
-        <a href="./m2-inventory.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">📦</span><span class="tab-text">Inventory & Spoilage</span></a>
-        <a href="./m3-batch-optimization.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">🍳</span><span class="tab-text">Batch Optimization</span></a>
-        <a href="./m4-guest-pwa.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">🌿</span><span class="tab-text">Guest PWA & Rooms</span></a>
-        <a href="./m5-facilities.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">⚡</span><span class="tab-text">Facilities & Repairs</span></a>
-        <a href="./m3-guide.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">📖</span><span class="tab-text">M3 User Guide</span></a>
+        <a href="./m1-executive.html" class="nav-tab active" style="text-decoration: none;"><span
+            class="tab-icon">📊</span><span class="tab-text">Executive Analytics</span></a>
+        <a href="./m2-inventory.html" class="nav-tab" style="text-decoration: none;"><span
+            class="tab-icon">📦</span><span class="tab-text">Inventory & Spoilage</span></a>
+        <a href="./m3-batch-optimization.html" class="nav-tab" style="text-decoration: none;"><span
+            class="tab-icon">🍳</span><span class="tab-text">Batch Optimization</span></a>
+        <a href="./m4-guest-pwa.html" class="nav-tab" style="text-decoration: none;"><span
+            class="tab-icon">🌿</span><span class="tab-text">Guest PWA & Rooms</span></a>
+        <a href="./m5-facilities.html" class="nav-tab" style="text-decoration: none;"><span
+            class="tab-icon">⚡</span><span class="tab-text">Facilities & Repairs</span></a>
+        <a href="./m3-guide.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">📖</span><span
+            class="tab-text">M3 User Guide</span></a>
       </div>
     </nav>
 
@@ -60,8 +70,38 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const mount = document.getElementById('m1-mount');
-      if (mount) new Module1Executive(mount);
+      if (!mount) return;
+
+      const system = db.getSystem();
+      const user = system?.activeUser;
+
+      const allowedNamedRoles = [
+        'Executive',
+        'Hotel Manager',
+        'Sustainability Executive',
+        'Operations Director'
+      ];
+
+      const isAuthorized =
+        Boolean(user?.id) &&
+        (
+          system?.activeRole === 'executive' ||
+          allowedNamedRoles.includes(user.role)
+        );
+
+      if (!isAuthorized) {
+        mount.innerHTML = `
+          <div class="card">
+            <h2>Access denied</h2>
+            <p>An authorized management role is required.</p>
+          </div>
+  `     ;
+        return;
+      }
+
+      new Module1Executive(mount);
     });
   </script>
 </body>
+
 </html>
