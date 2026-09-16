@@ -14,6 +14,7 @@ export class Module1Executive {
     this.chartMetric = 'food'; // 'food' | 'water' | 'energy' | 'co2' | 'cost'
     this.reportPeriod = 'all'; // 'all' | 'q1' | 'q2' | 'mtd'
     this.selectedDepartment = '';
+    this.auditFilters = { date: '', user: '', action: '', baseline: '' };
     this.init();
   }
 
@@ -57,7 +58,7 @@ export class Module1Executive {
       }
 
       baselines = db.getBaselines();
-      auditLogs = db.get('auditLogs');
+      auditLogs = db.getAuditLogs(this.auditFilters);
       complianceHistory = db.get('complianceLogs');
     } catch (error) {
       this.renderDashboardError(error);
@@ -99,15 +100,24 @@ export class Module1Executive {
           <div class="card kpi-card">
             <div class="kpi-header">
               <span class="kpi-label">Sustainability Score</span>
-              <span class="badge badge-success">Certified</span>
+              ${compliance.dataComplete 
+                ? `<span class="badge ${compliance.gradeBadge}">${compliance.label}</span>`
+                : `<span class="badge badge-warning">Data Incomplete</span>`
+              }
             </div>
-            <div class="kpi-body">
-              <div class="kpi-score-main">${compliance.score}<span class="kpi-score-denom">/100</span></div>
-              <div class="kpi-grade-text">${compliance.grade}</div>
-            </div>
-            <div class="progress-bar-wrap">
-              <div class="progress-bar" style="width: ${compliance.score}%;"></div>
-            </div>
+            ${compliance.dataComplete ? `
+              <div class="kpi-body">
+                <div class="kpi-score-main">${compliance.score}<span class="kpi-score-denom">/100</span></div>
+                <div class="kpi-grade-text">${compliance.grade}</div>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" style="width: ${compliance.score}%;"></div>
+              </div>
+            ` : `
+              <div class="kpi-body" style="padding-top: 15px;">
+                <p class="text-danger" style="margin:0; font-size: 13px;">${compliance.message}</p>
+              </div>
+            `}
           </div>
 
           <div class="card kpi-card">
@@ -244,7 +254,7 @@ export class Module1Executive {
               ${!this.selectedDepartment
         ? '<p class="text-muted">Select a department to review.</p>'
         : !departmentPerformance?.hasData
-          ? '<p class="text-muted">No records found for this department</p>'
+          ? `<p class="text-danger">${departmentPerformance.message}</p>`
           : this.renderDepartmentBreakdown(departmentPerformance)
       }
             `}
@@ -288,17 +298,23 @@ export class Module1Executive {
 
         <!-- System Security Audit Trail -->
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
             <div>
               <h3 class="card-title">System Log & Parameter Adjustments</h3>
               <p class="card-subtitle">Timestamped ledger recording administrative calibration changes</p>
             </div>
-            <span class="badge badge-secondary">Audit Trail</span>
+            <div class="filter-group" style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-date" placeholder="Date (YYYY-MM-DD)" value="${this.auditFilters.date}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-user" placeholder="User ID / Name" value="${this.auditFilters.user}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-action" placeholder="Action" value="${this.auditFilters.action}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-baseline" placeholder="Baseline ID" value="${this.auditFilters.baseline}">
+              <button class="btn btn-sm btn-outline" id="btn-audit-search">Filter</button>
+            </div>
           </div>
           <div class="audit-stream">
             ${auditLogs.length === 0 ? `
-              <div class="text-muted text-center py-3">No baseline adjustments have been recorded.</div>
-            ` : auditLogs.slice(0, 6).map(log => `
+              <div class="text-danger text-center py-3">No audit records match the selected filters.</div>
+            ` : auditLogs.slice(0, 10).map(log => `
               <div class="audit-entry">
                 <div class="audit-icon">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -307,9 +323,11 @@ export class Module1Executive {
                   <div class="audit-top">
                     <span class="audit-action"><code>${log.action}</code></span>
                     <span class="audit-time text-muted">${log.timestamp}</span>
+                    ${log.transactionRef ? `<span class="badge badge-secondary" style="font-size: 9px;">${log.transactionRef}</span>` : ''}
                   </div>
                   <div class="audit-desc">
-                    <strong>${log.userName}</strong> adjusted <code>${log.targetKey}</code>:
+                    <strong>${log.userName}</strong> adjusted <code>${log.targetKey}</code>
+                    ${log.effectiveDate ? ` (Effective: ${log.effectiveDate})` : ''}:
                     <span class="audit-diff text-danger">${log.previousValue}</span> ➔ <span class="audit-diff text-success">${log.newValue}</span>
                   </div>
                   <div class="audit-reason text-muted"><em>Reason: ${log.reason}</em></div>
@@ -338,6 +356,10 @@ export class Module1Executive {
               <label class="form-label">New Baseline Value</label>
               <input type="number" step="0.01" min="0.01" class="form-input" id="modal-baseline-val" placeholder="Enter numeric value..." required />
               <small class="form-help">Must be a positive numeric value.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Effective Date</label>
+              <input type="date" class="form-input" id="modal-baseline-date" required />
             </div>
             <div class="form-group">
               <label class="form-label">Reason for Modification</label>
@@ -519,22 +541,43 @@ export class Module1Executive {
     if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
     if (cancelBtn) cancelBtn.onclick = () => { modal.style.display = 'none'; };
 
+    // Audit Filter Search
+    const auditSearchBtn = this.container.querySelector('#btn-audit-search');
+    if (auditSearchBtn) {
+      auditSearchBtn.onclick = () => {
+        this.auditFilters = {
+          date: this.container.querySelector('#audit-filter-date').value,
+          user: this.container.querySelector('#audit-filter-user').value,
+          action: this.container.querySelector('#audit-filter-action').value,
+          baseline: this.container.querySelector('#audit-filter-baseline').value,
+        };
+        this.render();
+      };
+    }
+
     if (form) {
       form.onsubmit = (e) => {
         e.preventDefault();
         const id = this.container.querySelector('#modal-baseline-id').value;
         const val = this.container.querySelector('#modal-baseline-val').value;
+        const date = this.container.querySelector('#modal-baseline-date').value;
         const reason = this.container.querySelector('#modal-baseline-reason').value;
 
         if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
           alert('Baseline value must be a positive numeric number.');
           return;
         }
+        if (!date) {
+          alert('Effective date is required.');
+          return;
+        }
 
-        const success = db.updateBaseline(id, val, reason);
-        if (success) {
+        const result = db.updateBaseline(id, val, date, reason);
+        if (result && result.success) {
           modal.style.display = 'none';
-          window.showGlobalToast?.('Operational baseline updated!', 'success');
+          window.showGlobalToast?.('Operational baseline updated and audit record created.', 'success');
+        } else {
+          alert('Baseline update was not saved. No changes were made.');
         }
       };
     }
@@ -546,7 +589,19 @@ export class Module1Executive {
 
   exportComplianceReportPDF() {
     const compliance = ComplianceEngine.calculateLiveScore();
+    
+    if (!compliance.dataComplete) {
+      alert("PDF export failed. Please try again later. Data incomplete. A compliance grade cannot be calculated.");
+      return;
+    }
+
     const printWindow = window.open('', '_blank', 'width=900,height=700');
+    
+    if (!printWindow) {
+      alert("PDF export failed. Please try again later.");
+      return;
+    }
+    
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -573,7 +628,7 @@ export class Module1Executive {
             <div class="subtitle">Property: Grand Bay Eco-Resort & Spa • Date: ${new Date().toLocaleDateString()}</div>
           </div>
           <div class="seal">
-            Verified Report<br/>Platinum Tier
+            Report Data<br/>${compliance.label}
           </div>
         </div>
         <div class="score-box">

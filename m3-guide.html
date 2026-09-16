@@ -59,6 +59,11 @@
       margin: 12px 0;
     }
   </style>
+  <script>
+    if (!localStorage.getItem('eco_session')) {
+      window.location.href = 'login.html';
+    }
+  </script>
 </head>
 <body>
   <div id="app">

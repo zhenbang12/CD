@@ -1,10 +1,16 @@
+if (!localStorage.getItem('eco_session')) {
+  window.location.href = 'login.html';
+}
 /**
  * EcoHotel OS - Master Application Router & Shell Controller
  * Sustainable Hospitality Operating System.
  */
 
 import { db } from './db/storage.js';
-import { Module1Executive } from './modules/m1ExecutiveAnalytics.js';
+import { Module1Dashboard } from './modules/m1Dashboard.js';
+import { Module1Department } from './modules/m1Department.js';
+import { Module1Baselines } from './modules/m1Baselines.js';
+import { Module1Audit } from './modules/m1Audit.js';
 import { Module2Inventory } from './modules/m2InventoryTracker.js';
 import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=2.2';
 import { Module4GuestPWA } from './modules/m4GuestPWA.js';
@@ -18,7 +24,7 @@ class App {
     const urlParams = new URLSearchParams(window.location.search);
     const pageParam = urlParams.get('page');
 
-    this.activeTab = hash || pageParam || 'm1';
+    this.activeTab = hash || pageParam || 'm1-dashboard';
     this.init();
   }
 
@@ -122,18 +128,16 @@ class App {
         </div>
 
         <div class="header-right">
-          <!-- Role Switcher -->
-          <div class="role-selector-wrap">
-            <span class="role-label">Role:</span>
-            <select class="form-input form-input-sm" id="global-role-switcher" style="width: 220px;">
-              <option value="executive" ${system.activeRole === 'executive' ? 'selected' : ''}>👔 Executive Management</option>
-              <option value="operations_director"${system.activeRole === 'operations_director' ? 'selected' : ''}>Operations Director</option>
-              <option value="chef" ${system.activeRole === 'chef' ? 'selected' : ''}>🍳 Head Chef / Kitchen</option>
-              <option value="programmer" ${system.activeRole === 'programmer' ? 'selected' : ''}>⚙️ F&B Batch Operations</option>
-              <option value="guest_pwa" ${system.activeRole === 'guest_pwa' ? 'selected' : ''}>🌿 Housekeeping Supervisor</option>
-              <option value="facilities" ${system.activeRole === 'facilities' ? 'selected' : ''}>⚡ Facilities & Maintenance</option>
-              <option value="guest" ${system.activeRole === 'guest' ? 'selected' : ''}>📱 Guest (Room 304)</option>
-            </select>
+          <!-- User Profile & Logout -->
+          <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-surface); padding: 4px 12px 4px 4px; border-radius: 20px; border: 1px solid var(--border-color);">
+            <div style="width: 32px; height: 32px; border-radius: 16px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
+              ${system.activeUser?.avatar || '?'}
+            </div>
+            <div style="display: flex; flex-direction: column; line-height: 1.2;">
+              <span style="font-size: 13px; font-weight: 600;">${system.activeUser?.name || 'Unknown User'}</span>
+              <span style="font-size: 10px; color: var(--text-muted);">${system.activeUser?.role || 'Guest'}</span>
+            </div>
+            <button id="btn-logout" class="btn btn-sm btn-outline" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>
           </div>
 
           <!-- Notification Counter Pill -->
@@ -157,7 +161,7 @@ class App {
       <!-- Main Navigation Tab Bar -->
       <nav class="main-navbar">
         <div class="nav-tabs-container">
-          <button class="nav-tab ${this.activeTab === 'm1' ? 'active' : ''}" data-tab="m1">
+          <button class="nav-tab ${this.activeTab && this.activeTab.startsWith('m1') ? 'active' : ''}" data-tab="m1-dashboard">
             <span class="tab-icon">📊</span>
             <span class="tab-text">Executive Analytics</span>
           </button>
@@ -196,7 +200,7 @@ class App {
     // Brand link
     const brandLink = document.getElementById('brand-home-link');
     if (brandLink) {
-      brandLink.onclick = () => this.switchTab('m1');
+      brandLink.onclick = () => this.switchTab('m1-dashboard');
     }
 
     // Tab Switching
@@ -243,39 +247,15 @@ class App {
       };
     });
 
-    // Role Switcher
-    const roleSwitcher = document.getElementById('global-role-switcher');
-    if (roleSwitcher) {
-      roleSwitcher.onchange = (e) => {
-        const role = e.target.value;
-        let userDetails = { name: 'Executive Staff', role: 'Staff' };
-
-        if (role === 'executive') {
-          userDetails = { name: 'Executive Management', role: 'Executive', department: 'Management' };
-          this.switchTab('m1');
-        } else if (role === 'operations_director') {
-          userDetails = { name: 'Operations Director', role: 'Operations Director', department: 'Operations' };
-          this.switchTab('m1');
-        } else if (role === 'chef') {
-          userDetails = { name: 'Head Chef', role: 'Head Chef', department: 'Culinary' };
-          this.switchTab('m2');
-        } else if (role === 'programmer') {
-          userDetails = { name: 'F&B Operations', role: 'Batch Lead', department: 'F&B' };
-          this.switchTab('m3');
-        } else if (role === 'guest_pwa') {
-          userDetails = { name: 'Housekeeping Supervisor', role: 'Supervisor', department: 'Rooms' };
-          this.switchTab('m4');
-        } else if (role === 'facilities') {
-          userDetails = { name: 'Facilities Engineer', role: 'Engineer', department: 'Engineering' };
-          this.switchTab('m5');
-        } else if (role === 'guest') {
-          userDetails = { name: 'Guest (Room 304)', role: 'Guest', department: 'Guest' };
-          this.switchTab('m4');
-        }
-
-        db.setSystemRole(role, userDetails);
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        localStorage.removeItem('eco_session');
+        window.location.href = 'login.html';
       };
     }
+
+    
 
     // Reset Demo DB
     const resetBtn = document.getElementById('btn-global-reset-db');
@@ -316,7 +296,8 @@ class App {
       window.location.hash = `#/${tabId}`;
     }
     document.querySelectorAll('.nav-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tab === tabId);
+      const isM1Tab = tabId.startsWith('m1') && t.dataset.tab === 'm1-dashboard';
+      t.classList.toggle('active', t.dataset.tab === tabId || isM1Tab);
     });
     this.loadActiveModule();
   }
@@ -325,8 +306,14 @@ class App {
     const mountPoint = document.getElementById('module-mount-point');
     if (!mountPoint) return;
 
-    if (this.activeTab === 'm1') {
-      new Module1Executive(mountPoint);
+    if (this.activeTab === 'm1' || this.activeTab === 'm1-dashboard') {
+      new Module1Dashboard(mountPoint);
+    } else if (this.activeTab === 'm1-department') {
+      new Module1Department(mountPoint);
+    } else if (this.activeTab === 'm1-baselines') {
+      new Module1Baselines(mountPoint);
+    } else if (this.activeTab === 'm1-audit') {
+      new Module1Audit(mountPoint);
     } else if (this.activeTab === 'm2') {
       new Module2Inventory(mountPoint);
     } else if (this.activeTab === 'm3') {
@@ -373,3 +360,5 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
   new App();
 });
+
+

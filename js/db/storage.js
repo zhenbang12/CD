@@ -55,6 +55,25 @@ class StorageEngine {
         }
       }
     }
+
+    // Force sync new items from INITIAL_DATA without overwriting existing data (Idempotent)
+    const mergeArrays = ['users', 'utilityMeters', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'baselines', 'complianceLogs'];
+    mergeArrays.forEach(key => {
+      if (INITIAL_DATA[key]) {
+        if (!this.data[key]) this.data[key] = [];
+        
+        // Helper to get ID
+        const getId = (item) => item.id || item.meterId || item.month || item.timestamp;
+        
+        const existingIds = this.data[key].map(getId);
+        INITIAL_DATA[key].forEach(newItem => {
+          if (!existingIds.includes(getId(newItem))) {
+            this.data[key].push(newItem);
+          }
+        });
+      }
+    });
+
     this.saveDatabase();
   }
 
@@ -95,7 +114,30 @@ class StorageEngine {
   }
 
   getSystem() {
-    return this.data.system;
+    const sys = this.data.system || {};
+    const sessionId = localStorage.getItem('eco_session');
+    if (sessionId) {
+      let users = this.get('users');
+      if (!users || users.length === 0) {
+        users = [
+          { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
+          { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
+          { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
+          { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
+          { id: "USR-104", username: "chef", password: "password123", name: "Sze Ping", role: "Head Chef", department: "F&B", avatar: "SP" },
+          { id: "USR-105", username: "guest", password: "password123", name: "Simon Wong", role: "Guest", department: "Guest", avatar: "SW" }
+        ];
+      }
+      const authUser = users.find(u => u.id === sessionId);
+      if (authUser) {
+        sys.activeUser = authUser;
+        sys.activeRole = authUser.role;
+      }
+    } else {
+      sys.activeUser = null;
+      sys.activeRole = null;
+    }
+    return sys;
   }
 
   getLastDatabaseError() {

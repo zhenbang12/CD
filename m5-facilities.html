@@ -8,6 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/style.css" />
+  <script>
+    if (!localStorage.getItem('eco_session')) {
+      window.location.href = 'login.html';
+    }
+  </script>
 </head>
 <body>
   <div id="app">
@@ -22,15 +27,16 @@
         </a>
         <div class="hotel-pill"><span class="hotel-dot"></span><span>Grand Bay Eco-Resort & Spa</span></div>
       </div>
-      <div class="header-right">
-        <span class="badge badge-primary">Module 5 Standalone</span>
-        <a href="./index.html" class="btn btn-sm btn-outline" style="text-decoration: none;">🏠 Master Portal</a>
+            <div class="header-right" style="display: flex; gap: 10px; align-items: center;">
+        <span class="badge badge-primary">Standalone</span>
+        <a href="./index.html" class="btn btn-sm btn-outline" style="text-decoration: none;">Master Portal</a>
+        <button onclick="localStorage.removeItem('eco_session'); window.location.href='login.html'" class="btn btn-sm" style="background: var(--danger); color: white; border: none;">Logout</button>
       </div>
     </header>
 
     <nav class="main-navbar">
       <div class="nav-tabs-container">
-        <a href="./m1-executive.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">📊</span><span class="tab-text">Executive Analytics</span></a>
+        <a href="./m1-dashboard.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">??</span><span class="tab-text">Executive Analytics</span></a>
         <a href="./m2-inventory.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">📦</span><span class="tab-text">Inventory & Spoilage</span></a>
         <a href="./m3-batch-optimization.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">🍳</span><span class="tab-text">Batch Optimization</span></a>
         <a href="./m4-guest-pwa.html" class="nav-tab" style="text-decoration: none;"><span class="tab-icon">🌿</span><span class="tab-text">Guest PWA & Rooms</span></a>

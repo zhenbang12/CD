@@ -14,7 +14,7 @@ export class ComplianceEngine {
    * - Electricity reduction vs baseline (20% weight)
    * - Unresolved High-Priority Defect Penalty (10% weight)
    */
-  static calculateLiveScore() {
+  static calculateLiveScore(reportingPeriod = 'all', scope = 'all') {
     const baselines = db.getBaselines();
     const rooms = db.get('rooms');
     const utilityMeters = db.get('utilityMeters');
@@ -23,31 +23,54 @@ export class ComplianceEngine {
     const repairTickets = db.get('repairTickets');
 
     // 1. Water Score Calculation
-    const waterMeters = utilityMeters.filter(m => m.type === 'Water');
+    const waterMeters = utilityMeters.filter(m => m.type === 'Water' && m.lastReading !== undefined);
     let totalWaterBaseline = 0;
     let totalWaterActual = 0;
     waterMeters.forEach(m => {
       totalWaterBaseline += m.baselineDaily;
-      totalWaterActual += (m.lastReading || m.baselineDaily);
+      totalWaterActual += m.lastReading;
     });
-    const waterEfficiency = totalWaterBaseline > 0 ? (totalWaterBaseline / totalWaterActual) : 1.0;
-    let waterScore = Math.min(100, Math.max(35, waterEfficiency * 88));
 
     // 2. Electricity Score Calculation
-    const eleMeters = utilityMeters.filter(m => m.type === 'Electricity');
+    const eleMeters = utilityMeters.filter(m => m.type === 'Electricity' && m.lastReading !== undefined);
     let totalEleBaseline = 0;
     let totalEleActual = 0;
     eleMeters.forEach(m => {
       totalEleBaseline += m.baselineDaily;
-      totalEleActual += (m.lastReading || m.baselineDaily);
+      totalEleActual += m.lastReading;
     });
-    const eleEfficiency = totalEleBaseline > 0 ? (totalEleBaseline / totalEleActual) : 1.0;
-    let eleScore = Math.min(100, Math.max(35, eleEfficiency * 85));
 
     // 3. F&B Waste Score
     const totalFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || 0), 0) +
       plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
+
     // Baseline: 45kg max daily allowable waste across 300+ guests
+    const foodBaselineDaily = 45;
+
+    // UC_106 A2: No usable data for a required metric
+    const hasWaterData = waterMeters.length > 0;
+    const hasEleData = eleMeters.length > 0;
+    const hasFoodData = foodWaste.length > 0 || plateWaste.length > 0;
+
+    if (!hasWaterData || !hasEleData || !hasFoodData) {
+      return {
+        dataComplete: false,
+        message: "Data incomplete. A compliance grade cannot be calculated.",
+        errorType: "M3",
+        metrics: {
+          foodWasteCurrentKg: totalFoodWasteKg,
+          waterUseCurrentL: totalWaterActual,
+          energyUseCurrentKwh: totalEleActual,
+        }
+      };
+    }
+
+    const waterEfficiency = totalWaterBaseline > 0 ? (totalWaterBaseline / totalWaterActual) : 1.0;
+    let waterScore = Math.min(100, Math.max(35, waterEfficiency * 88));
+
+    const eleEfficiency = totalEleBaseline > 0 ? (totalEleBaseline / totalEleActual) : 1.0;
+    let eleScore = Math.min(100, Math.max(35, eleEfficiency * 85));
+
     const foodScore = Math.min(100, Math.max(45, 100 - (totalFoodWasteKg * 0.6)));
 
     // 4. Maintenance / Unresolved Ticket Penalty
@@ -67,28 +90,35 @@ export class ComplianceEngine {
     let grade = 'Compliant';
     let statusClass = 'status-normal';
     let gradeBadge = 'badge-secondary';
+    let label = 'Standard Compliance';
+
     if (compositeScore >= 90) {
       grade = 'VM2026 Green Champion (Platinum)';
+      label = 'Platinum Tier';
       statusClass = 'status-champion';
       gradeBadge = 'badge-success';
     } else if (compositeScore >= 80) {
       grade = 'High Sustainable Compliance (Gold)';
+      label = 'Gold Tier';
       statusClass = 'status-gold';
       gradeBadge = 'badge-primary';
     } else if (compositeScore >= 70) {
       grade = 'Standard Compliance (Silver)';
+      label = 'Silver Tier';
       statusClass = 'status-silver';
       gradeBadge = 'badge-warning';
     } else {
       grade = 'Action Required (Audit Warning)';
+      label = 'Audit Warning';
       statusClass = 'status-warning';
       gradeBadge = 'badge-danger';
     }
 
-    // Cumulative MTD calculations
-    const foodWasteSavedMTD = 940; // kg MTD
-    const waterConservedMTD = 122000; // Liters MTD
-    const energySavedMTD = 10400; // kWh MTD
+    // Cumulative MTD calculations (Dynamic based on daily differences * 30 days)
+    const daysInPeriod = 30; // Approximating MTD as 30 days of activity
+    const foodWasteSavedMTD = Math.max(0, (foodBaselineDaily * daysInPeriod) - totalFoodWasteKg);
+    const waterConservedMTD = Math.max(0, (totalWaterBaseline - totalWaterActual) * daysInPeriod);
+    const energySavedMTD = Math.max(0, (totalEleBaseline - totalEleActual) * daysInPeriod);
 
     // Environmental GHG / Carbon Avoided (kg CO2e)
     const foodCo2 = foodWasteSavedMTD * 2.5;
@@ -103,8 +133,10 @@ export class ComplianceEngine {
     const totalCostSavingsMyr = Math.round(foodSavingsMyr + waterSavingsMyr + energySavingsMyr);
 
     return {
+      dataComplete: true,
       score: compositeScore,
       grade,
+      label,
       statusClass,
       gradeBadge,
       metrics: {
@@ -183,30 +215,68 @@ export class ComplianceEngine {
   static getDepartmentPerformance(departmentId) {
     const currentMonth = db.getSystem().currentDate.slice(0, 7);
 
+    // Support both 'departmentId' and 'department' keys, and 'lastReadingTime' or 'lastUpdated'
     const performanceData = db.get('utilityMeters').filter(
       meter =>
-        meter.departmentId === departmentId &&
-        meter.lastReadingTime?.startsWith(currentMonth)
+        (meter.departmentId === departmentId || meter.department === departmentId) &&
+        (meter.lastReadingTime?.startsWith(currentMonth) || meter.lastUpdated?.startsWith(currentMonth))
     );
 
     const spoilageLogs = db.get('foodWasteLogs').filter(
       log =>
-        log.departmentId === departmentId &&
-        log.type === 'Spoilage' &&
-        log.date?.startsWith(currentMonth)
+        (log.departmentId === departmentId || log.department === departmentId) &&
+        (log.type === 'Spoilage' || log.type === 'Preparation Scrap') &&
+        (log.date?.startsWith(currentMonth) || log.timestamp?.startsWith(currentMonth))
     );
 
     const utilityAnomalies = performanceData.filter(
-      meter => meter.status.includes('Anomaly')
+      meter => meter.status && meter.status.toLowerCase().includes('anomaly')
     );
+
+    const hasData = performanceData.length > 0 || spoilageLogs.length > 0;
+
+    if (!hasData) {
+      return {
+        hasData: false,
+        message: "No records found for this department and period."
+      };
+    }
+
+    // Aggregate metrics for UI
+    let energy = 0;
+    let water = 0;
+    let waste = 0;
+    const flags = [];
+
+    performanceData.forEach(meter => {
+      // Support 'lastReading' or 'currentReading' and 'type' or 'category'
+      const val = meter.lastReading || meter.currentReading || 0;
+      const t = (meter.type || '').toLowerCase();
+      if (t === 'electricity' || t === 'energy' || t === 'power') {
+        energy += val;
+        if (meter.status && meter.status.includes('High')) flags.push('energy');
+      }
+      if (t === 'water') {
+        water += val;
+        if (meter.status && meter.status.includes('Anomaly')) flags.push('water');
+      }
+    });
+
+    spoilageLogs.forEach(log => {
+      waste += (log.quantity || log.weightKg || 0);
+    });
 
     return {
       performanceData,
       spoilageLogs,
       utilityAnomalies,
-      hasData:
-        performanceData.length > 0 ||
-        spoilageLogs.length > 0
+      hasData: true,
+      metrics: {
+        energy,
+        water,
+        waste
+      },
+      flags
     };
   }
 }

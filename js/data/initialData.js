@@ -4,6 +4,15 @@
  */
 
 export const INITIAL_DATA = {
+  // Simulated Authentication Users
+  users: [
+    { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
+    { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
+    { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
+    { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
+    { id: "USR-104", username: "chef", password: "password123", name: "Sze Ping", role: "Head Chef", department: "F&B", avatar: "SP" },
+    { id: "USR-105", username: "guest", password: "password123", name: "Simon Wong", role: "Guest", department: "Guest", avatar: "SW" }
+  ],
   // Current System Config & Active User
   system: {
     hotelName: "Grand Bay Eco-Resort & Spa (VM2026 Certified)",
@@ -31,11 +40,19 @@ export const INITIAL_DATA = {
     { id: "BL-04", key: "kitchen_power", name: "Main Kitchen Daily Electricity Baseline", value: 380, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-02 09:30" },
     { id: "BL-05", key: "buffet_food_waste", name: "Max Allowed Food Waste per Diner", value: 0.12, unit: "kg/guest/service", category: "F&B", updatedBy: "Sze Ping", updatedAt: "2026-08-03 14:15" },
     { id: "BL-06", key: "laundry_water", name: "Commercial Laundry Water Baseline", value: 6200, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-07", key: "hvac_chiller_power", name: "Central Chilled Water HVAC Baseline", value: 850, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-05 11:20" }
+    { id: "BL-07", key: "hvac_chiller_power", name: "Central Chilled Water HVAC Baseline", value: 850, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-05 11:20" },
+    { id: "BL-08", key: "laundry_power", name: "Commercial Laundry Power Baseline", value: 450, unit: "kWh/day", category: "Electricity", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
+    { id: "BL-09", key: "pool_water", name: "Pool Filtration Daily Top-up Baseline", value: 800, unit: "L/day", category: "Water", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
+    { id: "BL-10", key: "lobby_hvac", name: "Lobby HVAC Energy Baseline", value: 120, unit: "kWh/day", category: "Electricity", updatedBy: "System", updatedAt: "2026-07-15 10:00" }
   ],
 
   // Module 1: Historical Compliance Logs (Last 6 Months towards VM2026)
-  complianceLogs: [
+    complianceLogs: [
+    { month: "Oct 2025", foodSavedKg: 910, waterConservedL: 112000, energySavedKwh: 9800, co2AvoidedKg: 13500, costSavedMyr: 25100, vmScore: 68, status: "Needs Improvement" },
+    { month: "Nov 2025", foodSavedKg: 980, waterConservedL: 118000, energySavedKwh: 10200, co2AvoidedKg: 14200, costSavedMyr: 27300, vmScore: 71, status: "Acceptable" },
+    { month: "Dec 2025", foodSavedKg: 1050, waterConservedL: 125000, energySavedKwh: 10900, co2AvoidedKg: 15400, costSavedMyr: 29500, vmScore: 74, status: "Acceptable" },
+    { month: "Jan 2026", foodSavedKg: 1120, waterConservedL: 134000, energySavedKwh: 11500, co2AvoidedKg: 16800, costSavedMyr: 31200, vmScore: 75, status: "Compliant" },
+    { month: "Feb 2026", foodSavedKg: 1190, waterConservedL: 139000, energySavedKwh: 12100, co2AvoidedKg: 17600, costSavedMyr: 32800, vmScore: 76, status: "Compliant" },
     { month: "Mar 2026", foodSavedKg: 1240, waterConservedL: 145000, energySavedKwh: 12800, co2AvoidedKg: 18450, costSavedMyr: 34200, vmScore: 78, status: "Compliant" },
     { month: "Apr 2026", foodSavedKg: 1480, waterConservedL: 168000, energySavedKwh: 14200, co2AvoidedKg: 21300, costSavedMyr: 39800, vmScore: 84, status: "High Compliance" },
     { month: "May 2026", foodSavedKg: 1620, waterConservedL: 192000, energySavedKwh: 16500, co2AvoidedKg: 24100, costSavedMyr: 44600, vmScore: 89, status: "High Compliance" },
@@ -64,7 +81,10 @@ export const INITIAL_DATA = {
     { id: "WST-102", departmentId: "kitchen", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Fresh Farm Poultry", type: "Prep Waste", reason: "Bones & Trimmings", quantity: 5.8, unit: "kg", costImpact: 0, loggedBy: "Kitchen Prep Team" },
     { id: "WST-103", departmentId: "kitchen", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Organic Coconut Milk", type: "Spoilage", reason: "Sour batch due to door left ajar", quantity: 4, unit: "L", costImpact: 34, loggedBy: "Sous Chef Ahmad" },
     { id: "WST-104", departmentId: "kitchen", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Grade A Omega-3 Eggs", type: "Prep Waste", reason: "Eggshells sent to composter", quantity: 6.2, unit: "kg", costImpact: 0, loggedBy: "Prep Cook Mei" },
-    { id: "WST-105", departmentId: "kitchen", date: "2026-08-10", mealPeriod: "Dinner Shift", item: "Atlantic Salmon Skin & Bones", type: "Prep Waste", reason: "Fish stock extraction", quantity: 4.5, unit: "kg", costImpact: 0, loggedBy: "Sous Chef Ahmad" }
+    { id: "WST-105", departmentId: "kitchen", date: "2026-08-10", mealPeriod: "Dinner Shift", item: "Atlantic Salmon Skin & Bones", type: "Prep Waste", reason: "Fish stock extraction", quantity: 4.5, unit: "kg", costImpact: 0, loggedBy: "Sous Chef Ahmad" },
+    { id: "FW-111", department: "kitchen", departmentId: "kitchen", type: "Preparation Scrap", item: "Mixed Prep", weightKg: 12.4, quantity: 12.4, unit: "kg", loggedBy: "Sous Chef", timestamp: "2026-08-12 14:00", date: "2026-08-12" },
+    { id: "FW-112", department: "kitchen", departmentId: "kitchen", type: "Spoilage", item: "Dairy", weightKg: 3.2, quantity: 3.2, unit: "kg", loggedBy: "Inventory Clerk", timestamp: "2026-08-12 16:30", date: "2026-08-12" },
+    { id: "FW-113", department: "kitchen", departmentId: "kitchen", type: "Spoilage", item: "Buffet Leftover", weightKg: 8.5, quantity: 8.5, unit: "kg", loggedBy: "F&B Manager", timestamp: "2026-08-12 22:30", date: "2026-08-12" }
   ],
 
   // Module 3: 48-Hour Ingest Forecast (Hotel Reservation Engine)
@@ -89,7 +109,12 @@ export const INITIAL_DATA = {
   plateWasteLogs: [
     { id: "PW-001", date: "2026-08-12", mealPeriod: "Dinner", dishId: "DSH-02", dishName: "Grilled Herb Butter Atlantic Salmon", discardedKg: 4.8, isAnomaly: false, note: "Slight over-batching during late dinner peak", loggedBy: "Chef Zhen Bang" },
     { id: "PW-002", date: "2026-08-12", mealPeriod: "Dinner", dishId: "DSH-05", dishName: "Crispy Organic Garden Salad Bar", discardedKg: 3.2, isAnomaly: false, note: "Guests preferred warm appetizers due to rain", loggedBy: "Prep Cook Mei" },
-    { id: "PW-003", date: "2026-08-11", mealPeriod: "Dinner", dishId: "DSH-06", dishName: "Slow-Roasted Australian Beef Striploin", discardedKg: 6.5, isAnomaly: true, anomalyReason: "Kitchen tray dropped while restocking carvery", photoAttached: true, loggedBy: "Chef Zhen Bang" }
+    { id: "PW-003", date: "2026-08-11", mealPeriod: "Dinner", dishId: "DSH-06", dishName: "Slow-Roasted Australian Beef Striploin", discardedKg: 6.5, isAnomaly: true, anomalyReason: "Kitchen tray dropped while restocking carvery", photoAttached: true, loggedBy: "Chef Zhen Bang" },
+    { id: "PW-101", department: "housekeeping", departmentId: "housekeeping", roomNumber: "101", wasteKg: 0.8, discardedKg: 0.8, timestamp: "2026-08-12 09:30", date: "2026-08-12", mealPeriod: "Room Service" },
+    { id: "PW-102", department: "housekeeping", departmentId: "housekeeping", roomNumber: "102", wasteKg: 1.2, discardedKg: 1.2, timestamp: "2026-08-12 09:45", date: "2026-08-12", mealPeriod: "Room Service" },
+    { id: "PW-103", department: "housekeeping", departmentId: "housekeeping", roomNumber: "105", wasteKg: 0.5, discardedKg: 0.5, timestamp: "2026-08-12 10:00", date: "2026-08-12", mealPeriod: "Room Service" },
+    { id: "PW-104", department: "housekeeping", departmentId: "housekeeping", roomNumber: "108", wasteKg: 2.1, discardedKg: 2.1, timestamp: "2026-08-12 10:15", date: "2026-08-12", mealPeriod: "Room Service" },
+    { id: "PW-105", department: "housekeeping", departmentId: "housekeeping", roomNumber: "112", wasteKg: 0.4, discardedKg: 0.4, timestamp: "2026-08-12 10:30", date: "2026-08-12", mealPeriod: "Room Service" }
   ],
 
   // Module 4: Hotel Rooms & Master Housekeeping Schedule
@@ -247,6 +272,15 @@ export const INITIAL_DATA = {
       previousValue: "0.15 kg/guest",
       newValue: "0.12 kg/guest",
       reason: "Stricter VM2026 culinary prep guidelines adopted."
-    }
+    },
+    { timestamp: "2026-08-01 10:15", userId: "USR-101", userName: "Kar Hang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "185", newValue: "180", effectiveDate: "2026-08-01", reason: "Installed new aerator standard", transactionRef: "TXN-90231A" },
+    { timestamp: "2026-08-02 09:30", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_water", previousValue: "4800", newValue: "4500", effectiveDate: "2026-08-02", reason: "Quarterly efficiency review", transactionRef: "TXN-90235C" },
+    { timestamp: "2026-08-03 14:15", userId: "USR-103", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15", newValue: "0.12", effectiveDate: "2026-08-03", reason: "Buffet tray optimization initiative", transactionRef: "TXN-90288X" },
+    { timestamp: "2026-08-05 11:20", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "hvac_chiller_power", previousValue: "900", newValue: "850", effectiveDate: "2026-08-06", reason: "New chiller firmware update", transactionRef: "TXN-90312D" },
+    { timestamp: "2026-08-10 16:45", userId: "USR-101", userName: "Kar Hang", action: "SYSTEM_REPORT_GEN", targetKey: "compliance_pdf", previousValue: "N/A", newValue: "Exported", effectiveDate: "2026-08-10", reason: "Weekly management reporting", transactionRef: "TXN-90401B" },
+    { timestamp: "2026-08-11 08:20", userId: "USR-104", userName: "System Scheduler", action: "AUTO_ANOMALY_SCAN", targetKey: "utilityMeters", previousValue: "Scan Run", newValue: "3 Alerts Found", effectiveDate: "2026-08-11", reason: "Daily morning scan", transactionRef: "TXN-90455S" },
+    { timestamp: "2026-08-12 13:10", userId: "USR-101", userName: "Kar Hang", action: "ROLE_PERMISSION_GRANT", targetKey: "USR-108", previousValue: "Staff", newValue: "Facilities Manager", effectiveDate: "2026-08-12", reason: "Promotion applied in HR system", transactionRef: "TXN-90512H" }
   ]
 };
+
+

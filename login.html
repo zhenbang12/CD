@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - EcoHotel OS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      font-family: 'Inter', sans-serif;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .login-header .logo-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      display: inline-block;
+      text-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .login-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #064e3b;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .login-header p {
+      color: #047857;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .login-card {
+      background: var(--bg-card, #ffffff);
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .btn-login {
+      height: 48px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: #059669;
+      color: white;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-login:hover {
+      background: #047857;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo-icon">🌿</div>
+      <h1>EcoHotel OS</h1>
+    </div>
+    <div class="login-card">
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="username" class="form-input" required placeholder="Enter your username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" required placeholder="Enter your password">
+        </div>
+        <div id="error-msg" class="text-danger" style="margin-bottom: 15px; display: none;">Invalid credentials.</div>
+        <button type="submit" class="btn-login">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './js/db/storage.js';
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const userVal = document.getElementById('username').value.trim();
+      const passVal = document.getElementById('password').value.trim();
+      
+      let users = db.get('users');
+      
+      // Fallback if browser cached the old initialData.js missing the users array
+      if (!users || users.length === 0) {
+        users = [
+          { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
+          { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
+          { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
+          { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
+          { id: "USR-104", username: "chef", password: "password123", name: "Sze Ping", role: "Head Chef", department: "F&B", avatar: "SP" },
+          { id: "USR-105", username: "guest", password: "password123", name: "Simon Wong", role: "Guest", department: "Guest", avatar: "SW" }
+        ];
+      }
+      
+      const foundUser = users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
+
+      if (foundUser) {
+        localStorage.setItem('eco_session', foundUser.id);
+        window.location.href = 'index.html';
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

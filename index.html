@@ -13,6 +13,11 @@
 
   <!-- App Stylesheet -->
   <link rel="stylesheet" href="./css/style.css" />
+  <script>
+    if (!localStorage.getItem('eco_session')) {
+      window.location.href = 'login.html';
+    }
+  </script>
 </head>
 <body>
   <!-- App Mounting Container -->

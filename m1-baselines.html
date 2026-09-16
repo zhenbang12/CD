@@ -31,15 +31,17 @@
         </a>
         <div class="hotel-pill"><span class="hotel-dot"></span><span>Grand Bay Eco-Resort & Spa</span></div>
       </div>
-      <div class="header-right">
-        <span class="badge badge-primary">Module 1 Standalone</span>
-        <a href="./index.html" class="btn btn-sm btn-outline" style="text-decoration: none;">🏠 Master Portal</a>
+            <div class="header-right" style="display: flex; gap: 10px; align-items: center;">
+        <span class="badge badge-primary">Standalone</span>
+        <a href="./index.html" class="btn btn-sm btn-outline" style="text-decoration: none;">Master Portal</a>
+        <button onclick="localStorage.removeItem('eco_session'); window.location.href='login.html'" class="btn btn-sm" style="background: var(--danger); color: white; border: none;">Logout</button>
       </div>
     </header>
 
     <nav class="main-navbar">
       <div class="nav-tabs-container">
-        <a href="./m1-dashboard.html" class="nav-tab active" style="text-decoration: none;"><span class="tab-icon">??</span><span class="tab-text">Executive Analytics</span></a>
+        <a href="./m1-executive.html" class="nav-tab active" style="text-decoration: none;"><span
+            class="tab-icon">📊</span><span class="tab-text">Executive Analytics</span></a>
         <a href="./m2-inventory.html" class="nav-tab" style="text-decoration: none;"><span
             class="tab-icon">📦</span><span class="tab-text">Inventory & Spoilage</span></a>
         <a href="./m3-batch-optimization.html" class="nav-tab" style="text-decoration: none;"><span
@@ -59,7 +61,7 @@
 
   <script type="module">
     import { db } from './js/db/storage.js';
-    import { Module1Dashboard } from './js/modules/m1Dashboard.js';
+    import { Module1Baselines } from './js/modules/m1Baselines.js';
 
     window.showGlobalToast = (message, type = 'info') => {
       const container = document.getElementById('toast-container');
@@ -103,7 +105,7 @@
         return;
       }
 
-      new Module1Dashboard(mount);
+      new Module1Baselines(mount);
     });
   </script>
 </body>
