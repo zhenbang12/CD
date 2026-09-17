@@ -63,53 +63,20 @@ class HotelDatabase extends ChangeNotifier {
     EcoVoucher(code: 'VM26-TRP-4409', roomNumber: '202', guestName: 'Dr. Farouk Abdullah', rewardTitle: 'Langkawi Geopark Mangrove Pass', description: 'Zero-emission solar boat expedition', pointsCost: 30, expiryDate: '2026-08-25'),
   ];
 
-  // Defect Category Catalog (Module 5) — read-only here.
-  // Kept in sync with the Web Admin Dashboard's default catalog; only the
-  // web dashboard can add new categories (see js/db/storage.js addDefectCategory).
-  final List<DefectCategory> defectCategories = const [
-    DefectCategory(id: 'cat-toilet-flapper', label: 'Bathroom Toilet Flapper Leak', resourceType: 'Water', hint: '~280 L/day'),
-    DefectCategory(id: 'cat-basin-faucet', label: 'Dripping Basin Faucet', resourceType: 'Water', hint: '~45 L/day'),
-    DefectCategory(id: 'cat-hvac-thermostat', label: 'HVAC / Aircon Thermostat Stuck', resourceType: 'Electricity', hint: '~25 kWh/day'),
-    DefectCategory(id: 'cat-shower-valve', label: 'Shower Valve Pressure Leak', resourceType: 'Water', hint: '~120 L/day'),
-    DefectCategory(id: 'cat-coldroom-gasket', label: 'Cold Room Door Gasket Seal', resourceType: 'Electricity', hint: '~35 kWh/day'),
-  ];
-
-  // Utility Meters (Module 5) — kept in sync with the Web Admin Dashboard's
-  // full meter list (js/data/initialData.js) so the Log Meter Reading
-  // dropdown shows the same zones on both apps.
+  // Utility Meters (Module 5)
   final List<UtilityMeter> utilityMeters = [
-    // Housekeeping
     UtilityMeter(meterId: 'MTR-W-F1', zone: 'Floor 1 Guest Wing', type: 'Water', baselineDaily: 1800, unit: 'L/day', lastReading: 1650, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-E-F1', zone: 'Floor 1 Guest Wing', type: 'Electricity', baselineDaily: 140, unit: 'kWh/day', lastReading: 132, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-W-F2', zone: 'Floor 2 Guest Wing', type: 'Water', baselineDaily: 1750, unit: 'L/day', lastReading: 1710, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-E-F2', zone: 'Floor 2 Guest Wing', type: 'Electricity', baselineDaily: 145, unit: 'kWh/day', lastReading: 140, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-W-F3', zone: 'Floor 3 Executive Wing', type: 'Water', baselineDaily: 1600, unit: 'L/day', lastReading: 2150, lastReadingTime: '2026-08-12 18:00', status: 'Anomaly Flagged (+34.3%)'),
-
-    // Kitchen
+    UtilityMeter(meterId: 'MTR-E-F3', zone: 'Floor 3 Executive Wing', type: 'Electricity', baselineDaily: 155, unit: 'kWh/day', lastReading: 150, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-W-KIT', zone: 'Main Culinary Kitchen', type: 'Water', baselineDaily: 4500, unit: 'L/day', lastReading: 4320, lastReadingTime: '2026-08-12 21:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-E-KIT', zone: 'Main Culinary Kitchen', type: 'Electricity', baselineDaily: 380, unit: 'kWh/day', lastReading: 460, lastReadingTime: '2026-08-12 21:00', status: 'Anomaly Flagged (+21.0%)'),
-
-    // Laundry
-    UtilityMeter(meterId: 'MTR-W-LDY', zone: 'Commercial Eco-Laundry', type: 'Water', baselineDaily: 6200, unit: 'L/day', lastReading: 5890, lastReadingTime: '2026-08-12 20:30', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-E-LDY', zone: 'Commercial Eco-Laundry', type: 'Electricity', baselineDaily: 290, unit: 'kWh/day', lastReading: 275, lastReadingTime: '2026-08-12 20:30', status: 'Normal'),
-
-    // Facilities
-    UtilityMeter(meterId: 'MTR-E-HVAC', zone: 'Central Chiller Plant', type: 'Electricity', baselineDaily: 850, unit: 'kWh/day', lastReading: 820, lastReadingTime: '2026-08-12 22:00', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-W-FAC', zone: 'Maintenance Workshop', type: 'Water', baselineDaily: 500, unit: 'L/day', lastReading: 620, lastReadingTime: '2026-08-13 08:00', status: 'Anomaly Flagged (+24.0%)'),
-
-    // Front Office
-    UtilityMeter(meterId: 'MTR-W-FO', zone: 'Front Office & Lobby', type: 'Water', baselineDaily: 700, unit: 'L/day', lastReading: 680, lastReadingTime: '2026-08-13 08:00', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-E-FO', zone: 'Front Office & Lobby', type: 'Electricity', baselineDaily: 120, unit: 'kWh/day', lastReading: 148, lastReadingTime: '2026-08-13 08:00', status: 'Anomaly Flagged (+23.3%)'),
   ];
 
   // Technicians (Module 5)
-  // NOTE: status/activeTickets are kept in sync with the seeded repairTickets
-  // list below — Faizal Rahim is "Busy" because he's actively assigned to
-  // ticket TK-2026-0812-01 (In Progress). Keep these consistent whenever seed
-  // tickets are added/removed/reassigned (mirrors js/data/initialData.js).
   final List<Technician> technicians = [
-    Technician(id: 'TECH-01', name: 'Faizal Rahim', specialty: 'Plumbing & Hydraulics', status: 'Busy (Room 304 (Floor 3))', activeTickets: 1, phone: '+60 12-441 9021'),
-    Technician(id: 'TECH-02', name: 'Ramesh Kumar', specialty: 'HVAC & Electrical', status: 'Available', activeTickets: 0, phone: '+60 17-883 1145'),
+    Technician(id: 'TECH-01', name: 'Faizal Rahim', specialty: 'Plumbing & Hydraulics', status: 'Available', activeTickets: 0, phone: '+60 12-441 9021'),
+    Technician(id: 'TECH-02', name: 'Ramesh Kumar', specialty: 'HVAC & Electrical', status: 'Busy (Main Kitchen)', activeTickets: 1, phone: '+60 17-883 1145'),
     Technician(id: 'TECH-03', name: 'Chong Wei', specialty: 'Smart Controls & Sensors', status: 'Available', activeTickets: 0, phone: '+60 19-332 7780'),
   ];
 
@@ -118,6 +85,7 @@ class HotelDatabase extends ChangeNotifier {
     RepairTicket(
       id: 'TCK-8801',
       ticketNumber: 'TK-2026-0812-01',
+      source: 'Housekeeping Defect Report',
       zone: 'Room 304 (Floor 3)',
       defectCategory: 'Bathroom Toilet Water Leak',
       description: 'Toilet flapper valve running water into bowl.',
@@ -130,6 +98,23 @@ class HotelDatabase extends ChangeNotifier {
       status: 'In Progress',
       createdAt: '2026-08-12 11:20',
       notes: 'Replacing silicone diaphragm seal.',
+    ),
+    RepairTicket(
+      id: 'TCK-8802',
+      ticketNumber: 'TK-2026-0812-02',
+      source: 'Automated Utility Anomaly Engine',
+      zone: 'Main Culinary Kitchen',
+      defectCategory: 'HVAC / Cold-room Compressor',
+      description: 'Meter MTR-E-KIT exceeded baseline by 21.0% (460 vs 380 kWh).',
+      severity: 'High',
+      estimatedLossRate: '80 kWh / day',
+      estimatedDailyLossNum: 80,
+      resourceType: 'Electricity',
+      priority: 'High',
+      assignedTechnician: 'Ramesh Kumar',
+      status: 'Assigned',
+      createdAt: '2026-08-12 21:15',
+      notes: 'Dispatched to replace thermal gasket seals.',
     ),
   ];
 
@@ -243,33 +228,6 @@ class HotelDatabase extends ChangeNotifier {
   }
 
   // ================= MODULE 5 METHODS =================
-
-  // Ticket Number Sequence (format: TK-YYYY-MM-DD-001), mirrors js/db/storage.js
-  // generateTicketNumber() on the Web Admin Dashboard so both apps use the
-  // same numbering scheme.
-  DateTime? _ticketSeqDate;
-  int _ticketSeqCount = 0;
-
-  String _generateTicketNumber() {
-    final now = DateTime.now();
-    final todayStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final isSameDay = _ticketSeqDate != null &&
-        _ticketSeqDate!.year == now.year &&
-        _ticketSeqDate!.month == now.month &&
-        _ticketSeqDate!.day == now.day;
-    if (!isSameDay) {
-      _ticketSeqDate = now;
-      _ticketSeqCount = 0;
-    }
-    _ticketSeqCount += 1;
-    final seq = _ticketSeqCount.toString().padLeft(3, '0');
-    return 'TK-$todayStr-$seq';
-  }
-
-  // A meter reading that exceeds baseline only flags the zone as an Anomaly
-  // on the telemetry board — it no longer auto-dispatches a repair ticket.
-  // Repair tickets are only created from an explicit reportDefect() call,
-  // so staff decide whether a flagged anomaly actually needs a work order.
   bool logMeterReading(String meterId, double reading) {
     final idx = utilityMeters.indexWhere((m) => m.meterId == meterId);
     if (idx == -1) return false;
@@ -281,58 +239,70 @@ class HotelDatabase extends ChangeNotifier {
     final dev = ((reading - meter.baselineDaily) / meter.baselineDaily) * 100.0;
     final isAnomaly = dev >= 15.0;
 
-    meter.status = isAnomaly ? 'Anomaly Flagged (+${dev.toStringAsFixed(1)}%)' : 'Normal';
+    if (isAnomaly) {
+      meter.status = 'Anomaly Flagged (+${dev.toStringAsFixed(1)}%)';
+      final loss = (reading - meter.baselineDaily).round();
+      final unitStr = meter.type == 'Water' ? 'Liters/day' : 'kWh/day';
+
+      final availableTech = technicians.firstWhere((t) => t.status == 'Available', orElse: () => technicians.first);
+      repairTickets.insert(0, RepairTicket(
+        id: 'TCK-${Random().nextInt(9000) + 1000}',
+        ticketNumber: 'TK-2026-0813-${Random().nextInt(90) + 10}',
+        source: 'Automated Utility Anomaly Engine',
+        zone: meter.zone,
+        defectCategory: '${meter.type} Surge Leak / Anomaly',
+        description: 'Meter ${meter.meterId} exceeded baseline by ${dev.toStringAsFixed(1)}%.',
+        severity: 'High',
+        estimatedLossRate: '$loss $unitStr',
+        estimatedDailyLossNum: loss.toDouble(),
+        resourceType: meter.type,
+        priority: 'High',
+        assignedTechnician: availableTech.name,
+        status: 'Assigned',
+        createdAt: '2026-08-13 08:30',
+        notes: 'Dispatched via Anomaly Detection Logic.',
+      ));
+      availableTech.activeTickets += 1;
+    } else {
+      meter.status = 'Normal';
+    }
 
     notifyListeners();
     return isAnomaly;
   }
 
-  void reportDefect(String zone, String category, String severity, String resourceType, String description, {String? photoDataUrl}) {
+  void reportDefect(String zone, String category, String severity, String description) {
     double lossNum = 0;
     String lossStr = '0 / day';
-    final lc = category.toLowerCase();
 
-    // Mirrors the estimation logic in the Web Admin Dashboard (js/db/storage.js)
-    // so both apps produce consistent repair ticket data.
-    if (lc.contains('toilet') || lc.contains('flush') || lc.contains('cistern')) {
+    if (category.toLowerCase().contains('toilet')) {
       lossNum = severity == 'High' ? 320 : 180;
       lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('faucet') || lc.contains('tap') || lc.contains('pipe') || lc.contains('basin')) {
+    } else if (category.toLowerCase().contains('faucet') || category.toLowerCase().contains('tap')) {
       lossNum = severity == 'High' ? 120 : 45;
       lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('shower') || lc.contains('valve')) {
-      lossNum = severity == 'High' ? 120 : 55;
-      lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('hvac') || lc.contains('aircon') || lc.contains('chiller') || lc.contains('thermostat')) {
-      lossNum = severity == 'High' ? 35 : 18;
-      lossStr = '${lossNum.round()} kWh / day';
-    } else if (lc.contains('cold room') || lc.contains('gasket') || lc.contains('compressor') || lc.contains('freezer')) {
-      lossNum = severity == 'High' ? 35 : 18;
-      lossStr = '${lossNum.round()} kWh / day';
     } else {
-      lossNum = severity == 'High' ? 40 : 15;
-      lossStr = resourceType == 'Electricity' ? '${lossNum.round()} kWh / day' : '${lossNum.round()} Liters / day';
+      lossNum = 35;
+      lossStr = '${lossNum.round()} kWh / day';
     }
 
-    final priority = severity == 'High' || lossNum >= 100 ? 'High' : 'Normal';
     final tech = technicians.firstWhere((t) => t.status == 'Available', orElse: () => technicians.first);
     repairTickets.insert(0, RepairTicket(
       id: 'TCK-${Random().nextInt(9000) + 1000}',
-      ticketNumber: _generateTicketNumber(),
+      ticketNumber: 'TK-2026-0813-${Random().nextInt(90) + 10}',
+      source: 'Housekeeping Defect Report',
       zone: zone,
       defectCategory: category,
       description: description,
       severity: severity,
       estimatedLossRate: lossStr,
       estimatedDailyLossNum: lossNum,
-      resourceType: resourceType,
-      priority: priority,
+      resourceType: category.toLowerCase().contains('hvac') ? 'Electricity' : 'Water',
+      priority: severity == 'High' ? 'High' : 'Normal',
       assignedTechnician: tech.name,
       status: 'Assigned',
       createdAt: '2026-08-13 08:30',
-      notes: 'Reported by Housekeeping ground team during room inspection.',
-      photoAttached: photoDataUrl != null,
-      photoDataUrl: photoDataUrl,
+      notes: 'Reported by ground staff.',
     ));
     tech.activeTickets += 1;
     notifyListeners();
