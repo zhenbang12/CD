@@ -64,10 +64,10 @@ class StorageEngine {
     mergeArrays.forEach(key => {
       if (INITIAL_DATA[key]) {
         if (!this.data[key]) this.data[key] = [];
-        
+
         // Helper to get ID
         const getId = (item) => item.id || item.meterId || item.month || item.timestamp;
-        
+
         const existingIds = this.data[key].map(getId);
         INITIAL_DATA[key].forEach(newItem => {
           if (!existingIds.includes(getId(newItem))) {
@@ -649,15 +649,44 @@ class StorageEngine {
   }
 
   // --- MODULE 4: Guest PWA & Housekeeping Schedule ---
+  logGuestAccess(roomNumber, source = 'QR_CODE_SCAN') {
+    const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
+    if (!room) return false;
+    
+    // Avoid spamming if already logged within last 3 minutes
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const existing = this.data.guestInteractions.find(i => 
+      i.roomNumber === roomNumber && 
+      i.action === 'PWA_ACCESS' &&
+      i.timestamp.substring(0, 16) === now.substring(0, 16)
+    );
+    if (!existing) {
+      this.data.guestInteractions.unshift({
+        id: `GIL-${Date.now().toString().slice(-4)}`,
+        roomNumber: roomNumber,
+        timestamp: now,
+        action: 'PWA_ACCESS',
+        details: `Guest ${room.guestName} accessed in-room terminal via ${source} (Token: ${room.qrToken || 'RM' + roomNumber})`,
+        pointsEarned: 0
+      });
+      this.saveDatabase();
+      this.notify('guestInteractions', this.data.guestInteractions);
+    }
+    return true;
+  }
+
   updateGuestPreference(roomNumber, { servicePreference, linenDelayDays = 0, towelReuse = true }) {
     const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
     if (!room) return false;
 
+    const parsedDelay = parseInt(linenDelayDays, 10) || 0;
     // Check if exactly same preference already exists
-    const isUnchanged = (room.servicePreference === servicePreference && room.towelReuse === towelReuse);
+    const isUnchanged = (room.servicePreference === servicePreference && 
+      room.towelReuse === towelReuse && 
+      (room.linenDelayDays || 0) === parsedDelay);
 
     room.servicePreference = servicePreference;
-    room.linenDelayDays = parseInt(linenDelayDays, 10);
+    room.linenDelayDays = parsedDelay;
     room.towelReuse = towelReuse;
 
     let pointsForToday = 0;
@@ -666,7 +695,8 @@ class StorageEngine {
       pointsForToday = 15;
     } else if (servicePreference === 'LINEN_DELAY') {
       room.cleaningStatus = 'Light Service Only';
-      pointsForToday = 10;
+      // 10 pts baseline + 2 pts bonus if >= 3 days
+      pointsForToday = parsedDelay >= 3 ? 12 : 10;
     } else {
       room.cleaningStatus = 'Active Clean List';
       pointsForToday = 0;
@@ -678,21 +708,29 @@ class StorageEngine {
 
     // Baseline historical points (Room 304 baseline is 5 pts)
     const baseHistorical = 5;
-    room.ecoPointsEarned = baseHistorical + pointsForToday;
+    const netPoints = (baseHistorical + pointsForToday) - (room.pointsSpent || 0);
+    room.ecoPointsEarned = Math.max(0, netPoints);
 
     // Log Interaction Event (FR_12) only if changed
     if (!isUnchanged) {
+      let detailDesc = `Selected ${servicePreference}`;
+      if (servicePreference === 'LINEN_DELAY') {
+        detailDesc += ` (Postponed by ${parsedDelay} day${parsedDelay === 1 ? '' : 's'})`;
+      }
+      if (towelReuse) {
+        detailDesc += ' + Towel Reuse';
+      }
       this.data.guestInteractions.unshift({
         id: `GIL-${Date.now().toString().slice(-4)}`,
         roomNumber: roomNumber,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
         action: 'PWA_SERVICE_SELECTION',
-        details: `Selected ${servicePreference}${towelReuse ? ' + Towel Reuse' : ''}`,
+        details: detailDesc,
         pointsEarned: pointsForToday
       });
     }
 
-    // Check Voucher Milestone (Every 25 points)
+    // Check Voucher Milestone (Every 25 points default unlock)
     if (room.ecoPointsEarned >= 25) {
       const existingVoucher = this.data.ecoVouchers.find(v => v.roomNumber === roomNumber);
       if (!existingVoucher) {
@@ -716,6 +754,57 @@ class StorageEngine {
     this.notify('rooms', this.data.rooms);
     this.notify('guestInteractions', this.data.guestInteractions);
     return { room, pointsAwarded: pointsForToday, isUnchanged };
+  }
+
+  claimRewardTier(roomNumber, tierKey) {
+    const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
+    if (!room) return { success: false, message: 'Room not found.' };
+
+    const rewardTiers = {
+      'tier-dining': { title: '15% Farm-to-Table Dining Voucher', cost: 25, desc: 'Valid at Ocean Reef Organic Bistro & Farm-to-Table Kitchen.' },
+      'tier-geopark': { title: 'Langkawi UNESCO Geopark Mangrove Pass', cost: 30, desc: 'Zero-emission solar boat eco-safari guided expedition.' },
+      'tier-canopy': { title: 'Rainforest Canopy Walk & Eco-Trek', cost: 45, desc: 'Guided rainforest eco-trek and native mangrove sapling planting.' }
+    };
+
+    const tier = rewardTiers[tierKey];
+    if (!tier) return { success: false, message: 'Invalid reward tier.' };
+
+    if ((room.ecoPointsEarned || 0) < tier.cost) {
+      return { success: false, message: `Insufficient points. You need ${tier.cost} pts (Current: ${room.ecoPointsEarned || 0} pts).` };
+    }
+
+    // Deduct points from guest balance and record spent points
+    room.ecoPointsEarned = Math.max(0, (room.ecoPointsEarned || 0) - tier.cost);
+    room.pointsSpent = (room.pointsSpent || 0) + tier.cost;
+
+    const prefix = tierKey === 'tier-geopark' ? 'VM26-TRP' : tierKey === 'tier-canopy' ? 'VM26-SAF' : 'VM26-ECO';
+    const newVoucher = {
+      code: `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`,
+      roomNumber: room.roomNumber,
+      guestName: room.guestName,
+      rewardTitle: tier.title,
+      description: tier.desc,
+      pointsCost: tier.cost,
+      issueDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      expiryDate: '2026-08-25',
+      isRedeemed: false
+    };
+
+    this.data.ecoVouchers.unshift(newVoucher);
+    this.data.guestInteractions.unshift({
+      id: `GIL-${Date.now().toString().slice(-4)}`,
+      roomNumber: roomNumber,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      action: 'VOUCHER_CLAIMED',
+      details: `Claimed ${tier.title} (-${tier.cost} pts) -> Voucher ${newVoucher.code}`,
+      pointsEarned: -tier.cost
+    });
+
+    this.saveDatabase();
+    this.notify('rooms', this.data.rooms);
+    this.notify('ecoVouchers', this.data.ecoVouchers);
+    this.notify('guestInteractions', this.data.guestInteractions);
+    return { success: true, voucher: newVoucher, newBalance: room.ecoPointsEarned };
   }
 
   redeemVoucher(code) {

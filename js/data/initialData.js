@@ -58,7 +58,7 @@ export const INITIAL_DATA = {
   ],
 
   // Module 1: Historical Compliance Logs (Last 6 Months towards VM2026)
-    complianceLogs: [
+  complianceLogs: [
     { month: "Oct 2025", foodSavedKg: 910, waterConservedL: 112000, energySavedKwh: 9800, co2AvoidedKg: 13500, costSavedMyr: 25100, vmScore: 68, status: "Needs Improvement" },
     { month: "Nov 2025", foodSavedKg: 980, waterConservedL: 118000, energySavedKwh: 10200, co2AvoidedKg: 14200, costSavedMyr: 27300, vmScore: 71, status: "Acceptable" },
     { month: "Dec 2025", foodSavedKg: 1050, waterConservedL: 125000, energySavedKwh: 10900, co2AvoidedKg: 15400, costSavedMyr: 29500, vmScore: 74, status: "Acceptable" },
