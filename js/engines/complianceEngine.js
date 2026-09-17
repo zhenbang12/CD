@@ -16,90 +16,75 @@ export class ComplianceEngine {
    */
   static calculateLiveScore(reportingPeriod = 'all', scope = 'all') {
     const baselines = db.getBaselines();
-    const rooms = db.get('rooms') || [];
-    const utilityMeters = db.get('utilityMeters') || [];
-    const plateWaste = db.get('plateWasteLogs') || [];
-    const foodWaste = db.get('foodWasteLogs') || [];
-    const repairTickets = db.get('repairTickets') || [];
-    const reservationForecast = db.get('reservationForecast') || [];
+    const rooms = db.get('rooms');
+    const utilityMeters = db.get('utilityMeters');
+    const plateWaste = db.get('plateWasteLogs');
+    const foodWaste = db.get('foodWasteLogs');
+    const repairTickets = db.get('repairTickets');
 
-    const getBaselineValue = (key, fallback) => {
-      const b = baselines.find(x => x.key === key);
-      return b ? b.value : fallback;
-    };
+    // 1. Water Score Calculation
+    const waterMeters = utilityMeters.filter(m => m.type === 'Water' && m.lastReading !== undefined);
+    let totalWaterBaseline = 0;
+    let totalWaterActual = 0;
+    waterMeters.forEach(m => {
+      totalWaterBaseline += m.baselineDaily;
+      totalWaterActual += m.lastReading;
+    });
 
-    const foodWastePerCoverLimit = getBaselineValue('buffet_food_waste', 0.15);
-    let totalGuestsToday = 300; 
-    if (reservationForecast.length > 0) {
-      const targetDate = reservationForecast[0].date;
-      const shifts = reservationForecast.filter(r => r.date === targetDate);
-      totalGuestsToday = shifts.reduce((acc, cur) => acc + (cur.totalInHouseGuests || 0), 0) / (shifts.length || 1);
-      if (totalGuestsToday === 0) totalGuestsToday = 300;
+    // 2. Electricity Score Calculation
+    const eleMeters = utilityMeters.filter(m => m.type === 'Electricity' && m.lastReading !== undefined);
+    let totalEleBaseline = 0;
+    let totalEleActual = 0;
+    eleMeters.forEach(m => {
+      totalEleBaseline += m.baselineDaily;
+      totalEleActual += m.lastReading;
+    });
+
+    // 3. F&B Waste Score
+    const totalFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || 0), 0) +
+      plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
+
+    // Baseline: 45kg max daily allowable waste across 300+ guests
+    const foodBaselineDaily = 45;
+
+    // UC_106 A2: No usable data for a required metric
+    const hasWaterData = waterMeters.length > 0;
+    const hasEleData = eleMeters.length > 0;
+    const hasFoodData = foodWaste.length > 0 || plateWaste.length > 0;
+
+    if (!hasWaterData || !hasEleData || !hasFoodData) {
+      return {
+        dataComplete: false,
+        message: "Data incomplete. A compliance grade cannot be calculated.",
+        errorType: "M3",
+        metrics: {
+          foodWasteCurrentKg: totalFoodWasteKg,
+          waterUseCurrentL: totalWaterActual,
+          energyUseCurrentKwh: totalEleActual,
+        }
+      };
     }
 
-    const targetFoodWasteKg = totalGuestsToday * foodWastePerCoverLimit;
-    const actualFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || cur.weightKg || 0), 0) +
-                              plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
-    
-    let foodEfficiency = targetFoodWasteKg / (actualFoodWasteKg || 1);
-    let foodScore = Math.min(100, Math.max(35, foodEfficiency * 85));
+    const waterEfficiency = totalWaterBaseline > 0 ? (totalWaterBaseline / totalWaterActual) : 1.0;
+    let waterScore = Math.min(100, Math.max(35, waterEfficiency * 88));
 
-    const occupiedRooms = rooms.filter(r => r.status === 'Occupied').length || 10;
-    const waterPerRoom = getBaselineValue('water_per_room', 300);
-    const energyPerRoom = getBaselineValue('power_per_room', 25);
+    const eleEfficiency = totalEleBaseline > 0 ? (totalEleBaseline / totalEleActual) : 1.0;
+    let eleScore = Math.min(100, Math.max(35, eleEfficiency * 85));
 
-    const targetRoomWater = occupiedRooms * waterPerRoom;
-    const targetRoomEnergy = occupiedRooms * energyPerRoom;
+    const foodScore = Math.min(100, Math.max(45, 100 - (totalFoodWasteKg * 0.6)));
 
-    let staticWaterTarget = 0;
-    let staticEnergyTarget = 0;
-    let actualWater = 0;
-    let actualEnergy = 0;
+    // 4. Maintenance / Unresolved Ticket Penalty
+    const activeHighTickets = repairTickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length;
+    const ticketPenalty = activeHighTickets * 3.5;
 
-    utilityMeters.forEach(m => {
-      if (m.type === 'Water') actualWater += m.lastReading || 0;
-      if (m.type === 'Electricity') actualEnergy += m.lastReading || 0;
+    // Weighted composite
+    let compositeScore = Math.round(
+      (waterScore * 0.35) +
+      (eleScore * 0.30) +
+      (foodScore * 0.35) -
+      ticketPenalty
+    );
 
-      if (m.departmentId !== 'housekeeping') {
-        if (m.type === 'Water') staticWaterTarget += m.baselineDaily || 0;
-        if (m.type === 'Electricity') staticEnergyTarget += m.baselineDaily || 0;
-      }
-    });
-
-    const totalTargetWater = targetRoomWater + staticWaterTarget;
-    const totalTargetEnergy = targetRoomEnergy + staticEnergyTarget;
-
-    const waterEfficiency = totalTargetWater / (actualWater || 1);
-    const energyEfficiency = totalTargetEnergy / (actualEnergy || 1);
-
-    const waterScore = Math.min(100, Math.max(35, waterEfficiency * 88));
-    const eleScore = Math.min(100, Math.max(35, energyEfficiency * 85));
-
-    let ecoBonus = 0;
-    rooms.forEach(r => {
-      if (r.status === 'Occupied') {
-        if (r.servicePreference === 'OPT_OUT_CLEANING') ecoBonus += 1.5;
-        else if (r.servicePreference === 'LINEN_DELAY') ecoBonus += 0.5;
-        if (r.towelReuse) ecoBonus += 0.5;
-      }
-    });
-
-    let ticketPenalty = 0;
-    let activeHighTickets = 0;
-    repairTickets.forEach(t => {
-      if (t.status !== 'Completed' && t.status !== 'Resolved') {
-        if (t.priority === 'High' || t.severity === 'High') {
-          ticketPenalty += 3.0;
-          activeHighTickets++;
-        } else {
-          ticketPenalty += 1.0;
-        }
-      }
-    });
-
-    let baseScore = (waterScore * 0.35) + (eleScore * 0.30) + (foodScore * 0.35);
-    let compositeScore = Math.round(baseScore + ecoBonus - ticketPenalty);
-    
     compositeScore = Math.min(99, Math.max(40, compositeScore));
 
     let grade = 'Compliant';
@@ -129,12 +114,23 @@ export class ComplianceEngine {
       gradeBadge = 'badge-danger';
     }
 
-    const foodWasteSavedMTD = Math.max(0, targetFoodWasteKg - actualFoodWasteKg) * 30;
-    const waterConservedMTD = Math.max(0, totalTargetWater - actualWater) * 30;
-    const energySavedMTD = Math.max(0, totalTargetEnergy - actualEnergy) * 30;
+    // Cumulative MTD calculations (Dynamic based on daily differences * 30 days)
+    const daysInPeriod = 30; // Approximating MTD as 30 days of activity
+    const foodWasteSavedMTD = Math.max(0, (foodBaselineDaily * daysInPeriod) - totalFoodWasteKg);
+    const waterConservedMTD = Math.max(0, (totalWaterBaseline - totalWaterActual) * daysInPeriod);
+    const energySavedMTD = Math.max(0, (totalEleBaseline - totalEleActual) * daysInPeriod);
 
-    const totalCo2AvoidedKg = Math.round((foodWasteSavedMTD * 2.5) + ((waterConservedMTD / 1000) * 0.35) + (energySavedMTD * 0.65));
-    const totalCostSavingsMyr = Math.round((foodWasteSavedMTD * 22.0) + ((waterConservedMTD / 1000) * 2.80) + (energySavedMTD * 0.52));
+    // Environmental GHG / Carbon Avoided (kg CO2e)
+    const foodCo2 = foodWasteSavedMTD * 2.5;
+    const waterCo2 = (waterConservedMTD / 1000) * 0.35;
+    const energyCo2 = energySavedMTD * 0.65;
+    const totalCo2AvoidedKg = Math.round(foodCo2 + waterCo2 + energyCo2);
+
+    // Financial Cost Savings (MYR)
+    const foodSavingsMyr = foodWasteSavedMTD * 22.0; // RM22/kg avg
+    const waterSavingsMyr = (waterConservedMTD / 1000) * 2.80; // RM2.80/m3
+    const energySavingsMyr = energySavedMTD * 0.52; // RM0.52/kWh
+    const totalCostSavingsMyr = Math.round(foodSavingsMyr + waterSavingsMyr + energySavingsMyr);
 
     return {
       dataComplete: true,
@@ -144,12 +140,9 @@ export class ComplianceEngine {
       statusClass,
       gradeBadge,
       metrics: {
-        foodWasteCurrentKg: actualFoodWasteKg,
-        foodWasteTargetKg: targetFoodWasteKg,
-        waterUseCurrentL: actualWater,
-        waterTargetL: totalTargetWater,
-        energyUseCurrentKwh: actualEnergy,
-        energyTargetKwh: totalTargetEnergy,
+        foodWasteCurrentKg: totalFoodWasteKg,
+        waterUseCurrentL: totalWaterActual,
+        energyUseCurrentKwh: totalEleActual,
         waterScore: Math.round(waterScore),
         eleScore: Math.round(eleScore),
         foodScore: Math.round(foodScore),
@@ -163,6 +156,9 @@ export class ComplianceEngine {
     };
   }
 
+  /**
+   * Calculates Departmental Wastage & Offender Heatmap with dynamic variance
+   */
   static getDepartmentHeatmaps() {
     const utilityMeters = db.get('utilityMeters');
     const foodWaste = db.get('foodWasteLogs');
