@@ -35,10 +35,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  # Used to pick a photo from the gallery for Report Facility Defect's
-  # "Upload Photo Evidence" field (Module 5), matching the web dashboard.
-  image_picker: ^1.1.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
