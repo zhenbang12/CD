@@ -6,7 +6,7 @@
 export const INITIAL_DATA = {
   // Simulated Authentication Users
   users: [
-    { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Hotel Manager", department: "Executive Board", avatar: "HM" },
+    { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
     { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
     { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
     { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
@@ -22,8 +22,14 @@ export const INITIAL_DATA = {
     isSimulating: false,
     simSpeed: 1, // 1x, 2x, 5x
     theme: "dark", // 'dark' | 'light'
-    activeRole: null,
-    activeUserId: null
+    activeRole: "executive", // 'executive' | 'chef' | 'programmer' | 'guest_pwa' | 'facilities' | 'guest'
+    activeUser: {
+      id: "USR-101",
+      name: "Kar Hang",
+      role: "Sustainability Executive",
+      department: "Executive Board",
+      avatar: "👔"
+    }
   },
 
   // Operational Baselines (Target Standards)
@@ -42,21 +48,15 @@ export const INITIAL_DATA = {
 
   // Module 1: Historical Compliance Logs (Last 6 Months towards VM2026)
     complianceLogs: [
-    { month: "Sep 2025", foodSavedKg: 850, waterConservedL: 95000, energySavedKwh: 8200, co2AvoidedKg: 11450, costSavedMyr: 21200, vmScore: 61, status: "Audit Warning" },
-    { month: "Oct 2025", foodSavedKg: 920, waterConservedL: 110000, energySavedKwh: 9100, co2AvoidedKg: 13300, costSavedMyr: 24800, vmScore: 65, status: "Audit Warning" },
-    { month: "Nov 2025", foodSavedKg: 990, waterConservedL: 115000, energySavedKwh: 9800, co2AvoidedKg: 14500, costSavedMyr: 26500, vmScore: 67, status: "Audit Warning" },
-    { month: "Dec 2025", foodSavedKg: 810, waterConservedL: 105000, energySavedKwh: 11200, co2AvoidedKg: 13800, costSavedMyr: 25100, vmScore: 64, status: "Audit Warning" },
-    { month: "Jan 2026", foodSavedKg: 1050, waterConservedL: 130000, energySavedKwh: 10500, co2AvoidedKg: 16100, costSavedMyr: 29400, vmScore: 71, status: "Silver Tier" },
-    { month: "Feb 2026", foodSavedKg: 1120, waterConservedL: 138000, energySavedKwh: 11900, co2AvoidedKg: 17600, costSavedMyr: 32100, vmScore: 74, status: "Silver Tier" },
-    { month: "Oct 2025", foodSavedKg: 910, waterConservedL: 112000, energySavedKwh: 9800, co2AvoidedKg: 13500, costSavedMyr: 25100, vmScore: 68, status: "Audit Warning" },
-    { month: "Nov 2025", foodSavedKg: 980, waterConservedL: 118000, energySavedKwh: 10200, co2AvoidedKg: 14200, costSavedMyr: 27300, vmScore: 71, status: "Silver Tier" },
-    { month: "Dec 2025", foodSavedKg: 1050, waterConservedL: 125000, energySavedKwh: 10900, co2AvoidedKg: 15400, costSavedMyr: 29500, vmScore: 74, status: "Silver Tier" },
-    { month: "Jan 2026", foodSavedKg: 1120, waterConservedL: 134000, energySavedKwh: 11500, co2AvoidedKg: 16800, costSavedMyr: 31200, vmScore: 75, status: "Silver Tier" },
-    { month: "Feb 2026", foodSavedKg: 1190, waterConservedL: 139000, energySavedKwh: 12100, co2AvoidedKg: 17600, costSavedMyr: 32800, vmScore: 76, status: "Silver Tier" },
-    { month: "Mar 2026", foodSavedKg: 1240, waterConservedL: 145000, energySavedKwh: 12800, co2AvoidedKg: 18450, costSavedMyr: 34200, vmScore: 78, status: "Silver Tier" },
-    { month: "Apr 2026", foodSavedKg: 1480, waterConservedL: 168000, energySavedKwh: 14200, co2AvoidedKg: 21300, costSavedMyr: 39800, vmScore: 84, status: "Gold Tier" },
-    { month: "May 2026", foodSavedKg: 1620, waterConservedL: 192000, energySavedKwh: 16500, co2AvoidedKg: 24100, costSavedMyr: 44600, vmScore: 89, status: "Gold Tier" },
-    { month: "Jun 2026", foodSavedKg: 1510, waterConservedL: 178000, energySavedKwh: 15300, co2AvoidedKg: 22600, costSavedMyr: 41200, vmScore: 86, status: "Gold Tier" },
+    { month: "Oct 2025", foodSavedKg: 910, waterConservedL: 112000, energySavedKwh: 9800, co2AvoidedKg: 13500, costSavedMyr: 25100, vmScore: 68, status: "Needs Improvement" },
+    { month: "Nov 2025", foodSavedKg: 980, waterConservedL: 118000, energySavedKwh: 10200, co2AvoidedKg: 14200, costSavedMyr: 27300, vmScore: 71, status: "Acceptable" },
+    { month: "Dec 2025", foodSavedKg: 1050, waterConservedL: 125000, energySavedKwh: 10900, co2AvoidedKg: 15400, costSavedMyr: 29500, vmScore: 74, status: "Acceptable" },
+    { month: "Jan 2026", foodSavedKg: 1120, waterConservedL: 134000, energySavedKwh: 11500, co2AvoidedKg: 16800, costSavedMyr: 31200, vmScore: 75, status: "Compliant" },
+    { month: "Feb 2026", foodSavedKg: 1190, waterConservedL: 139000, energySavedKwh: 12100, co2AvoidedKg: 17600, costSavedMyr: 32800, vmScore: 76, status: "Compliant" },
+    { month: "Mar 2026", foodSavedKg: 1240, waterConservedL: 145000, energySavedKwh: 12800, co2AvoidedKg: 18450, costSavedMyr: 34200, vmScore: 78, status: "Compliant" },
+    { month: "Apr 2026", foodSavedKg: 1480, waterConservedL: 168000, energySavedKwh: 14200, co2AvoidedKg: 21300, costSavedMyr: 39800, vmScore: 84, status: "High Compliance" },
+    { month: "May 2026", foodSavedKg: 1620, waterConservedL: 192000, energySavedKwh: 16500, co2AvoidedKg: 24100, costSavedMyr: 44600, vmScore: 89, status: "High Compliance" },
+    { month: "Jun 2026", foodSavedKg: 1510, waterConservedL: 178000, energySavedKwh: 15300, co2AvoidedKg: 22600, costSavedMyr: 41200, vmScore: 86, status: "High Compliance" },
     { month: "Jul 2026", foodSavedKg: 1790, waterConservedL: 215000, energySavedKwh: 18900, co2AvoidedKg: 27800, costSavedMyr: 49500, vmScore: 93, status: "VM2026 Champion" },
     { month: "Aug 2026 (MTD)", foodSavedKg: 940, waterConservedL: 122000, energySavedKwh: 10400, co2AvoidedKg: 15200, costSavedMyr: 28400, vmScore: 92, status: "On Track" }
   ],
@@ -77,10 +77,6 @@ export const INITIAL_DATA = {
 
   // Module 2: Waste Logs (Spoilage vs Prep Waste)
   foodWasteLogs: [
-    { id: "FWL-004", date: "2026-08-11", mealPeriod: "Dinner", type: "Spoilage", quantity: 4.1, costImpact: 112, loggedBy: "Chef Sze Ping", departmentId: "kitchen" },
-    { id: "FWL-005", date: "2026-08-11", mealPeriod: "Dinner", type: "Overproduction", quantity: 22.4, costImpact: 350, loggedBy: "Banquet Manager Tan", departmentId: "banquet" },
-    { id: "FWL-006", date: "2026-08-11", mealPeriod: "Breakfast", type: "Spoilage", quantity: 8.5, costImpact: 95, loggedBy: "Pastry Chef Chloe", departmentId: "pastry" },
-
     { id: "WST-101", departmentId: "kitchen", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Cameron Highland Hydroponic Lettuce", type: "Spoilage", reason: "Expired / Wilted in Chiller B", quantity: 3.4, unit: "kg", costImpact: 31.28, loggedBy: "Sze Ping (Head Chef)" },
     { id: "WST-102", departmentId: "kitchen", date: "2026-08-12", mealPeriod: "Dinner Shift", item: "Fresh Farm Poultry", type: "Prep Waste", reason: "Bones & Trimmings", quantity: 5.8, unit: "kg", costImpact: 0, loggedBy: "Kitchen Prep Team" },
     { id: "WST-103", departmentId: "kitchen", date: "2026-08-11", mealPeriod: "Breakfast Shift", item: "Organic Coconut Milk", type: "Spoilage", reason: "Sour batch due to door left ajar", quantity: 4, unit: "L", costImpact: 34, loggedBy: "Sous Chef Ahmad" },
@@ -151,12 +147,6 @@ export const INITIAL_DATA = {
 
   // Module 5: Hotel Zones & Sub-Meters
   utilityMeters: [
-    { meterId: "MTR-E-PSTRY", departmentId: "kitchen", zone: "Pastry & Baking Room", type: "Electricity", baselineDaily: 120, unit: "kWh/day", lastReading: 110, lastReadingTime: "2026-08-12 21:00", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-W-BNQT", departmentId: "kitchen", zone: "Banquet Prep Area", type: "Water", baselineDaily: 1200, unit: "L/day", lastReading: 1550, lastReadingTime: "2026-08-12 21:00", status: "Anomaly Flagged (+29.1%)", icon: "💧" },
-    { meterId: "MTR-W-POOL", departmentId: "facilities", zone: "Main Infinity Pool & Spa", type: "Water", baselineDaily: 2500, unit: "L/day", lastReading: 2300, lastReadingTime: "2026-08-12 23:00", status: "Normal", icon: "💧" },
-    { meterId: "MTR-E-POOL", departmentId: "facilities", zone: "Pool Pumps & Heating", type: "Electricity", baselineDaily: 180, unit: "kWh/day", lastReading: 172, lastReadingTime: "2026-08-12 23:00", status: "Normal", icon: "⚡" },
-    { meterId: "MTR-W-IRRG", departmentId: "facilities", zone: "Landscape Irrigation System", type: "Water", baselineDaily: 800, unit: "L/day", lastReading: 1250, lastReadingTime: "2026-08-12 23:00", status: "Anomaly Flagged (+56.2%)", icon: "💧" },
-
     // Housekeeping
     { meterId: "MTR-W-F1", departmentId: "housekeeping", zone: "Floor 1 Guest Wing", type: "Water", baselineDaily: 1800, unit: "L/day", lastReading: 1650, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\uD83D\uDCA7" },
     { meterId: "MTR-E-F1", departmentId: "housekeeping", zone: "Floor 1 Guest Wing", type: "Electricity", baselineDaily: 140, unit: "kWh/day", lastReading: 132, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\u26A1" },
@@ -250,15 +240,45 @@ export const INITIAL_DATA = {
 
   // System Immutable Audit Trail (Security & Baseline Modifications)
   auditLogs: [
-    { timestamp: "2026-08-01 10:00", userId: "USR-102", userName: "Zhen Bang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "200 L/room/day", newValue: "180 L/room/day", effectiveDate: "2026-08-01", reason: "Calibrated for new high-efficiency low-flow aerators installed across Tower A.", transactionRef: "TXN-90100A" },
-    { timestamp: "2026-08-02 09:30", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_power", previousValue: "420 kWh/day", newValue: "380 kWh/day", effectiveDate: "2026-08-02", reason: "Induction cooktop upgrade in main banquet kitchen completed.", transactionRef: "TXN-90150B" },
-    { timestamp: "2026-08-03 14:15", userId: "USR-104", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15 kg/guest", newValue: "0.12 kg/guest", effectiveDate: "2026-08-03", reason: "Stricter VM2026 culinary prep guidelines adopted.", transactionRef: "TXN-90200C" },
+    {
+      id: "AUD-9001",
+      timestamp: "2026-08-01 10:00:14",
+      userId: "USR-102",
+      userName: "Zhen Bang (Tech Lead)",
+      action: "UPDATE_OPERATIONAL_BASELINE",
+      targetKey: "water_per_room",
+      previousValue: "200 L/room/day",
+      newValue: "180 L/room/day",
+      reason: "Calibrated for new high-efficiency low-flow aerators installed across Tower A."
+    },
+    {
+      id: "AUD-9002",
+      timestamp: "2026-08-02 09:30:22",
+      userId: "USR-103",
+      userName: "Wan Ching (Facilities Dir)",
+      action: "UPDATE_OPERATIONAL_BASELINE",
+      targetKey: "kitchen_power",
+      previousValue: "420 kWh/day",
+      newValue: "380 kWh/day",
+      reason: "Induction cooktop upgrade in main banquet kitchen completed."
+    },
+    {
+      id: "AUD-9003",
+      timestamp: "2026-08-03 14:15:08",
+      userId: "USR-104",
+      userName: "Sze Ping (Head Chef)",
+      action: "UPDATE_OPERATIONAL_BASELINE",
+      targetKey: "buffet_food_waste",
+      previousValue: "0.15 kg/guest",
+      newValue: "0.12 kg/guest",
+      reason: "Stricter VM2026 culinary prep guidelines adopted."
+    },
     { timestamp: "2026-08-01 10:15", userId: "USR-101", userName: "Kar Hang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "185", newValue: "180", effectiveDate: "2026-08-01", reason: "Installed new aerator standard", transactionRef: "TXN-90231A" },
-    { timestamp: "2026-08-02 09:30", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_water", previousValue: "4800", newValue: "4500", effectiveDate: "2026-08-02", reason: "Quarterly efficiency review", transactionRef: "TXN-90235C" },
-    { timestamp: "2026-08-03 14:15", userId: "USR-104", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15", newValue: "0.12", effectiveDate: "2026-08-03", reason: "Buffet tray optimization initiative", transactionRef: "TXN-90288X" },
-    { timestamp: "2026-08-05 11:20", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "hvac_chiller_power", previousValue: "900", newValue: "850", effectiveDate: "2026-08-06", reason: "New chiller firmware update", transactionRef: "TXN-90312D" },
+    { timestamp: "2026-08-02 09:30", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_water", previousValue: "4800", newValue: "4500", effectiveDate: "2026-08-02", reason: "Quarterly efficiency review", transactionRef: "TXN-90235C" },
+    { timestamp: "2026-08-03 14:15", userId: "USR-103", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15", newValue: "0.12", effectiveDate: "2026-08-03", reason: "Buffet tray optimization initiative", transactionRef: "TXN-90288X" },
+    { timestamp: "2026-08-05 11:20", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "hvac_chiller_power", previousValue: "900", newValue: "850", effectiveDate: "2026-08-06", reason: "New chiller firmware update", transactionRef: "TXN-90312D" },
     { timestamp: "2026-08-10 16:45", userId: "USR-101", userName: "Kar Hang", action: "SYSTEM_REPORT_GEN", targetKey: "compliance_pdf", previousValue: "N/A", newValue: "Exported", effectiveDate: "2026-08-10", reason: "Weekly management reporting", transactionRef: "TXN-90401B" },
-    { timestamp: "2026-08-11 08:20", userId: "USR-106", userName: "System Scheduler", action: "AUTO_ANOMALY_SCAN", targetKey: "utilityMeters", previousValue: "Scan Run", newValue: "3 Alerts Found", effectiveDate: "2026-08-11", reason: "Daily morning scan", transactionRef: "TXN-90455S" },
+    { timestamp: "2026-08-11 08:20", userId: "USR-104", userName: "System Scheduler", action: "AUTO_ANOMALY_SCAN", targetKey: "utilityMeters", previousValue: "Scan Run", newValue: "3 Alerts Found", effectiveDate: "2026-08-11", reason: "Daily morning scan", transactionRef: "TXN-90455S" },
     { timestamp: "2026-08-12 13:10", userId: "USR-101", userName: "Kar Hang", action: "ROLE_PERMISSION_GRANT", targetKey: "USR-108", previousValue: "Staff", newValue: "Facilities Manager", effectiveDate: "2026-08-12", reason: "Promotion applied in HR system", transactionRef: "TXN-90512H" }
   ]
 };
