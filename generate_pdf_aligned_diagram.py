@@ -1,0 +1,319 @@
+import os
+import shutil
+import pymupdf
+
+def generate_pdf_aligned_diagram():
+    width = 1500
+    height = 920
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}">
+  <defs>
+    <style>
+      .main-title {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 24px; font-weight: 800; fill: #0F172A; letter-spacing: -0.4px; }}
+      .main-sub {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 13px; font-weight: 500; fill: #64748B; }}
+      .tier-label {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; font-weight: 800; fill: #0F172A; text-transform: uppercase; letter-spacing: 0.8px; }}
+      .tier-tech {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #059669; }}
+      
+      .card-title {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #0F172A; }}
+      .card-sub {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 11px; font-weight: 600; fill: #059669; }}
+      .card-pic {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 10.5px; font-weight: 700; fill: #2563EB; }}
+      .card-desc {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 11.5px; font-weight: 400; fill: #475569; }}
+      
+      .tbl-header {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 12px; font-weight: 700; fill: #1E293B; }}
+      .tbl-code {{ font-family: "Consolas", "Courier New", monospace; font-size: 10.5px; font-weight: 700; fill: #0F172A; }}
+      .tbl-desc {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 10px; font-weight: 400; fill: #64748B; }}
+
+      .flow-label {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 11px; font-weight: 600; fill: #334155; }}
+    </style>
+
+    <marker id="arrow-down-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#059669" />
+    </marker>
+    <marker id="arrow-up-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 8 1 L 0 5 L 8 9 z" fill="#2563EB" />
+    </marker>
+    <marker id="arrow-down-slate" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#475569" />
+    </marker>
+    <marker id="arrow-up-slate" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 8 1 L 0 5 L 8 9 z" fill="#475569" />
+    </marker>
+
+    <filter id="shadow" x="-2%" y="-2%" width="104%" height="106%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0F172A" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="{width}" height="{height}" fill="#F8FAFC" />
+
+  <!-- ================= TOP HEADER ================= -->
+  <rect x="0" y="0" width="{width}" height="76" fill="#FFFFFF" />
+  <line x1="0" y1="76" x2="{width}" y2="76" stroke="#E2E8F0" stroke-width="1.2" />
+  
+  <rect x="40" y="22" width="5" height="32" rx="2.5" fill="#059669" />
+  <text x="56" y="42" class="main-title">EcoHotel OS — System Architecture Diagram</text>
+  <text x="56" y="62" class="main-sub">Aligned with Course Document: 3 Logical Layers &amp; 5 Core Modules (BMSE2073 Software Design &amp; Architecture)</text>
+
+  <g transform="translate(1220, 24)">
+    <rect x="0" y="0" width="240" height="28" rx="6" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" />
+    <text x="18" y="18" font-family="sans-serif" font-size="11" font-weight="600" fill="#334155">Mandate: Visit Malaysia 2026</text>
+  </g>
+
+
+  <!-- ================================================================= -->
+  <!-- TIER 1: GUI LAYER (FRONTEND)                                      -->
+  <!-- ================================================================= -->
+  <g transform="translate(40, 95)">
+    <!-- Container Box -->
+    <rect x="0" y="0" width="1420" height="195" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2" filter="url(#shadow)" />
+    
+    <!-- Tier Header Bar -->
+    <path d="M 0 8 Q 0 0 8 0 L 1412 0 Q 1420 0 1420 8 L 1420 36 L 0 36 Z" fill="#F8FAFC" />
+    <line x1="0" y1="36" x2="1420" y2="36" stroke="#E2E8F0" stroke-width="1.2" />
+    
+    <rect x="18" y="10" width="4" height="16" rx="2" fill="#059669" />
+    <text x="30" y="23" class="tier-label">1. GUI Layer (Frontend)</text>
+    <text x="245" y="23" class="tier-tech">• Technology Stack: Flutter (Mobile) &amp; Web Dashboard / PWA (Browser)</text>
+
+    <!-- 3 Frontend Cards as Defined in PDF -->
+    <!-- Card 1: Web Dashboard -->
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="445" height="130" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="445" height="4" rx="2" fill="#059669" />
+      <text x="16" y="24" class="card-title">Web-Based Admin Dashboard</text>
+      <text x="16" y="42" class="card-sub">Desktop Viewport • Manager &amp; Sustainability Leads</text>
+      <text x="16" y="66" class="card-desc">• M1: Executive Sustainability Analytics &amp; VM2026 Score</text>
+      <text x="16" y="86" class="card-desc">• Departmental Resource Wastage Heatmaps (Kitchen vs Facilities)</text>
+      <text x="16" y="106" class="card-desc">• Operational Baseline Calibration &amp; PDF Report Exports</text>
+    </g>
+
+    <!-- Card 2: Ground Staff Mobile App -->
+    <g transform="translate(485, 48)">
+      <rect x="0" y="0" width="450" height="130" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="450" height="4" rx="2" fill="#059669" />
+      <text x="16" y="24" class="card-title">Ground Staff Mobile App (Flutter)</text>
+      <text x="16" y="42" class="card-sub">Mobile / Tablet Form Factor • Kitchen, Housekeeping &amp; Techs</text>
+      <text x="16" y="66" class="card-desc">• M2: Stock Lifecycle Logging, Shelf-Life Expiry Watch &amp; Dual Waste</text>
+      <text x="16" y="86" class="card-desc">• M5: Daily Physical Meter Readings (Water / Power Sub-Meters)</text>
+      <text x="16" y="106" class="card-desc">• Real-time Push Notifications &amp; High-Priority Work Orders</text>
+    </g>
+
+    <!-- Card 3: In-Room Guest PWA -->
+    <g transform="translate(955, 48)">
+      <rect x="0" y="0" width="445" height="130" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="445" height="4" rx="2" fill="#059669" />
+      <text x="16" y="24" class="card-title">Guest Eco-Engagement PWA</text>
+      <text x="16" y="42" class="card-sub">Zero-Install Mobile Browser • In-Room QR Code Scan</text>
+      <text x="16" y="66" class="card-desc">• M4: Green Opt-Out Service (Towel Reuse, Linen Delay, Skip Clean)</text>
+      <text x="16" y="86" class="card-desc">• Eco-Points Reward Tracker &amp; Milestone Eco-Voucher Wallet</text>
+      <text x="16" y="106" class="card-desc">• Instant Room Service Synchronization with Ground Staff</text>
+    </g>
+  </g>
+
+
+  <!-- ================= CONNECTORS 1 -> 2 ================= -->
+  <g stroke="#059669" stroke-width="1.8" fill="none">
+    <path d="M 450 290 L 450 345" marker-end="url(#arrow-down-green)" />
+  </g>
+  <g stroke="#2563EB" stroke-width="1.8" fill="none">
+    <path d="M 1050 345 L 1050 290" marker-end="url(#arrow-up-blue)" />
+  </g>
+
+  <rect x="250" y="306" width="400" height="24" rx="4" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1" />
+  <text x="268" y="322" class="flow-label" fill="#065F46">User Shift Entries, QR Opt-Outs &amp; Meter Readings (HTTP/REST)</text>
+
+  <rect x="850" y="306" width="400" height="24" rx="4" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1" />
+  <text x="872" y="322" class="flow-label" fill="#1D4ED8">Live Compliance Dashboards, Prep Sheets &amp; Auto-Tickets</text>
+
+
+  <!-- ================================================================= -->
+  <!-- TIER 2: BUSINESS LOGIC LAYER (BACKEND)                            -->
+  <!-- ================================================================= -->
+  <g transform="translate(40, 355)">
+    <!-- Container Box -->
+    <rect x="0" y="0" width="1420" height="210" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2" filter="url(#shadow)" />
+    
+    <!-- Tier Header Bar -->
+    <path d="M 0 8 Q 0 0 8 0 L 1412 0 Q 1420 0 1420 8 L 1420 36 L 0 36 Z" fill="#F8FAFC" />
+    <line x1="0" y1="36" x2="1420" y2="36" stroke="#E2E8F0" stroke-width="1.2" />
+
+    <rect x="18" y="10" width="4" height="16" rx="2" fill="#2563EB" />
+    <text x="30" y="23" class="tier-label">2. Business Logic Layer (Backend / Services)</text>
+    <text x="375" y="23" class="tier-tech">• Technology Stack: Spring Boot REST APIs, Algorithmic Services &amp; RBAC</text>
+
+    <!-- 3 Core Engines Described in PDF Section 1 & 2 -->
+    <!-- Engine 1: Prep Calculator & Batch Optimization -->
+    <g transform="translate(20, 48)">
+      <rect x="0" y="0" width="445" height="145" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="4" height="145" rx="2" fill="#059669" />
+      <text x="16" y="24" class="card-title">Smart Prep Calculator Algorithm</text>
+      <text x="16" y="42" class="card-pic">Module 3 (Zhen Bang) &amp; Module 2 (Sze Ping)</text>
+      <text x="16" y="66" class="card-desc">• Ingests 48-hour guest influx forecast from reservations</text>
+      <text x="16" y="86" class="card-desc">• Formula calculates exact kg of core ingredients needed</text>
+      <text x="16" y="106" class="card-desc">• Plate Waste Feedback Loop: automatically reduces prep sizing</text>
+      <text x="16" y="124" class="card-desc">  for dishes consistently returned untouched</text>
+    </g>
+
+    <!-- Engine 2: Anomaly Detection & Facilities -->
+    <g transform="translate(485, 48)">
+      <rect x="0" y="0" width="450" height="145" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="4" height="145" rx="2" fill="#E11D48" />
+      <text x="16" y="24" class="card-title">Automated Anomaly Detection Logic</text>
+      <text x="16" y="42" class="card-pic">Module 5 (Wan Ching) &amp; Facilities Subsystem</text>
+      <text x="16" y="66" class="card-desc">• Scans daily utility logs across rooms &amp; kitchen zones</text>
+      <text x="16" y="86" class="card-desc">• Triggers automated alert if water/power exceeds baseline by &gt;15%</text>
+      <text x="16" y="106" class="card-desc">• Calculates estimated daily resource loss volume (Liters / kWh)</text>
+      <text x="16" y="124" class="card-desc">• Auto-generates High-Priority Repair Tickets for technicians</text>
+    </g>
+
+    <!-- Engine 3: Compliance Scoring & Service Sync -->
+    <g transform="translate(955, 48)">
+      <rect x="0" y="0" width="445" height="145" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="4" height="145" rx="2" fill="#2563EB" />
+      <text x="16" y="24" class="card-title">VM2026 Compliance &amp; Service Sync</text>
+      <text x="16" y="42" class="card-pic">Module 1 (Kar Hang) &amp; Module 4 (Simon)</text>
+      <text x="16" y="66" class="card-desc">• Computes unified VM2026 Sustainability Compliance Score</text>
+      <text x="16" y="86" class="card-desc">• Dynamic Housekeeping Queue: instantly alters cleaning routes</text>
+      <text x="16" y="106" class="card-desc">• Eco-Rewards Validation Engine: converts points into vouchers</text>
+      <text x="16" y="124" class="card-desc">• Role-Based Access Control (RBAC) enforcement &amp; Audit Trail</text>
+    </g>
+  </g>
+
+
+  <!-- ================= CONNECTORS 2 -> 3 ================= -->
+  <g stroke="#475569" stroke-width="1.8" fill="none">
+    <path d="M 450 565 L 450 620" marker-end="url(#arrow-down-slate)" />
+    <path d="M 1050 620 L 1050 565" marker-end="url(#arrow-up-slate)" />
+  </g>
+
+  <rect x="250" y="581" width="400" height="24" rx="4" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" />
+  <text x="272" y="597" class="flow-label">Transactional Writes, Spoilage Logs &amp; Repair Work Orders</text>
+
+  <rect x="850" y="581" width="400" height="24" rx="4" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1" />
+  <text x="872" y="597" class="flow-label">Relational Data Sets, Historical Baselines &amp; Inventory Stock</text>
+
+
+  <!-- ================================================================= -->
+  <!-- TIER 3: DATA PROCESSING LAYER (DATABASE)                          -->
+  <!-- ================================================================= -->
+  <g transform="translate(40, 630)">
+    <!-- Container Box -->
+    <rect x="0" y="0" width="1420" height="235" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2" filter="url(#shadow)" />
+    
+    <!-- Tier Header Bar -->
+    <path d="M 0 8 Q 0 0 8 0 L 1412 0 Q 1420 0 1420 8 L 1420 36 L 0 36 Z" fill="#F8FAFC" />
+    <line x1="0" y1="36" x2="1420" y2="36" stroke="#E2E8F0" stroke-width="1.2" />
+
+    <rect x="18" y="10" width="4" height="16" rx="2" fill="#475569" />
+    <text x="30" y="23" class="tier-label">3. Data Processing Layer (Database / Oracle SQL)</text>
+    <text x="440" y="23" class="tier-tech">• 3NF Normalized Relational Tables Mapped from Overall Assessment Table (Page 5)</text>
+
+    <!-- 5 Module Table Cards Matching Page 5 of PDF -->
+    <!-- M1 Tables -->
+    <g transform="translate(15, 48)">
+      <rect x="0" y="0" width="265" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="265" height="28" rx="4" fill="#F1F5F9" />
+      <text x="12" y="19" class="tbl-header">M1: Executive Analytics</text>
+      
+      <text x="12" y="48" class="tbl-code">COMPLIANCE_LOG</text>
+      <text x="12" y="62" class="tbl-desc">vmScore, reductionRate, co2Saved</text>
+
+      <text x="12" y="86" class="tbl-code">USER_AUDIT</text>
+      <text x="12" y="100" class="tbl-desc">userRole, action, baselineDelta</text>
+
+      <text x="12" y="124" class="tbl-code">MONTHLY_SAVINGS</text>
+      <text x="12" y="138" class="tbl-desc">costSavedRM, waterSavedLiters</text>
+    </g>
+
+    <!-- M2 Tables -->
+    <g transform="translate(295, 48)">
+      <rect x="0" y="0" width="265" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="265" height="28" rx="4" fill="#F1F5F9" />
+      <text x="12" y="19" class="tbl-header">M2: Inventory Tracker</text>
+      
+      <text x="12" y="48" class="tbl-code">RAW_INGREDIENTS</text>
+      <text x="12" y="62" class="tbl-desc">SKU, batchNo, quantity, expiryDate</text>
+
+      <text x="12" y="86" class="tbl-code">SPOILAGE_LOG</text>
+      <text x="12" y="100" class="tbl-desc">wasteType (Spoilage vs Prep), kg</text>
+
+      <text x="12" y="124" class="tbl-code">SHELF_LIFE</text>
+      <text x="12" y="138" class="tbl-desc">thresholdDays, expiryAlertState</text>
+    </g>
+
+    <!-- M3 Tables -->
+    <g transform="translate(575, 48)">
+      <rect x="0" y="0" width="265" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="265" height="28" rx="4" fill="#F1F5F9" />
+      <text x="12" y="19" class="tbl-header">M3: Batch Optimization</text>
+      
+      <text x="12" y="48" class="tbl-code">RESERVATIONS</text>
+      <text x="12" y="62" class="tbl-desc">48h check-ins, coversBreakfast</text>
+
+      <text x="12" y="86" class="tbl-code">PREP_RECOMMENDATIONS</text>
+      <text x="12" y="100" class="tbl-desc">ingredientKg, chefOverrideKg</text>
+
+      <text x="12" y="124" class="tbl-code">PLATE_WASTE</text>
+      <text x="12" y="138" class="tbl-desc">unconsumedGrams, penaltyFactor</text>
+    </g>
+
+    <!-- M4 Tables -->
+    <g transform="translate(855, 48)">
+      <rect x="0" y="0" width="265" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="265" height="28" rx="4" fill="#F1F5F9" />
+      <text x="12" y="19" class="tbl-header">M4: Guest PWA Sync</text>
+      
+      <text x="12" y="48" class="tbl-code">GUEST_OPT_OUT</text>
+      <text x="12" y="62" class="tbl-desc">optOutId, waiveLinen, towelReuse</text>
+
+      <text x="12" y="86" class="tbl-code">STAFF_SCHEDULES</text>
+      <text x="12" y="100" class="tbl-desc">roomStatus, activeCleaningQueue</text>
+
+      <text x="12" y="124" class="tbl-code">ECO_VOUCHERS</text>
+      <text x="12" y="138" class="tbl-desc">voucherCode, pointsBalance, discount</text>
+    </g>
+
+    <!-- M5 Tables -->
+    <g transform="translate(1135, 48)">
+      <rect x="0" y="0" width="270" height="170" rx="6" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.2" />
+      <rect x="0" y="0" width="270" height="28" rx="4" fill="#F1F5F9" />
+      <text x="12" y="19" class="tbl-header">M5: Utility Audit</text>
+      
+      <text x="12" y="48" class="tbl-code">METER_READINGS</text>
+      <text x="12" y="62" class="tbl-desc">zoneId, currentKwh, currentWaterM3</text>
+
+      <text x="12" y="86" class="tbl-code">ANOMALY_FLAGS</text>
+      <text x="12" y="100" class="tbl-desc">surgePercent (&gt;15%), exceptionFlag</text>
+
+      <text x="12" y="124" class="tbl-code">REPAIR_TICKETS</text>
+      <text x="12" y="138" class="tbl-desc">priority (High/Med/Low), technicianId</text>
+    </g>
+  </g>
+
+</svg>'''
+
+    svg_file = r"d:\CD\architecture_diagram_pdf_aligned.svg"
+    png_file = r"d:\CD\architecture_diagram_pdf_aligned.png"
+
+    with open(svg_file, "w", encoding="utf-8") as f:
+        f.write(svg)
+
+    doc = pymupdf.open(stream=svg.encode("utf-8"), filetype="svg")
+    pix = doc[0].get_pixmap(dpi=200)
+    pix.save(png_file)
+    print(f"Saved PDF-Aligned PNG diagram ({pix.width}x{pix.height}):", png_file)
+
+    # Overwrite main architecture_diagram.png and copy to artifacts
+    shutil.copyfile(png_file, r"d:\CD\architecture_diagram.png")
+    shutil.copyfile(svg_file, r"d:\CD\architecture_diagram.svg")
+
+    artifact_dir = r"C:\Users\zhenb\.gemini\antigravity-ide\brain\bc80946a-639a-4571-829e-16471149fa2d"
+    if os.path.exists(artifact_dir):
+        artifact_png = os.path.join(artifact_dir, "architecture_diagram_pdf_aligned.png")
+        shutil.copyfile(png_file, artifact_png)
+        shutil.copyfile(png_file, os.path.join(artifact_dir, "architecture_diagram.png"))
+        print("Copied to artifact dir:", artifact_png)
+
+if __name__ == "__main__":
+    generate_pdf_aligned_diagram()

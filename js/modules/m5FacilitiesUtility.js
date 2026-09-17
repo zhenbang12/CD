@@ -11,20 +11,38 @@ export class Module5Facilities {
     this.container = container;
     this.activeFilter = 'ALL'; // 'ALL' | 'HIGH' | 'IN_PROGRESS' | 'COMPLETED'
     this.selectedZonePin = null;
+    this.pendingPhotoDataUrl = null; // base64 photo evidence staged before ticket submission
+    this.unsubs = [];
+    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    db.subscribe('utilityMeters', () => this.render());
-    db.subscribe('repairTickets', () => this.render());
-    db.subscribe('technicians', () => this.render());
+    this.unsubs.push(
+      db.subscribe('utilityMeters', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('repairTickets', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('technicians', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('defectCategories', () => { if (!this.isDestroyed) this.render(); })
+    );
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    if (this.unsubs) {
+      this.unsubs.forEach(unsub => {
+        try { unsub(); } catch (err) { /* ignore */ }
+      });
+      this.unsubs = [];
+    }
   }
 
   render() {
+    if (this.isDestroyed) return;
     const meters = db.get('utilityMeters');
     const tickets = db.get('repairTickets');
     const technicians = db.get('technicians');
+    const defectCategories = db.get('defectCategories') || [];
 
     // Filter tickets
     let filteredTickets = tickets;
@@ -94,12 +112,13 @@ export class Module5Facilities {
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Ongoing Leak Loss</span>
+              <span class="kpi-label">Ongoing Resource Loss (Active Tickets)</span>
               <span class="badge badge-warning">Active</span>
             </div>
             <div class="kpi-body">
               <div class="kpi-value-lg text-danger">${totalWaterLossDaily.toLocaleString()} <span class="kpi-unit">L / day</span></div>
-              <div class="kpi-desc">Estimated loss volume from active leaks</div>
+              <div class="kpi-value-lg text-danger" style="font-size: 16px; margin-top: 2px;">${totalEleLossDaily.toLocaleString()} <span class="kpi-unit">kWh / day</span></div>
+              <div class="kpi-desc">Sum of estimated loss from all non-completed repair tickets, split by resource type</div>
             </div>
           </div>
 
@@ -127,22 +146,29 @@ export class Module5Facilities {
           
           <div style="background: var(--bg-card-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); padding: 16px; position: relative; min-height: 180px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-around; align-items: center;">
             ${meters.map(m => {
-              const isAnomaly = m.status.includes('Anomaly');
-              return `
-                <div class="zone-pin-card" style="background: var(--bg-card); border: 1px solid ${isAnomaly ? 'var(--danger)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 10px 14px; min-width: 180px; cursor: pointer; transition: all 0.15s;" data-meter-id="${m.meterId}">
+      const isAnomaly = m.status.includes('Anomaly');
+      // Any reading above baseline gets the red outline treatment,
+      // even if it hasn't crossed the +15% "Spike Flag" threshold
+      // that triggers an auto-ticket. Exceeding baseline at all is
+      // still worth calling out visually here.
+      const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
+      const flagRed = isAnomaly || overBaseline;
+      const badgeLabel = isAnomaly ? 'Spike Flag' : (overBaseline ? 'Above Baseline' : 'Normal');
+      return `
+                <div class="zone-pin-card" style="background: var(--bg-card); border: 1px solid ${flagRed ? 'var(--danger)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 10px 14px; min-width: 180px; cursor: pointer; transition: all 0.15s;" data-meter-id="${m.meterId}">
                   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                     <span style="font-size: 14px;">${m.icon || '⚡'}</span>
-                    <span class="badge ${isAnomaly ? 'badge-danger' : 'badge-success'}">${isAnomaly ? 'Spike Flag' : 'Normal'}</span>
+                    <span class="badge ${flagRed ? 'badge-danger' : 'badge-success'}">${badgeLabel}</span>
                   </div>
                   <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">${m.zone}</div>
                   <div style="font-size: 10.5px; color: var(--text-muted);">${m.meterId} (${m.type})</div>
-                  <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: ${isAnomaly ? 'var(--danger)' : 'var(--primary)'};">
+                  <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: ${flagRed ? 'var(--danger)' : 'var(--primary)'};">
                     ${m.lastReading || '—'} <small style="font-size: 10px; color: var(--text-muted);">${m.unit}</small>
                   </div>
                   <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">Baseline: ${m.baselineDaily} ${m.unit}</div>
                 </div>
               `;
-            }).join('')}
+    }).join('')}
           </div>
         </div>
 
@@ -170,17 +196,22 @@ export class Module5Facilities {
                 </tr>
               </thead>
               <tbody>
-                ${meters.map(m => `
+                ${meters.map(m => {
+      const isAnomaly = m.status.includes('Anomaly');
+      const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
+      const flagRed = isAnomaly || overBaseline;
+      const displayStatus = isAnomaly ? m.status : (overBaseline ? 'Above Baseline' : m.status);
+      return `
                   <tr>
                     <td><code>${m.meterId}</code></td>
                     <td><strong>${m.zone}</strong></td>
                     <td><span class="badge ${m.type === 'Water' ? 'badge-info' : 'badge-warning'}">${m.type}</span></td>
                     <td>${m.baselineDaily} ${m.unit}</td>
-                    <td><strong class="font-lg ${m.status.includes('Anomaly') ? 'text-danger' : 'text-primary'}">${m.lastReading || '—'}</strong> ${m.unit}</td>
+                    <td><strong class="font-lg ${flagRed ? 'text-danger' : 'text-primary'}">${m.lastReading || '—'}</strong> ${m.unit}</td>
                     <td><small class="text-muted">${m.lastReadingTime}</small></td>
                     <td>
-                      <span class="badge ${m.status.includes('Anomaly') ? 'badge-danger' : 'badge-success'}">
-                        ${m.status}
+                      <span class="badge ${flagRed ? 'badge-danger' : 'badge-success'}">
+                        ${displayStatus}
                       </span>
                     </td>
                     <td>
@@ -189,7 +220,8 @@ export class Module5Facilities {
                       </button>
                     </td>
                   </tr>
-                `).join('')}
+                `;
+    }).join('')}
               </tbody>
             </table>
           </div>
@@ -217,11 +249,11 @@ export class Module5Facilities {
                   <th>Ticket #</th>
                   <th>Location / Zone</th>
                   <th>Defect Category</th>
-                  <th>Source</th>
                   <th>Loss Rate</th>
                   <th>Priority</th>
                   <th>Assigned Technician</th>
                   <th>Status</th>
+                  <th>Evidence</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -233,7 +265,6 @@ export class Module5Facilities {
                     <td><code>${t.ticketNumber}</code></td>
                     <td><strong>${t.zone}</strong></td>
                     <td>${t.defectCategory}</td>
-                    <td><small class="text-muted">${t.source}</small></td>
                     <td><strong class="text-danger">${t.estimatedLossRate}</strong></td>
                     <td><span class="badge ${t.priority === 'High' ? 'badge-danger' : 'badge-secondary'}">${t.priority}</span></td>
                     <td><small><strong>${t.assignedTechnician}</strong></small></td>
@@ -241,6 +272,14 @@ export class Module5Facilities {
                       <span class="status-pill ${t.status === 'Completed' ? 'pill-completed' : t.status === 'In Progress' ? 'pill-progress' : 'pill-assigned'}">
                         ${t.status}
                       </span>
+                    </td>
+                    <td>
+                      ${t.photoDataUrl ? `
+                        <button type="button" class="btn btn-xs btn-outline btn-view-photo" data-id="${t.id}">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:3px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                          View Photo
+                        </button>
+                      ` : `<small class="text-muted">—</small>`}
                     </td>
                     <td>
                       ${t.status !== 'Completed' ? `
@@ -307,7 +346,7 @@ export class Module5Facilities {
             <div class="form-group">
               <label class="form-label">Current Meter Reading Value</label>
               <input type="number" step="0.1" min="0.1" class="form-input" id="meter-input-val" placeholder="Enter physical readout..." required />
-              <small class="form-help">If reading is &ge;15% above baseline, system will automatically trigger an Anomaly and dispatch a High-Priority Repair Ticket.</small>
+              <small class="form-help">If reading is &ge;15% above baseline, the zone will be flagged as an Anomaly on the telemetry board. It will NOT auto-create a repair ticket — file a "Report Facility Defect" if a work order is needed.</small>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-meter">Cancel</button>
@@ -331,14 +370,36 @@ export class Module5Facilities {
                 <input type="text" class="form-input" id="defect-zone" placeholder="e.g., Room 304 (Floor 3)" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Defect Category</label>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <label class="form-label" style="margin-bottom:0;">Defect Category</label>
+                  <button type="button" class="btn btn-xs btn-outline" id="btn-toggle-add-category">+ Add Category</button>
+                </div>
                 <select class="form-input" id="defect-category" required>
-                  <option value="Bathroom Toilet Flapper Leak">Bathroom Toilet Flapper Leak (~280 L/day)</option>
-                  <option value="Dripping Basin Faucet">Dripping Basin Faucet (~45 L/day)</option>
-                  <option value="HVAC / Aircon Thermostat Stuck">HVAC / Aircon Thermostat Stuck (~25 kWh/day)</option>
-                  <option value="Shower Valve Pressure Leak">Shower Valve Pressure Leak (~120 L/day)</option>
-                  <option value="Cold Room Door Gasket Seal">Cold Room Door Gasket Seal (~35 kWh/day)</option>
+                  ${defectCategories.map(c => `<option value="${c.label}">${c.label}${c.hint ? ` (${c.hint})` : ''}</option>`).join('')}
                 </select>
+                <div id="add-category-panel" style="display:none; margin-top:10px; padding:10px; border:1px dashed var(--border-subtle); border-radius:var(--radius-md); background:var(--bg-card-subtle);">
+                  <div class="grid grid-2">
+                    <div class="form-group" style="margin-bottom:8px;">
+                      <label class="form-label">New Category</label>
+                      <input type="text" class="form-input" id="new-category-name" placeholder="e.g., Pool Pump Seal Leak" />
+                    </div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                      <label class="form-label">Resource Type</label>
+                      <select class="form-input" id="new-category-resource">
+                        <option value="Water">Water</option>
+                        <option value="Electricity">Electricity</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom:8px;">
+                    <label class="form-label">Estimated Loss Hint (optional)</label>
+                    <input type="text" class="form-input" id="new-category-hint" placeholder="e.g., ~60 L/day" />
+                  </div>
+                  <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-xs btn-outline" id="btn-cancel-add-category">Cancel</button>
+                    <button type="button" class="btn btn-xs btn-primary" id="btn-save-new-category">Save Category</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="grid grid-2">
@@ -362,6 +423,15 @@ export class Module5Facilities {
               <label class="form-label">Defect Description & Notes</label>
               <textarea class="form-input" id="defect-desc" rows="3" placeholder="Describe issue (e.g., Cistern water continuously running into bowl)..." required></textarea>
             </div>
+            <div class="form-group">
+              <label class="form-label">Photo Evidence (optional)</label>
+              <input type="file" accept="image/*" class="form-input" id="defect-photo" />
+              <small class="form-help">Attach a photo of the defect (max 8MB)</small>
+              <div id="defect-photo-preview-wrap" style="display:none; margin-top:8px; position:relative; width:fit-content;">
+                <img id="defect-photo-preview" src="" style="max-width:180px; max-height:130px; display:block; border-radius: var(--radius-md); border:1px solid var(--border-subtle); object-fit:cover;" />
+                <button type="button" class="btn btn-xs btn-outline" id="btn-remove-photo" style="position:absolute; top:4px; right:4px; padding:2px 6px;">&times;</button>
+              </div>
+            </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-defect">Cancel</button>
               <button type="submit" class="btn btn-sm btn-danger">Dispatch Repair Ticket</button>
@@ -369,12 +439,61 @@ export class Module5Facilities {
           </form>
         </div>
       </div>
+
+      <!-- Modal 3: View Photo Evidence -->
+      <div class="modal-backdrop" id="photo-view-modal" style="display: none;">
+        <div class="modal-card" style="max-width: 520px;">
+          <div class="modal-header">
+            <h3 class="modal-title">Defect Photo Evidence</h3>
+            <button class="modal-close" id="btn-close-photo-modal">&times;</button>
+          </div>
+          <div style="padding: 4px 0 8px;">
+            <img id="photo-view-img" src="" alt="Defect photo evidence" style="width:100%; max-height:65vh; object-fit:contain; border-radius: var(--radius-md); border:1px solid var(--border-subtle); background: var(--bg-card-subtle);" />
+          </div>
+        </div>
+      </div>
     `;
 
     this.attachEventListeners();
   }
 
+  // Downscales an image file to maxDim px on its longest side and re-encodes
+  // it as JPEG, returning a base64 data URL. Keeps photo evidence small
+  // enough for localStorage instead of storing raw multi-MB camera photos.
+  compressImageFile(file, maxDim = 1000, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('File read failed'));
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Image decode failed'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) {
+              height = Math.round(height * (maxDim / width));
+              width = maxDim;
+            } else {
+              width = Math.round(width * (maxDim / height));
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   attachEventListeners() {
+    const tickets = db.get('repairTickets');
+
     // Filter Tabs
     this.container.querySelectorAll('.tab-btn[data-filter]').forEach(btn => {
       btn.onclick = () => {
@@ -443,10 +562,171 @@ export class Module5Facilities {
     const closeDefectBtn = this.container.querySelector('#btn-close-defect-modal');
     const cancelDefectBtn = this.container.querySelector('#btn-cancel-defect');
     const defectForm = this.container.querySelector('#form-report-defect');
+    const defectCategoryField = this.container.querySelector('#defect-category');
+    const defectResourceField = this.container.querySelector('#defect-resource');
 
-    if (openDefectBtn) openDefectBtn.onclick = () => { defectModal.style.display = 'flex'; };
+    // Keep Resource Type in sync with the selected Defect Category, since
+    // each category (e.g. "Dripping Basin Faucet" vs "HVAC Thermostat
+    // Stuck") already has a known resourceType (Water/Electricity) in
+    // defectCategories. Ground staff shouldn't have to set it manually.
+    const syncResourceTypeFromCategory = () => {
+      if (!defectCategoryField || !defectResourceField) return;
+      const currentCategories = db.get('defectCategories') || [];
+      const selectedCat = currentCategories.find(c => c.label === defectCategoryField.value);
+      if (selectedCat) defectResourceField.value = selectedCat.resourceType;
+    };
+
+    if (defectCategoryField) defectCategoryField.onchange = syncResourceTypeFromCategory;
+
+    if (openDefectBtn) openDefectBtn.onclick = () => {
+      this.pendingPhotoDataUrl = null;
+      defectModal.style.display = 'flex';
+      syncResourceTypeFromCategory();
+    };
     if (closeDefectBtn) closeDefectBtn.onclick = () => { defectModal.style.display = 'none'; };
     if (cancelDefectBtn) cancelDefectBtn.onclick = () => { defectModal.style.display = 'none'; };
+
+    // Photo Evidence Handlers (Report Facility Defect form)
+    const photoInput = this.container.querySelector('#defect-photo');
+    const photoPreviewWrap = this.container.querySelector('#defect-photo-preview-wrap');
+    const photoPreviewImg = this.container.querySelector('#defect-photo-preview');
+    const removePhotoBtn = this.container.querySelector('#btn-remove-photo');
+
+    // Restore a pending photo preview across an in-modal re-render (e.g. after adding a category)
+    if (this.pendingPhotoDataUrl && photoPreviewImg && photoPreviewWrap) {
+      photoPreviewImg.src = this.pendingPhotoDataUrl;
+      photoPreviewWrap.style.display = 'block';
+    }
+
+    if (photoInput) {
+      photoInput.onchange = () => {
+        const file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) {
+          alert('Photo is too large. Please choose an image under 8MB.');
+          photoInput.value = '';
+          return;
+        }
+
+        // Resize/compress before storing as base64. Uncompressed phone photos
+        // (often 3-10MB) turned into base64 and pushed through JSON.stringify +
+        // localStorage.setItem synchronously will freeze the tab, and can
+        // silently blow past the browser's ~5-10MB localStorage quota (the
+        // write then throws and is swallowed, so the photo just "disappears").
+        // Downscaling to ~1000px and re-encoding as JPEG keeps it to tens of KB.
+        if (photoPreviewWrap) {
+          photoPreviewWrap.style.display = 'block';
+        }
+        if (photoPreviewImg) {
+          photoPreviewImg.style.opacity = '0.4';
+        }
+
+        this.compressImageFile(file, 1000, 0.72)
+          .then((dataUrl) => {
+            this.pendingPhotoDataUrl = dataUrl;
+            if (photoPreviewImg) {
+              photoPreviewImg.src = dataUrl;
+              photoPreviewImg.style.opacity = '1';
+            }
+          })
+          .catch((err) => {
+            console.error('Photo compression failed', err);
+            alert('Could not process that photo. Please try a different image.');
+            photoInput.value = '';
+            if (photoPreviewWrap) photoPreviewWrap.style.display = 'none';
+          });
+      };
+    }
+
+    if (removePhotoBtn) {
+      removePhotoBtn.onclick = () => {
+        this.pendingPhotoDataUrl = null;
+        if (photoInput) photoInput.value = '';
+        if (photoPreviewWrap) photoPreviewWrap.style.display = 'none';
+        if (photoPreviewImg) photoPreviewImg.src = '';
+      };
+    }
+
+    // View Photo Evidence Modal (Repair Ticket table)
+    const photoViewModal = this.container.querySelector('#photo-view-modal');
+    const closePhotoModalBtn = this.container.querySelector('#btn-close-photo-modal');
+    const photoViewImg = this.container.querySelector('#photo-view-img');
+
+    if (closePhotoModalBtn) closePhotoModalBtn.onclick = () => { photoViewModal.style.display = 'none'; };
+    if (photoViewModal) {
+      photoViewModal.onclick = (e) => {
+        if (e.target === photoViewModal) photoViewModal.style.display = 'none';
+      };
+    }
+    this.container.querySelectorAll('.btn-view-photo').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.id;
+        const ticket = tickets.find(t => t.id === id);
+        if (ticket && ticket.photoDataUrl && photoViewImg && photoViewModal) {
+          photoViewImg.src = ticket.photoDataUrl;
+          photoViewModal.style.display = 'flex';
+        }
+      };
+    });
+
+    // Add Defect Category Panel (Web Admin only)
+    const addCategoryPanel = this.container.querySelector('#add-category-panel');
+    const toggleAddCategoryBtn = this.container.querySelector('#btn-toggle-add-category');
+    const cancelAddCategoryBtn = this.container.querySelector('#btn-cancel-add-category');
+    const saveNewCategoryBtn = this.container.querySelector('#btn-save-new-category');
+
+    if (toggleAddCategoryBtn) {
+      toggleAddCategoryBtn.onclick = () => {
+        if (addCategoryPanel) {
+          addCategoryPanel.style.display = addCategoryPanel.style.display === 'none' ? 'block' : 'none';
+        }
+      };
+    }
+    if (cancelAddCategoryBtn) {
+      cancelAddCategoryBtn.onclick = () => { addCategoryPanel.style.display = 'none'; };
+    }
+    if (saveNewCategoryBtn) {
+      saveNewCategoryBtn.onclick = () => {
+        const nameInput = this.container.querySelector('#new-category-name');
+        const resourceInput = this.container.querySelector('#new-category-resource');
+        const hintInput = this.container.querySelector('#new-category-hint');
+
+        const name = nameInput.value.trim();
+        if (!name) {
+          alert('Please enter a category name.');
+          return;
+        }
+        const resourceType = resourceInput.value;
+        const hint = hintInput.value.trim();
+
+        db.addDefectCategory({ label: name, resourceType, hint });
+
+        // Preserve in-progress form values across the re-render
+        const zoneVal = this.container.querySelector('#defect-zone')?.value || '';
+        const severityVal = this.container.querySelector('#defect-severity')?.value || 'Normal';
+        const descVal = this.container.querySelector('#defect-desc')?.value || '';
+
+        this.render();
+
+        const reopenedModal = this.container.querySelector('#defect-modal');
+        if (reopenedModal) reopenedModal.style.display = 'flex';
+
+        const zoneField = this.container.querySelector('#defect-zone');
+        if (zoneField) zoneField.value = zoneVal;
+        const categoryField = this.container.querySelector('#defect-category');
+        if (categoryField) categoryField.value = name;
+        const severityField = this.container.querySelector('#defect-severity');
+        if (severityField) severityField.value = severityVal;
+        const resourceField = this.container.querySelector('#defect-resource');
+        if (resourceField) resourceField.value = resourceType;
+        const descField = this.container.querySelector('#defect-desc');
+        if (descField) descField.value = descVal;
+        // Photo preview is restored automatically at the top of attachEventListeners()
+        // via this.pendingPhotoDataUrl, since this.render() re-runs it.
+
+        window.showGlobalToast?.(`New defect category "${name}" added.`, 'success');
+      };
+    }
 
     if (defectForm) {
       defectForm.onsubmit = (e) => {
@@ -463,11 +743,18 @@ export class Module5Facilities {
           severity,
           resourceType,
           description,
-          photoAttached: true
+          photoDataUrl: this.pendingPhotoDataUrl || null
         });
 
+        this.pendingPhotoDataUrl = null;
         defectModal.style.display = 'none';
-        window.showGlobalToast?.(`Defect logged! Ticket ${ticket.ticketNumber} created and assigned to ${ticket.assignedTechnician}.`, 'success');
+
+        if (db.getLastDatabaseError()) {
+          db.clearLastDatabaseError();
+          window.showGlobalToast?.(`Ticket ${ticket.ticketNumber} created, but the photo may not have been saved (browser storage is full). Try a smaller photo.`, 'warning');
+        } else {
+          window.showGlobalToast?.(`Defect logged! Ticket ${ticket.ticketNumber} created and assigned to ${ticket.assignedTechnician}.`, 'success');
+        }
       };
     }
 
@@ -482,13 +769,25 @@ export class Module5Facilities {
 
     this.container.querySelectorAll('.btn-status-complete').forEach(btn => {
       btn.onclick = () => {
+
         const id = btn.dataset.id;
         const ticketNum = btn.dataset.ticket;
-        const notes = prompt(`Enter repair action taken for ${ticketNum}:`, 'Replaced silicone flapper seal and verified zero leak flow.');
-        if (notes !== null) {
-          db.updateTicketStatus(id, 'Completed', notes);
-          window.showGlobalToast?.(`Repair ticket ${ticketNum} marked COMPLETED!`, 'success');
+
+        const confirmComplete = confirm(
+          `Confirm repair ticket ${ticketNum} has been resolved and marked as COMPLETED?`
+        );
+
+        if (confirmComplete) {
+
+          db.updateTicketStatus(id, 'Completed', '');
+
+          window.showGlobalToast?.(
+            `Repair ticket ${ticketNum} marked COMPLETED!`,
+            'success'
+          );
+
         }
+
       };
     });
   }
