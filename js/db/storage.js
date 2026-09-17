@@ -458,7 +458,7 @@ class StorageEngine {
     return this.data.baselines;
   }
 
-  updateBaseline(id, newValue, reason = 'Operational adjustment') {
+  updateBaseline(id, newValue, effectiveDate, reason = 'Operational adjustment') {
     const item = this.data.baselines.find(b => b.id === id);
     if (!item) return false;
 
@@ -473,6 +473,7 @@ class StorageEngine {
       targetKey: item.key,
       previousValue: previousValue,
       newValue: `${item.value} ${item.unit}`,
+      effectiveDate: effectiveDate,
       reason: reason
     });
 
@@ -481,18 +482,75 @@ class StorageEngine {
     return true;
   }
 
-  recordAuditLog({ action, targetKey, previousValue, newValue, reason }) {
-    const user = this.data.system.activeUser;
+  addBaseline(baselineData) {
+    if (!this.data.baselines) this.data.baselines = [];
+    
+    // Auto-generate ID if missing
+    const newId = baselineData.id || `BL-${Date.now().toString().slice(-4)}`;
+    
+    const newBaseline = {
+      ...baselineData,
+      id: newId,
+      updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      updatedBy: this.data.system.activeUser?.name || 'System'
+    };
+    
+    this.data.baselines.push(newBaseline);
+    
+    // Record Immutable Audit Log
+    this.recordAuditLog({
+      action: 'ADD_OPERATIONAL_BASELINE',
+      targetKey: newBaseline.key,
+      previousValue: 'N/A',
+      newValue: `${newBaseline.value} ${newBaseline.unit}`,
+      effectiveDate: newBaseline.updatedAt.split(' ')[0],
+      reason: baselineData.reason || 'New baseline created'
+    });
+
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return true;
+  }
+
+  deleteBaseline(id, reason = 'Operational adjustment') {
+    if (!this.data.baselines) return false;
+    const itemIndex = this.data.baselines.findIndex(b => b.id === id);
+    if (itemIndex === -1) return false;
+
+    const item = this.data.baselines[itemIndex];
+    this.data.baselines.splice(itemIndex, 1);
+
+    // Record Immutable Audit Log
+    this.recordAuditLog({
+      action: 'DELETE_OPERATIONAL_BASELINE',
+      targetKey: item.key,
+      previousValue: `${item.value} ${item.unit}`,
+      newValue: 'DELETED',
+      effectiveDate: new Date().toISOString().split('T')[0],
+      reason: reason
+    });
+
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return true;
+  }
+
+  recordAuditLog(log) {
+    if (!this.data.auditLogs) this.data.auditLogs = [];
+    
+    // Auto-generate a transaction ref if not provided (e.g. TXN-12345A)
+    const randomChar = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const txn = log.transactionRef || `TXN-${randomNum}${randomChar}`;
+
+    const user = this.data.system.activeUser || {};
     const newLog = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
+      transactionRef: txn,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
       userId: user.id || 'USR-ANON',
       userName: user.name || 'System User',
-      action,
-      targetKey,
-      previousValue,
-      newValue,
-      reason
+      ...log
     };
     this.data.auditLogs.unshift(newLog);
     this.saveDatabase();
