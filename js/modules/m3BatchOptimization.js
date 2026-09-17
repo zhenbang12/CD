@@ -26,15 +26,6 @@ export class Module3BatchOptimizer {
     this.activeViewTab = 'recommendations'; // 'recommendations' | 'waves' | 'requisition' | 'plateLogs'
     this.activeGuideTab = 'sop'; // 'overview' | 'sop' | 'math' | 'faq'
 
-    // Interactive Simulation State
-    this.isSimulationActive = false;
-    this.simulationState = {
-      totalGuests: 285,
-      malaysianPct: 45,
-      europeanPct: 18,
-      veganCount: 28
-    };
-
     this.unsubs = [];
     this.isDestroyed = false;
     this.init();
@@ -62,25 +53,7 @@ export class Module3BatchOptimizer {
 
   render() {
     if (this.isDestroyed) return;
-    // Generate recommendations with simulation state if enabled
-    const simOverrides = this.isSimulationActive ? {
-      totalGuests: this.simulationState.totalGuests,
-      nationalities: {
-        Malaysian: this.simulationState.malaysianPct,
-        Singaporean: 25,
-        European: this.simulationState.europeanPct,
-        MiddleEastern: 8,
-        Others: Math.max(0, 100 - this.simulationState.malaysianPct - 25 - this.simulationState.europeanPct - 8)
-      },
-      dietaryProfiles: {
-        Regular: this.simulationState.totalGuests - this.simulationState.veganCount - 50,
-        Halal: Math.round(this.simulationState.totalGuests * 0.85),
-        VeganVegetarian: this.simulationState.veganCount,
-        GlutenFree: 15
-      }
-    } : null;
-
-    const data = BatchOptimizerEngine.generatePrepRecommendations(this.selectedDate, this.selectedShift, simOverrides);
+    const data = BatchOptimizerEngine.generatePrepRecommendations(this.selectedDate, this.selectedShift);
     const plateLogs = db.get('plateWasteLogs');
     const overPrepAlerts = BatchOptimizerEngine.checkOverPrepAlerts();
     const dishes = db.get('dishes');
@@ -104,7 +77,7 @@ export class Module3BatchOptimizer {
           <div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <h1 class="view-title">Predictive F&B Batch Optimization Engine</h1>
-              <span class="badge badge-primary">Module 3 • PIC: Zhen Bang</span>
+              <span class="badge badge-primary">F&B Operations</span>
             </div>
             <p class="view-subtitle">Multi-factor algorithmic batching matching 48h guest influx, recipe BOM yields, and decayed plate-waste feedback loops.</p>
           </div>
@@ -112,10 +85,6 @@ export class Module3BatchOptimizer {
             <button class="btn btn-sm btn-outline" id="btn-open-user-guide" style="border-color: var(--primary); color: var(--primary);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               📖 User & Ops Guide
-            </button>
-            <button class="btn btn-sm ${this.isSimulationActive ? 'btn-warning' : 'btn-outline'}" id="btn-toggle-simulation">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              ${this.isSimulationActive ? 'Exit What-If Mode' : 'What-If Simulation'}
             </button>
             <button class="btn btn-sm btn-outline" id="btn-open-plate-waste-modal">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -145,36 +114,7 @@ export class Module3BatchOptimizer {
           </div>
         ` : ''}
 
-        <!-- Interactive What-If Demographics Sensitivity Panel (Collapsible) -->
-        ${this.isSimulationActive ? `
-          <div class="card" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.3); margin-bottom: 16px;">
-            <div class="card-header" style="padding-bottom: 8px;">
-              <div>
-                <h4 style="color: #d97706; font-size: 13px; font-weight: 700; margin: 0;">🔮 Executive Sensitivity Simulation (What-If Influx Modeler)</h4>
-                <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Simulate upcoming cruise tourist arrivals, tour group surges, or dietary shifts to test algorithmic batch adaptability.</p>
-              </div>
-              <span class="badge badge-warning">Simulating Active Influx</span>
-            </div>
-            <div class="grid grid-4" style="gap: 14px; margin-top: 10px;">
-              <div>
-                <label class="form-label" style="font-size: 11px;">In-House Guests: <strong id="val-sim-guests">${this.simulationState.totalGuests}</strong></label>
-                <input type="range" class="form-range" id="slider-sim-guests" min="150" max="450" value="${this.simulationState.totalGuests}" style="width: 100%;" />
-              </div>
-              <div>
-                <label class="form-label" style="font-size: 11px;">Malaysian / SG: <strong id="val-sim-my">${this.simulationState.malaysianPct}%</strong></label>
-                <input type="range" class="form-range" id="slider-sim-my" min="10" max="80" value="${this.simulationState.malaysianPct}" style="width: 100%;" />
-              </div>
-              <div>
-                <label class="form-label" style="font-size: 11px;">European Influx: <strong id="val-sim-eu">${this.simulationState.europeanPct}%</strong></label>
-                <input type="range" class="form-range" id="slider-sim-eu" min="5" max="60" value="${this.simulationState.europeanPct}" style="width: 100%;" />
-              </div>
-              <div>
-                <label class="form-label" style="font-size: 11px;">Vegan / Vegetarian: <strong id="val-sim-vegan">${this.simulationState.veganCount} pax</strong></label>
-                <input type="range" class="form-range" id="slider-sim-vegan" min="5" max="80" value="${this.simulationState.veganCount}" style="width: 100%;" />
-              </div>
-            </div>
-          </div>
-        ` : ''}
+
 
         <!-- Service Period Filter & Ingested Guest Matrix Bar -->
         <div class="card filter-bar-card">
@@ -476,10 +416,15 @@ export class Module3BatchOptimizer {
                       <td><span class="font-bold text-danger">${log.discardedKg} kg</span></td>
                       <td>
                         ${log.isAnomaly ? `
-                          <span class="badge badge-warning" title="${log.anomalyReason}">Accident (Photo Attached)</span>
+                          <span class="badge badge-warning" title="${log.anomalyReason}">Accident</span>
                         ` : `
-                          <span class="badge badge-secondary">Guest Buffet Return</span>
+                          <span class="badge badge-secondary">Buffet Return</span>
                         `}
+                        ${log.photoDataUrl ? `
+                          <button class="btn btn-xs btn-outline btn-view-pw-photo" data-photo="${log.id}" style="margin-left: 4px; padding: 1px 6px; font-size: 10px;">
+                            📷 Photo
+                          </button>
+                        ` : ''}
                       </td>
                       <td><small>${log.note || log.anomalyReason || 'Normal buffet table return'}</small></td>
                       <td><small class="text-muted">${log.loggedBy || 'Ground Kitchen Staff'}</small></td>
@@ -492,7 +437,7 @@ export class Module3BatchOptimizer {
         ` : ''}
       </div>
 
-      <!-- Modal: Log Plate Waste with Photo Capture Simulation -->
+      <!-- Modal: Log Plate Waste with Real Photo Evidence -->
       <div class="modal-backdrop" id="plate-waste-modal" style="display: none;">
         <div class="modal-card">
           <div class="modal-header">
@@ -536,8 +481,15 @@ export class Module3BatchOptimizer {
             <div class="form-group">
               <label class="form-label">Photo Evidence / Dish Inspection</label>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <button type="button" class="btn btn-xs btn-outline" id="btn-snap-photo">📸 Capture / Attach Photo Evidence</button>
-                <span id="photo-status" class="text-muted" style="font-size: 11px;">No photo attached</span>
+                <label class="btn btn-xs btn-outline" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <span>📸</span> Take Photo / Upload Evidence
+                  <input type="file" id="pw-photo-input" accept="image/*" capture="environment" style="display: none;" />
+                </label>
+                <span id="pw-photo-filename" class="text-muted" style="font-size: 11px;">No photo attached</span>
+              </div>
+              <div id="pw-photo-preview-wrap" style="display: none; margin-top: 8px;">
+                <img id="pw-photo-preview" src="" alt="Plate waste preview" style="max-width: 100%; max-height: 160px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: block;" />
+                <button type="button" class="btn btn-xs btn-danger" id="btn-remove-pw-photo" style="margin-top: 4px;">Remove Photo</button>
               </div>
             </div>
 
@@ -554,6 +506,23 @@ export class Module3BatchOptimizer {
         </div>
       </div>
 
+      <!-- Modal: View Plate Waste Photo Evidence -->
+      <div class="modal-backdrop" id="pw-photo-view-modal" style="display: none; z-index: 1050;">
+        <div class="modal-card" style="max-width: 520px; text-align: center;">
+          <div class="modal-header">
+            <h3 class="modal-title" id="pw-photo-modal-title">Verified Kitchen Evidence</h3>
+            <button class="modal-close" id="btn-close-pw-photo-modal">&times;</button>
+          </div>
+          <div style="padding: 12px 0;">
+            <img id="pw-photo-modal-img" src="" alt="Verified kitchen evidence" style="max-width: 100%; max-height: 380px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: inline-block;" />
+          </div>
+          <div id="pw-photo-modal-caption" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;"></div>
+          <div class="modal-footer" style="justify-content: flex-end;">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-dismiss-pw-photo">Close Preview</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal: User & Operations Guide for Module 3 -->
       <div class="modal-backdrop" id="user-guide-modal" style="display: none;">
         <div class="modal-card" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
@@ -562,7 +531,7 @@ export class Module3BatchOptimizer {
               <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
                 <span>📖</span> Module 3 Operations & User Guide
               </h3>
-              <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Lead PIC: <strong>Zhen Bang</strong> • Predictive F&B Batch Optimization Engine</p>
+              <p style="font-size: 11px; color: var(--text-muted); margin: 0;">EcoHotel OS • Predictive F&B Batch Optimization Engine</p>
             </div>
             <button class="modal-close" id="btn-close-user-guide">&times;</button>
           </div>
@@ -696,7 +665,7 @@ export class Module3BatchOptimizer {
           <div style="display: flex; flex-direction: column; gap: 8px; font-size: 11px;">
             <div>
               <strong>Q: What should I do if a tour bus or banquet arrives unannounced?</strong><br/>
-              <span class="text-muted">A: Click <em>"What-If Simulation"</em>, adjust the guest slider to the new influx count, and check the adjusted batch targets. You can also trigger an immediate Wave 2 / Wave 3 batch.</span>
+              <span class="text-muted">A: The system automatically pulls real-time reservation updates from the Oracle PMS bus. Chefs can also apply quick multiplier adjustments directly on the station cards, or trigger an immediate Wave 2 / Wave 3 batch for sudden dining surges.</span>
             </div>
             <div>
               <strong>Q: If a prep cook drops an entire tray of chicken, will it lower future batch recommendations?</strong><br/>
@@ -770,52 +739,6 @@ export class Module3BatchOptimizer {
       };
     });
 
-    // What-If Simulation Toggle
-    const simToggleBtn = this.container.querySelector('#btn-toggle-simulation');
-    if (simToggleBtn) {
-      simToggleBtn.onclick = () => {
-        this.isSimulationActive = !this.isSimulationActive;
-        this.render();
-      };
-    }
-
-    // Simulation Sliders
-    const sliderGuests = this.container.querySelector('#slider-sim-guests');
-    if (sliderGuests) {
-      sliderGuests.oninput = (e) => {
-        this.simulationState.totalGuests = parseInt(e.target.value);
-        this.container.querySelector('#val-sim-guests').innerText = e.target.value;
-        this.render();
-      };
-    }
-
-    const sliderMy = this.container.querySelector('#slider-sim-my');
-    if (sliderMy) {
-      sliderMy.oninput = (e) => {
-        this.simulationState.malaysianPct = parseInt(e.target.value);
-        this.container.querySelector('#val-sim-my').innerText = `${e.target.value}%`;
-        this.render();
-      };
-    }
-
-    const sliderEu = this.container.querySelector('#slider-sim-eu');
-    if (sliderEu) {
-      sliderEu.oninput = (e) => {
-        this.simulationState.europeanPct = parseInt(e.target.value);
-        this.container.querySelector('#val-sim-eu').innerText = `${e.target.value}%`;
-        this.render();
-      };
-    }
-
-    const sliderVegan = this.container.querySelector('#slider-sim-vegan');
-    if (sliderVegan) {
-      sliderVegan.oninput = (e) => {
-        this.simulationState.veganCount = parseInt(e.target.value);
-        this.container.querySelector('#val-sim-vegan').innerText = `${e.target.value} pax`;
-        this.render();
-      };
-    }
-
     // Modal Handlers
     const modal = this.container.querySelector('#plate-waste-modal');
     const openBtn = this.container.querySelector('#btn-open-plate-waste-modal');
@@ -825,15 +748,26 @@ export class Module3BatchOptimizer {
     const form = this.container.querySelector('#form-log-plate-waste');
     const anomalyCheckbox = this.container.querySelector('#pw-is-anomaly');
     const anomalyDiv = this.container.querySelector('#pw-anomaly-details');
-    const snapPhotoBtn = this.container.querySelector('#btn-snap-photo');
-    const photoStatus = this.container.querySelector('#photo-status');
+    const photoInput = this.container.querySelector('#pw-photo-input');
+    const photoFilename = this.container.querySelector('#pw-photo-filename');
+    const photoPreviewWrap = this.container.querySelector('#pw-photo-preview-wrap');
+    const photoPreviewImg = this.container.querySelector('#pw-photo-preview');
+    const removePhotoBtn = this.container.querySelector('#btn-remove-pw-photo');
 
-    let isPhotoAttached = false;
+    let pendingPhotoDataUrl = null;
 
-    if (openBtn) openBtn.onclick = () => { modal.style.display = 'flex'; };
-    if (openBtn2) openBtn2.onclick = () => { modal.style.display = 'flex'; };
-    if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
-    if (cancelBtn) cancelBtn.onclick = () => { modal.style.display = 'none'; };
+    const resetPhotoInput = () => {
+      pendingPhotoDataUrl = null;
+      if (photoInput) photoInput.value = '';
+      if (photoFilename) photoFilename.textContent = 'No photo attached';
+      if (photoPreviewWrap) photoPreviewWrap.style.display = 'none';
+      if (photoPreviewImg) photoPreviewImg.src = '';
+    };
+
+    if (openBtn) openBtn.onclick = () => { resetPhotoInput(); modal.style.display = 'flex'; };
+    if (openBtn2) openBtn2.onclick = () => { resetPhotoInput(); modal.style.display = 'flex'; };
+    if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; resetPhotoInput(); };
+    if (cancelBtn) cancelBtn.onclick = () => { modal.style.display = 'none'; resetPhotoInput(); };
 
     if (anomalyCheckbox) {
       anomalyCheckbox.onchange = () => {
@@ -841,10 +775,39 @@ export class Module3BatchOptimizer {
       };
     }
 
-    if (snapPhotoBtn) {
-      snapPhotoBtn.onclick = () => {
-        isPhotoAttached = true;
-        photoStatus.innerHTML = '<span class="badge badge-success">✓ Photo Evidence Verified (IMG_BOH_8892.jpg)</span>';
+    if (photoInput) {
+      photoInput.onchange = () => {
+        const file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) {
+          alert('Photo is too large. Please choose an image under 8MB.');
+          photoInput.value = '';
+          return;
+        }
+
+        if (photoFilename) photoFilename.textContent = file.name;
+        if (photoPreviewWrap) photoPreviewWrap.style.display = 'block';
+        if (photoPreviewImg) photoPreviewImg.style.opacity = '0.5';
+
+        this.compressImageFile(file, 1000, 0.72)
+          .then((dataUrl) => {
+            pendingPhotoDataUrl = dataUrl;
+            if (photoPreviewImg) {
+              photoPreviewImg.src = dataUrl;
+              photoPreviewImg.style.opacity = '1';
+            }
+          })
+          .catch((err) => {
+            console.error('Photo processing failed', err);
+            alert('Could not process photo. Please try a different image.');
+            resetPhotoInput();
+          });
+      };
+    }
+
+    if (removePhotoBtn) {
+      removePhotoBtn.onclick = () => {
+        resetPhotoInput();
       };
     }
 
@@ -872,15 +835,48 @@ export class Module3BatchOptimizer {
           discardedKg,
           isAnomaly,
           anomalyReason: isAnomaly ? anomalyReason : '',
-          photoAttached: isPhotoAttached || isAnomaly,
+          photoAttached: !!pendingPhotoDataUrl || isAnomaly,
+          photoDataUrl: pendingPhotoDataUrl || '',
           note,
           loggedBy: 'Chef Zhen Bang (BOH Team)'
         });
 
         modal.style.display = 'none';
+        resetPhotoInput();
         window.showGlobalToast?.(`Plate waste logged for ${dishName}! EMA predictive multiplier auto-recalculated.`, 'success');
       };
     }
+
+    // Photo Inspection Modal Handlers
+    const photoModal = this.container.querySelector('#pw-photo-view-modal');
+    const photoModalImg = this.container.querySelector('#pw-photo-modal-img');
+    const photoModalTitle = this.container.querySelector('#pw-photo-modal-title');
+    const photoModalCaption = this.container.querySelector('#pw-photo-modal-caption');
+    const closePhotoModalBtn = this.container.querySelector('#btn-close-pw-photo-modal');
+    const dismissPhotoBtn = this.container.querySelector('#btn-dismiss-pw-photo');
+
+    if (closePhotoModalBtn) closePhotoModalBtn.onclick = () => { photoModal.style.display = 'none'; };
+    if (dismissPhotoBtn) dismissPhotoBtn.onclick = () => { photoModal.style.display = 'none'; };
+    if (photoModal) {
+      photoModal.onclick = (e) => {
+        if (e.target === photoModal) photoModal.style.display = 'none';
+      };
+    }
+
+    this.container.querySelectorAll('.btn-view-pw-photo').forEach(btn => {
+      btn.onclick = () => {
+        const logId = btn.dataset.photo;
+        const targetLog = (db.get('plateWasteLogs') || []).find(l => l.id === logId);
+        if (targetLog && targetLog.photoDataUrl) {
+          if (photoModalImg) photoModalImg.src = targetLog.photoDataUrl;
+          if (photoModalTitle) photoModalTitle.textContent = `Evidence: ${targetLog.dishName}`;
+          if (photoModalCaption) {
+            photoModalCaption.textContent = `Verified BOH capture • ${targetLog.date} (${targetLog.mealPeriod}) by ${targetLog.loggedBy} • Discarded: ${targetLog.discardedKg} kg`;
+          }
+          if (photoModal) photoModal.style.display = 'flex';
+        }
+      };
+    });
 
     // Chef Multiplier Override
     this.container.querySelectorAll('.btn-chef-override').forEach(btn => {
@@ -921,6 +917,32 @@ export class Module3BatchOptimizer {
     if (printBtn) {
       printBtn.onclick = () => this.printPrepSheet(data);
     }
+  }
+
+  compressImageFile(file, maxWidth = 1000, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('FileReader failed'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Image decode failed'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   printPrepSheet(data) {
@@ -1006,8 +1028,8 @@ export class Module3BatchOptimizer {
         </table>
 
         <div class="footer">
-          <span>Grand Bay Eco-Resort & Spa • Visit Malaysia 2026 Sustainable Directive</span>
-          <span>Lead PIC: Zhen Bang (Module 3 F&B Batch Optimization)</span>
+          <span>Grand Bay Eco-Resort & Spa • Sustainable Culinary Operations</span>
+          <span>EcoHotel OS Predictive Batching Sheet</span>
         </div>
 
         <script>

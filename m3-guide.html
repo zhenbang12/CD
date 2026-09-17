@@ -97,7 +97,7 @@
     <!-- Page Navbar -->
     <nav class="main-navbar">
       <div class="nav-tabs-container">
-        <a href="./m1-executive.html" class="nav-tab" style="text-decoration: none;">
+        <a href="./m1-dashboard.html" class="nav-tab" style="text-decoration: none;">
           <span class="tab-icon">📊</span>
           <span class="tab-text">Executive Analytics</span>
         </a>
@@ -133,7 +133,7 @@
             <span class="badge badge-primary">Module 3 Operations Manual</span>
             <h1 style="font-size: 26px; font-weight: 900; margin: 8px 0 4px 0;">Predictive F&B Batch Optimization Engine</h1>
             <p style="color: var(--text-muted); font-size: 13px; margin: 0;">
-              Lead PIC: <strong>Zhen Bang</strong> • Programmer & System Architect • Grand Bay Eco-Resort & Spa
+              Operational Systems & Culinary Engineering • Grand Bay Eco-Resort & Spa
             </p>
           </div>
           <a href="./m3-batch-optimization.html" class="btn btn-primary" style="text-decoration: none;">
@@ -151,15 +151,15 @@
           </p>
         </div>
         <div class="card" style="border-left: 4px solid #3b82f6;">
-          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #3b82f6;">🌿 VM2026 ESG Alignment</h4>
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #3b82f6;">⚙️ Key Integration</h4>
           <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-            Avoided food waste feeds directly into Module 1's Executive Compliance Score ($1\text{ kg saved} = 2.5\text{ kg CO}_2\text{e avoided}$).
+            Bridges reservation occupancy forecasts with Module 2 raw chiller inventory and Module 1 carbon compliance.
           </p>
         </div>
-        <div class="card" style="border-left: 4px solid #f59e0b;">
-          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #f59e0b;">🔄 Closed-Loop Automation</h4>
+        <div class="card" style="border-left: 4px solid #8b5cf6;">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #8b5cf6;">📊 Primary Metric</h4>
           <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
-            Ingests Oracle SQL reservations, reconciles chiller stock in M2 Inventory, and auto-refines multipliers via Exponential Moving Average.
+            Tracks cumulative kilograms of culinary waste avoided, translating directly into financial savings and avoided CO₂e emissions.
           </p>
         </div>
       </div>
@@ -168,19 +168,20 @@
       <div class="card" style="margin-bottom: 24px;">
         <div class="card-header">
           <div>
-            <h3 class="card-title">⚡ 7-Step Kitchen Standard Operating Procedure (SOP)</h3>
-            <p class="card-subtitle">Daily operational sequence for Executive Chef, Sous Chefs, and Ground Station Prep Teams</p>
+            <h3 class="card-title">Kitchen Standard Operating Procedure (SOP)</h3>
+            <p class="card-subtitle">Follow these operational steps daily for buffet prep cycles</p>
           </div>
+          <span class="badge badge-success">Production Protocol</span>
         </div>
 
-        <div style="padding-top: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 10px;">
           <!-- Step 1 -->
           <div class="sop-step-card">
             <div class="step-number" style="background: rgba(5, 150, 105, 0.15); color: #059669;">1</div>
             <div>
-              <div style="font-weight: 800; font-size: 14px;">Select 48h Service Period & Influx Window</div>
+              <div style="font-weight: 800; font-size: 14px;">Select Service Date & Meal Shift</div>
               <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
-                Select the target date (e.g. 13 Aug / 14 Aug) and meal shift (Breakfast, Lunch, Dinner). The system automatically retrieves confirmed in-house guests, expected arrivals, cultural nationalities, and declared diets from Oracle SQL (`RESERVATIONS` table).
+                Choose the target date and service period (Breakfast, Lunch, or Dinner). The system automatically retrieves verified PMS room occupancy and predicted diner capture rates (92% for weekday breakfast).
               </p>
             </div>
           </div>
@@ -189,9 +190,9 @@
           <div class="sop-step-card">
             <div class="step-number" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">2</div>
             <div>
-              <div style="font-weight: 800; font-size: 14px;">Review Master Prep Targets & Station Kanban</div>
+              <div style="font-weight: 800; font-size: 14px;">Filter by Prep Station (Kanban View)</div>
               <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
-                Filter by kitchen station (🔥 Hot Line & Grill, 🍳 Live Action Counter, 🥗 Cold Pantry & Salads, 🥐 Bakery). Review calculated target weights, unoptimized baselines, food saved in kg, and financial savings in MYR.
+                Click station tabs (<em>Hot Line & Grill</em>, <em>Live Action Counters</em>, <em>Cold Pantry & Salads</em>, <em>Bakery & Pastry</em>) to isolate dishes prepared at your specific station.
               </p>
             </div>
           </div>
@@ -200,9 +201,9 @@
           <div class="sop-step-card">
             <div class="step-number" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">3</div>
             <div>
-              <div style="font-weight: 800; font-size: 14px;">Execute Staggered 3-Wave Prep Schedule (Just-In-Time Cooking)</div>
+              <div style="font-weight: 800; font-size: 14px;">Execute Staggered 3-Wave Prep Schedule</div>
               <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
-                Instead of cooking one giant opening batch, switch to the <em>"⏱️ Staggered 3-Wave Timeline"</em> tab. Prep <strong>Wave 1 (55%)</strong> for buffet opening, <strong>Wave 2 (35%)</strong> for the peak rush influx, and <strong>Wave 3 (10%)</strong> for on-demand live top-up.
+                Click <em>"🌊 Staggered 3-Wave Prep"</em>. Follow the phased schedule: <strong>Wave 1 (55%)</strong> at T-30m before opening, <strong>Wave 2 (30%)</strong> at peak influx, and <strong>Wave 3 (15%)</strong> on demand. Never cook 100% of volume upfront.
               </p>
             </div>
           </div>
@@ -211,9 +212,9 @@
           <div class="sop-step-card">
             <div class="step-number" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">4</div>
             <div>
-              <div style="font-weight: 800; font-size: 14px;">Test What-If Sensitivity Simulations</div>
+              <div style="font-weight: 800; font-size: 14px;">Live PMS Influx & Demographics Synchronization</div>
               <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
-                When unexpected tour bus groups or banquets are scheduled, click <strong>"What-If Simulation"</strong> and move the In-House Guests, European Influx, or Vegan Pax sliders. The system instantly simulates batch targets and food savings.
+                The engine continuously syncs with the Oracle PMS reservation ledger, automatically ingesting in-house guest counts, expected check-ins, cultural nationalities, and dietary profiles.
               </p>
             </div>
           </div>
