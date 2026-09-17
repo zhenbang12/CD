@@ -3,15 +3,30 @@ import { db } from '../db/storage.js';
 export class Module1Baselines {
   constructor(container) {
     this.container = container;
+    this.unsubs = [];
+    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    db.subscribe('baselines', () => this.render());
+    this.unsubs.push(
+      db.subscribe('baselines', () => { if (!this.isDestroyed) this.render(); })
+    );
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    if (this.unsubs) {
+      this.unsubs.forEach(unsub => {
+        try { unsub(); } catch (err) { /* ignore */ }
+      });
+      this.unsubs = [];
+    }
   }
 
   render() {
+    if (this.isDestroyed) return;
     let baselines = [];
     try {
       baselines = db.getBaselines();

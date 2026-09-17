@@ -11,17 +11,32 @@ export class Module4GuestPWA {
     this.container = container;
     this.activeRoomNumber = '304'; // Default demo room (Executive Seaview)
     this.floorFilter = 'ALL'; // 'ALL' | '1' | '2' | '3'
+    this.unsubs = [];
+    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    db.subscribe('rooms', () => this.render());
-    db.subscribe('ecoVouchers', () => this.render());
-    db.subscribe('guestInteractions', () => this.render());
+    this.unsubs.push(
+      db.subscribe('rooms', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('ecoVouchers', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('guestInteractions', () => { if (!this.isDestroyed) this.render(); })
+    );
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    if (this.unsubs) {
+      this.unsubs.forEach(unsub => {
+        try { unsub(); } catch (err) { /* ignore */ }
+      });
+      this.unsubs = [];
+    }
   }
 
   render() {
+    if (this.isDestroyed) return;
     const rooms = db.get('rooms');
     const vouchers = db.get('ecoVouchers');
     const interactions = db.get('guestInteractions');

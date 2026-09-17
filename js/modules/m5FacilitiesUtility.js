@@ -11,17 +11,34 @@ export class Module5Facilities {
     this.container = container;
     this.activeFilter = 'ALL'; // 'ALL' | 'HIGH' | 'IN_PROGRESS' | 'COMPLETED'
     this.selectedZonePin = null;
+    this.pendingPhotoDataUrl = null; // base64 photo evidence staged before ticket submission
+    this.unsubs = [];
+    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    db.subscribe('utilityMeters', () => this.render());
-    db.subscribe('repairTickets', () => this.render());
-    db.subscribe('technicians', () => this.render());
+    this.unsubs.push(
+      db.subscribe('utilityMeters', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('repairTickets', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('technicians', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('defectCategories', () => { if (!this.isDestroyed) this.render(); })
+    );
+  }
+
+  destroy() {
+    this.isDestroyed = true;
+    if (this.unsubs) {
+      this.unsubs.forEach(unsub => {
+        try { unsub(); } catch (err) { /* ignore */ }
+      });
+      this.unsubs = [];
+    }
   }
 
   render() {
+    if (this.isDestroyed) return;
     const meters = db.get('utilityMeters');
     const tickets = db.get('repairTickets');
     const technicians = db.get('technicians');

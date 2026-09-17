@@ -891,4 +891,7 @@ class StorageEngine {
   }
 }
 
-export const db = new StorageEngine();
+if (!window.__ECO_DB_INSTANCE__) {
+  window.__ECO_DB_INSTANCE__ = new StorageEngine();
+}
+export const db = window.__ECO_DB_INSTANCE__;
