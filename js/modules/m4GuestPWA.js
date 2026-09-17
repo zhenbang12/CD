@@ -48,7 +48,7 @@ export class Module4GuestPWA {
           </div>
           <div class="header-actions">
             <div class="room-switcher-wrap" style="display: flex; align-items: center; gap: 8px;">
-              <label class="text-muted" style="font-size:12px; font-weight:500;">Simulate In-Room QR Scan:</label>
+              <label class="text-muted" style="font-size:12px; font-weight:500;">Guest Room Terminal:</label>
               <select class="form-input form-input-sm" id="select-active-room" style="width: 240px;">
                 ${rooms.map(r => `<option value="${r.roomNumber}" ${r.roomNumber === this.activeRoomNumber ? 'selected' : ''}>Room ${r.roomNumber} - ${r.guestName} (${r.type})</option>`).join('')}
               </select>
@@ -60,7 +60,7 @@ export class Module4GuestPWA {
           </div>
         </div>
 
-        <!-- 2-Column Split: Mobile PWA Simulator (Left) + Live Housekeeping Queue (Right) -->
+        <!-- 2-Column Split: In-Room Guest Terminal (Left) + Live Housekeeping Queue (Right) -->
         <div class="grid grid-2 pwa-split-layout">
           
           <!-- LEFT COLUMN: Mobile PWA Screen -->

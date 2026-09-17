@@ -47,11 +47,14 @@ class StorageEngine {
     if (!this.data.guestInteractions) {
       this.data.guestInteractions = [];
     }
-    // Sanitize any previously inflated test points
+    // Sanitize any previously inflated test points or demo labels
     if (this.data.rooms) {
       for (const r of this.data.rooms) {
         if (r.ecoPointsEarned > 50) {
           r.ecoPointsEarned = 25;
+        }
+        if (r.guestName && r.guestName.includes('(Demo Tourist)')) {
+          r.guestName = r.guestName.replace('(Demo Tourist)', '').trim();
         }
       }
     }
@@ -166,19 +169,52 @@ class StorageEngine {
     this.notify('system', this.data.system);
   }
 
-  // --- Real-time Simulation Engine & Clock ---
-  startSimulation() {
-    if (this.simInterval) clearInterval(this.simInterval);
-    this.data.system.isSimulating = true;
+  // --- Operational Alert Acknowledgment Methods ---
+  getAcknowledgedAlerts() {
+    if (!this.data.system.acknowledgedAlerts) {
+      this.data.system.acknowledgedAlerts = [];
+    }
+    return this.data.system.acknowledgedAlerts;
+  }
+
+  acknowledgeAlert(alertId) {
+    if (!this.data.system.acknowledgedAlerts) {
+      this.data.system.acknowledgedAlerts = [];
+    }
+    if (!this.data.system.acknowledgedAlerts.includes(alertId)) {
+      this.data.system.acknowledgedAlerts.push(alertId);
+      this.saveDatabase();
+      this.notify('system', this.data.system);
+    }
+    return true;
+  }
+
+  acknowledgeAllAlerts(alertIds = []) {
+    if (!this.data.system.acknowledgedAlerts) {
+      this.data.system.acknowledgedAlerts = [];
+    }
+    alertIds.forEach(id => {
+      if (!this.data.system.acknowledgedAlerts.includes(id)) {
+        this.data.system.acknowledgedAlerts.push(id);
+      }
+    });
     this.saveDatabase();
     this.notify('system', this.data.system);
+    return true;
+  }
 
-    const speed = this.data.system.simSpeed || 1;
-    const intervalMs = Math.max(200, 1000 / speed);
+  clearAcknowledgedAlert(alertId) {
+    if (this.data.system.acknowledgedAlerts) {
+      this.data.system.acknowledgedAlerts = this.data.system.acknowledgedAlerts.filter(id => id !== alertId);
+      this.saveDatabase();
+      this.notify('system', this.data.system);
+    }
+    return true;
+  }
 
-    this.simInterval = setInterval(() => {
-      this.tickSimulation();
-    }, intervalMs);
+  // --- Real-time Simulation Engine & Clock (Disabled in Production) ---
+  startSimulation() {
+    this.stopSimulation();
   }
 
   stopSimulation() {
@@ -188,7 +224,6 @@ class StorageEngine {
     }
     this.data.system.isSimulating = false;
     this.saveDatabase();
-    this.notify('system', this.data.system);
   }
 
   setSimSpeed(speed) {
@@ -593,7 +628,7 @@ class StorageEngine {
     const newLog = {
       id: `WST-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().split('T')[0],
-      loggedBy: this.data.system.activeUser.name,
+      loggedBy: this.data.system.activeUser?.name || 'Culinary Staff',
       ...log,
       quantity: parseFloat(log.quantity)
     };
@@ -608,7 +643,7 @@ class StorageEngine {
     const newLog = {
       id: `PW-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().split('T')[0],
-      loggedBy: this.data.system.activeUser.name,
+      loggedBy: this.data.system.activeUser?.name || 'Chef Zhen Bang (BOH Team)',
       ...log,
       discardedKg: parseFloat(log.discardedKg)
     };

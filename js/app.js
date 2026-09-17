@@ -25,6 +25,8 @@ class App {
     const pageParam = urlParams.get('page');
 
     this.activeTab = hash || pageParam || 'm1-dashboard';
+    this.isAlertsFlyoutOpen = false;
+    this.activeAlertFilter = 'all';
     this.init();
   }
 
@@ -32,6 +34,7 @@ class App {
     this.applyInitialTheme();
     this.bindGlobalToast();
     this.renderShell();
+    this.startLiveClock();
     this.attachGlobalEvents();
     this.loadActiveModule();
 
@@ -45,7 +48,6 @@ class App {
 
     // Subscribe to global db updates
     db.subscribe('all', () => this.updateAlertBadges());
-    db.subscribe('system', (sys) => this.updateHeaderSystemState(sys));
     this.updateAlertBadges();
   }
 
@@ -113,17 +115,10 @@ class App {
             <span>Grand Bay Eco-Resort & Spa</span>
           </div>
 
-          <!-- Live Operational Clock -->
-          <div class="sim-clock-pill">
-            <span id="sim-clock-display">${system.currentDate} • ${system.currentTime}</span>
-            <div class="sim-controls">
-              <button class="sim-btn ${system.isSimulating ? 'active' : ''}" id="btn-toggle-sim" title="${system.isSimulating ? 'Pause Live Clock' : 'Start Live Clock'}">
-                ${system.isSimulating ? '⏸' : '▶'}
-              </button>
-              <button class="sim-btn ${system.simSpeed === 1 ? 'active' : ''}" data-speed="1" title="1x Speed">1x</button>
-              <button class="sim-btn ${system.simSpeed === 2 ? 'active' : ''}" data-speed="2" title="2x Speed">2x</button>
-              <button class="sim-btn ${system.simSpeed === 5 ? 'active' : ''}" data-speed="5" title="5x Speed">5x</button>
-            </div>
+          <!-- Live Operational System Clock -->
+          <div class="live-clock-pill" title="Live Operational Clock">
+            <span class="clock-dot"></span>
+            <span id="live-clock-display">Loading...</span>
           </div>
         </div>
 
@@ -131,11 +126,11 @@ class App {
           <!-- User Profile & Logout -->
           <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-surface); padding: 4px 12px 4px 4px; border-radius: 20px; border: 1px solid var(--border-color);">
             <div style="width: 32px; height: 32px; border-radius: 16px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
-              ${system.activeUser?.avatar || '?'}
+              ${system.activeUser?.avatar || 'SC'}
             </div>
             <div style="display: flex; flex-direction: column; line-height: 1.2;">
-              <span style="font-size: 13px; font-weight: 600;">${system.activeUser?.name || 'Unknown User'}</span>
-              <span style="font-size: 10px; color: var(--text-muted);">${system.activeUser?.role || 'Guest'}</span>
+              <span style="font-size: 13px; font-weight: 600;">${system.activeUser?.name || 'Sarah Chen'}</span>
+              <span style="font-size: 10px; color: var(--text-muted);">${system.activeUser?.role || 'Operations Director'}</span>
             </div>
             <button id="btn-logout" class="btn btn-sm btn-outline" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>
           </div>
@@ -149,11 +144,6 @@ class App {
           <!-- Light / Dark Theme Switcher -->
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
             ${system.theme === 'light' ? '🌙' : '☀️'}
-          </button>
-
-          <!-- Quick Reset Data -->
-          <button class="btn btn-xs btn-outline" id="btn-global-reset-db" title="Reset all data to baseline">
-            Reset Data
           </button>
         </div>
       </header>
@@ -181,10 +171,6 @@ class App {
             <span class="tab-icon">⚡</span>
             <span class="tab-text">Facilities & Repairs</span>
           </button>
-          <button class="nav-tab ${this.activeTab === 'db' ? 'active' : ''}" data-tab="db">
-            <span class="tab-icon">🗄️</span>
-            <span class="tab-text">Database Studio</span>
-          </button>
         </div>
       </nav>
 
@@ -193,6 +179,9 @@ class App {
 
       <!-- Toast Container -->
       <div id="toast-container" class="toast-container"></div>
+
+      <!-- Operational Incident & Alert Flyout Container -->
+      <div id="alerts-flyout-container"></div>
     `;
   }
 
@@ -224,29 +213,6 @@ class App {
       };
     }
 
-    // Live Simulation Controls
-    const simToggleBtn = document.getElementById('btn-toggle-sim');
-    if (simToggleBtn) {
-      simToggleBtn.onclick = () => {
-        const sys = db.getSystem();
-        if (sys.isSimulating) {
-          db.stopSimulation();
-          window.showGlobalToast?.('Clock paused.', 'info');
-        } else {
-          db.startSimulation();
-          window.showGlobalToast?.('Live telemetry active.', 'success');
-        }
-      };
-    }
-
-    document.querySelectorAll('.sim-btn[data-speed]').forEach(btn => {
-      btn.onclick = () => {
-        const speed = parseInt(btn.dataset.speed, 10);
-        db.setSimSpeed(speed);
-        document.querySelectorAll('.sim-btn[data-speed]').forEach(b => b.classList.toggle('active', b === btn));
-      };
-    });
-
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
       logoutBtn.onclick = () => {
@@ -255,39 +221,57 @@ class App {
       };
     }
 
-    
-
-    // Reset Demo DB
-    const resetBtn = document.getElementById('btn-global-reset-db');
-    if (resetBtn) {
-      resetBtn.onclick = () => {
-        if (confirm('Reset database to clean baseline dataset?')) {
-          db.resetDatabase();
-          this.loadActiveModule();
-          window.showGlobalToast?.('Database reset to baseline state.', 'success');
-        }
-      };
-    }
-
     // Alert Pill Click
     const alertPill = document.getElementById('global-alert-pill');
     if (alertPill) {
-      alertPill.onclick = () => {
-        this.switchTab('m5');
+      alertPill.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleAlertsFlyout();
       };
     }
+
+    // Global listener to close flyout on outside click
+    document.addEventListener('click', (e) => {
+      if (this.isAlertsFlyoutOpen) {
+        const flyout = document.getElementById('alerts-flyout');
+        const pill = document.getElementById('global-alert-pill');
+        if (flyout && !flyout.contains(e.target) && !pill.contains(e.target)) {
+          this.closeAlertsFlyout();
+        }
+      }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isAlertsFlyoutOpen) {
+        this.closeAlertsFlyout();
+      }
+    });
   }
 
-  updateHeaderSystemState(sys) {
-    const clock = document.getElementById('sim-clock-display');
-    if (clock) {
-      clock.textContent = `${sys.currentDate} • ${sys.currentTime}`;
-    }
-    const simBtn = document.getElementById('btn-toggle-sim');
-    if (simBtn) {
-      simBtn.innerHTML = sys.isSimulating ? '⏸' : '▶';
-      simBtn.classList.toggle('active', !!sys.isSimulating);
-    }
+  startLiveClock() {
+    const updateClock = () => {
+      const clock = document.getElementById('live-clock-display');
+      if (clock) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-MY', {
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+        const timeStr = now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        clock.textContent = `${dateStr} • ${timeStr}`;
+      }
+    };
+    updateClock();
+    if (this.clockTimer) clearInterval(this.clockTimer);
+    this.clockTimer = setInterval(updateClock, 1000);
   }
 
   switchTab(tabId, updateHash = true) {
@@ -327,32 +311,316 @@ class App {
     }
   }
 
+  // --- Real-time Notification Center Logic ---
+  computeActiveAlerts() {
+    const inventory = db.get('inventory') || [];
+    const utilityMeters = db.get('utilityMeters') || [];
+    const repairTickets = db.get('repairTickets') || [];
+    const plateWasteLogs = db.get('plateWasteLogs') || [];
+    const acknowledged = db.getAcknowledgedAlerts ? db.getAcknowledgedAlerts() : [];
+
+    const alerts = [];
+
+    // 1. Expiring Inventory (Module 2)
+    inventory.forEach(item => {
+      const exp = new Date(item.expiryDate);
+      const diffDays = Math.ceil((exp - new Date('2026-08-13')) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 2) {
+        const id = `inv-exp-${item.id}`;
+        alerts.push({
+          id,
+          category: 'inventory',
+          categoryLabel: 'Inventory Expiry',
+          typeClass: 'type-inventory',
+          badgeClass: 'badge-warning',
+          title: `${item.name} (${item.quantity} ${item.unit})`,
+          desc: diffDays <= 0 
+            ? `Immediate prep required! Located in ${item.storageLocation}. Expiry: today.`
+            : `Expires in ${diffDays} day${diffDays === 1 ? '' : 's'} (${item.expiryDate}). Stored in ${item.storageLocation}.`,
+          moduleTab: 'm2',
+          actionText: 'Inspect in Inventory',
+          actionPayload: { search: item.name },
+          acknowledged: acknowledged.includes(id)
+        });
+      }
+    });
+
+    // 2. Utility Meter Anomalies (Module 5)
+    utilityMeters.forEach(meter => {
+      if (meter.status && meter.status.includes('Anomaly')) {
+        const id = `meter-spike-${meter.meterId}`;
+        const pct = meter.baselineDaily > 0 ? Math.round(((meter.lastReading - meter.baselineDaily) / meter.baselineDaily) * 100) : 0;
+        alerts.push({
+          id,
+          category: 'utility',
+          categoryLabel: 'Meter Telemetry Spike',
+          typeClass: 'type-utility',
+          badgeClass: 'badge-danger',
+          title: `${meter.zone} (${meter.meterId})`,
+          desc: `Current consumption ${meter.lastReading} ${meter.unit} exceeds baseline (${meter.baselineDaily} ${meter.unit}) by +${pct}%.`,
+          moduleTab: 'm5',
+          actionText: 'Inspect Zone Meter',
+          actionPayload: { meterId: meter.meterId },
+          acknowledged: acknowledged.includes(id)
+        });
+      }
+    });
+
+    // 3. High-Priority Repair Tickets (Module 5)
+    repairTickets.forEach(ticket => {
+      if (ticket.priority === 'High' && ticket.status !== 'Completed') {
+        const id = `ticket-high-${ticket.id}`;
+        alerts.push({
+          id,
+          category: 'ticket',
+          categoryLabel: 'Urgent Work Order',
+          typeClass: 'type-ticket',
+          badgeClass: 'badge-danger',
+          title: `Ticket ${ticket.id}: ${ticket.zone}`,
+          desc: `${ticket.category} — ${ticket.description}. Est resource loss: ${ticket.estimatedWaterLossPerDay || 0} L/day.`,
+          moduleTab: 'm5',
+          actionText: 'Dispatch / Resolve',
+          actionPayload: { ticketId: ticket.id },
+          acknowledged: acknowledged.includes(id)
+        });
+      }
+    });
+
+    // 4. Plate Waste Operational Anomalies (Module 3)
+    plateWasteLogs.forEach(log => {
+      if (log.isAnomaly) {
+        const id = `pw-anomaly-${log.id}`;
+        alerts.push({
+          id,
+          category: 'waste',
+          categoryLabel: 'Kitchen Incident',
+          typeClass: 'type-waste',
+          badgeClass: 'badge-warning',
+          title: `${log.dishName || 'Buffet Dish'} (${log.discardedKg} kg)`,
+          desc: `Accidental spill / kitchen incident: "${log.anomalyReason || log.note || 'Kitchen Incident'}". Logged by ${log.loggedBy}.`,
+          moduleTab: 'm3',
+          actionText: 'View Batch Returns',
+          actionPayload: { viewTab: 'plateLogs' },
+          acknowledged: acknowledged.includes(id)
+        });
+      }
+    });
+
+    return alerts;
+  }
+
   updateAlertBadges() {
-    const inventory = db.get('inventory');
-    const utilityMeters = db.get('utilityMeters');
-    const repairTickets = db.get('repairTickets');
+    const alerts = this.computeActiveAlerts();
+    const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
+    const count = unacknowledgedAlerts.length;
 
-    const expiringCount = inventory.filter(i => {
-      const exp = new Date(i.expiryDate);
-      const diff = Math.ceil((exp - new Date('2026-08-13')) / (1000 * 60 * 60 * 24));
-      return diff <= 2;
-    }).length;
-
-    const anomaliesCount = utilityMeters.filter(m => m.status.includes('Anomaly')).length;
-    const highTicketsCount = repairTickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length;
-
-    const totalAlerts = expiringCount + anomaliesCount + highTicketsCount;
     const badge = document.getElementById('alert-count-badge');
     const pill = document.getElementById('global-alert-pill');
 
     if (badge && pill) {
-      badge.textContent = `${totalAlerts} Alert${totalAlerts === 1 ? '' : 's'}`;
-      if (totalAlerts > 0) {
+      badge.textContent = `${count} Alert${count === 1 ? '' : 's'}`;
+      if (count > 0) {
         pill.classList.add('has-alerts');
       } else {
         pill.classList.remove('has-alerts');
       }
     }
+
+    if (this.isAlertsFlyoutOpen) {
+      this.renderNotificationFlyout();
+    }
+  }
+
+  toggleAlertsFlyout() {
+    this.isAlertsFlyoutOpen = !this.isAlertsFlyoutOpen;
+    const pill = document.getElementById('global-alert-pill');
+    if (pill) {
+      pill.classList.toggle('active', this.isAlertsFlyoutOpen);
+    }
+    if (this.isAlertsFlyoutOpen) {
+      this.renderNotificationFlyout();
+    } else {
+      const container = document.getElementById('alerts-flyout-container');
+      if (container) container.innerHTML = '';
+    }
+  }
+
+  closeAlertsFlyout() {
+    this.isAlertsFlyoutOpen = false;
+    const pill = document.getElementById('global-alert-pill');
+    if (pill) pill.classList.remove('active');
+    const container = document.getElementById('alerts-flyout-container');
+    if (container) container.innerHTML = '';
+  }
+
+  renderNotificationFlyout() {
+    const container = document.getElementById('alerts-flyout-container');
+    if (!container) return;
+
+    const allAlerts = this.computeActiveAlerts();
+    const unackCount = allAlerts.filter(a => !a.acknowledged).length;
+
+    const counts = {
+      all: allAlerts.length,
+      inventory: allAlerts.filter(a => a.category === 'inventory').length,
+      utility: allAlerts.filter(a => a.category === 'utility').length,
+      ticket: allAlerts.filter(a => a.category === 'ticket').length,
+      waste: allAlerts.filter(a => a.category === 'waste').length
+    };
+
+    const filteredAlerts = this.activeAlertFilter === 'all'
+      ? allAlerts
+      : allAlerts.filter(a => a.category === this.activeAlertFilter);
+
+    container.innerHTML = `
+      <div class="alerts-flyout" id="alerts-flyout">
+        <!-- Header -->
+        <div class="alerts-flyout-header">
+          <div class="alerts-flyout-title">
+            <span>🚨</span>
+            <span>Operational Alert Center</span>
+            <span class="badge ${unackCount > 0 ? 'badge-danger' : 'badge-success'}" style="font-size: 10.5px;">
+              ${unackCount} Unacknowledged
+            </span>
+          </div>
+          <div class="alerts-flyout-actions">
+            ${unackCount > 0 ? `
+              <button class="btn btn-xs btn-outline" id="btn-ack-all-alerts" title="Mark all alerts as acknowledged">
+                ✓ Acknowledge All
+              </button>
+            ` : ''}
+            <button class="modal-close" id="btn-close-alerts-flyout" style="padding: 0; width: 24px; height: 24px; font-size: 16px; line-height: 1;">&times;</button>
+          </div>
+        </div>
+
+        <!-- Filter Pills Bar -->
+        <div class="alerts-filter-bar">
+          <button class="alerts-filter-btn ${this.activeAlertFilter === 'all' ? 'active' : ''}" data-filter="all">
+            All (${counts.all})
+          </button>
+          <button class="alerts-filter-btn ${this.activeAlertFilter === 'inventory' ? 'active' : ''}" data-filter="inventory">
+            📦 Stock Expiry (${counts.inventory})
+          </button>
+          <button class="alerts-filter-btn ${this.activeAlertFilter === 'utility' ? 'active' : ''}" data-filter="utility">
+            ⚡ Meter Spikes (${counts.utility})
+          </button>
+          <button class="alerts-filter-btn ${this.activeAlertFilter === 'ticket' ? 'active' : ''}" data-filter="ticket">
+            🛠️ Critical Work Orders (${counts.ticket})
+          </button>
+          <button class="alerts-filter-btn ${this.activeAlertFilter === 'waste' ? 'active' : ''}" data-filter="waste">
+            🍳 Kitchen Incidents (${counts.waste})
+          </button>
+        </div>
+
+        <!-- Body: Alert Cards -->
+        <div class="alerts-flyout-body">
+          ${filteredAlerts.length === 0 ? `
+            <div style="text-align: center; padding: 36px 16px; color: var(--text-muted);">
+              <div style="font-size: 36px; margin-bottom: 8px;">🌿</div>
+              <strong style="color: var(--text-main); font-size: 14px; display: block;">All Systems Nominal</strong>
+              <p style="font-size: 12px; margin-top: 4px; line-height: 1.4;">
+                No unresolved operational anomalies detected across inventory, guest rooms, kitchen, and facilities.
+              </p>
+            </div>
+          ` : filteredAlerts.map(alert => `
+            <div class="alert-item-card ${alert.typeClass}" style="opacity: ${alert.acknowledged ? '0.7' : '1'};">
+              <div class="alert-item-header">
+                <span class="badge ${alert.badgeClass} alert-item-badge">${alert.categoryLabel}</span>
+                ${alert.acknowledged ? `
+                  <span class="text-muted" style="font-size: 10px; font-weight: 600;">✓ Acknowledged</span>
+                ` : `
+                  <button class="btn btn-xs btn-outline btn-ack-single" data-alert-id="${alert.id}" style="padding: 2px 6px; font-size: 10px;">
+                    Acknowledge
+                  </button>
+                `}
+              </div>
+              <div class="alert-item-title">${alert.title}</div>
+              <div class="alert-item-desc">${alert.desc}</div>
+              <div class="alert-item-actions">
+                <button class="btn btn-xs btn-primary btn-alert-deep-link" data-alert-id="${alert.id}">
+                  ${alert.actionText} ➔
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Footer -->
+        <div class="alerts-flyout-footer">
+          <span>Enterprise Bus • Oracle SQL & IoT Telemetry</span>
+          <span>Grand Bay Eco-Resort</span>
+        </div>
+      </div>
+    `;
+
+    // Attach flyout interactions
+    const closeBtn = container.querySelector('#btn-close-alerts-flyout');
+    if (closeBtn) closeBtn.onclick = () => this.closeAlertsFlyout();
+
+    const ackAllBtn = container.querySelector('#btn-ack-all-alerts');
+    if (ackAllBtn) {
+      ackAllBtn.onclick = () => {
+        db.acknowledgeAllAlerts(allAlerts.map(a => a.id));
+        window.showGlobalToast?.('All operational alerts acknowledged.', 'info');
+        this.updateAlertBadges();
+      };
+    }
+
+    container.querySelectorAll('.alerts-filter-btn').forEach(btn => {
+      btn.onclick = () => {
+        this.activeAlertFilter = btn.dataset.filter;
+        this.renderNotificationFlyout();
+      };
+    });
+
+    container.querySelectorAll('.btn-ack-single').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.alertId;
+        db.acknowledgeAlert(id);
+        window.showGlobalToast?.('Alert acknowledged.', 'info');
+        this.updateAlertBadges();
+      };
+    });
+
+    container.querySelectorAll('.btn-alert-deep-link').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.alertId;
+        const targetAlert = allAlerts.find(a => a.id === id);
+        if (targetAlert) {
+          this.handleAlertDeepLink(targetAlert);
+        }
+      };
+    });
+  }
+
+  handleAlertDeepLink(alert) {
+    db.acknowledgeAlert(alert.id);
+    this.closeAlertsFlyout();
+    this.switchTab(alert.moduleTab);
+
+    // Deep-linking focusing
+    setTimeout(() => {
+      if (alert.category === 'inventory' && alert.actionPayload?.search) {
+        const searchInput = document.getElementById('search-inventory');
+        if (searchInput) {
+          searchInput.value = alert.actionPayload.search;
+          searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+          searchInput.focus();
+        }
+      } else if (alert.category === 'utility' && alert.actionPayload?.meterId) {
+        const meterCard = document.querySelector(`[data-meter-id="${alert.actionPayload.meterId}"]`);
+        if (meterCard) {
+          meterCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          meterCard.style.outline = '3px solid var(--danger)';
+          setTimeout(() => { meterCard.style.outline = ''; }, 3000);
+        }
+      } else if (alert.category === 'waste') {
+        const plateTabBtn = document.querySelector('.tab-btn[data-view="plateLogs"]');
+        if (plateTabBtn) {
+          plateTabBtn.click();
+        }
+      }
+    }, 200);
   }
 }
 

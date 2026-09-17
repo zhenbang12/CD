@@ -4,7 +4,7 @@
  */
 
 export const INITIAL_DATA = {
-  // Simulated Authentication Users
+  // Production Authentication Directory
   users: [
     { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Hotel Manager", department: "Executive Board", avatar: "HM" },
     { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
@@ -132,7 +132,7 @@ export const INITIAL_DATA = {
     { roomNumber: "301", floor: 3, type: "Presidential Eco Suite", guestName: "Hans Zimmer & Family", status: "Occupied", servicePreference: "STANDARD", optOutDays: 0, linenDelayDays: 0, towelReuse: true, cleaningStatus: "Active Clean List", ecoPointsEarned: 5, qrToken: "RM301-SEC-901" },
     { roomNumber: "302", floor: 3, type: "Deluxe Ocean Suite", guestName: "Vacant Ready", status: "Vacant Ready", servicePreference: "STANDARD", optOutDays: 0, linenDelayDays: 0, towelReuse: false, cleaningStatus: "Inspection Passed", ecoPointsEarned: 0, qrToken: "RM302-SEC-110" },
     { roomNumber: "303", floor: 3, type: "Executive Seaview Room", guestName: "Chloe Dupont", status: "Occupied", servicePreference: "LINEN_DELAY", optOutDays: 0, linenDelayDays: 2, towelReuse: true, cleaningStatus: "Light Service Only", ecoPointsEarned: 15, qrToken: "RM303-SEC-337" },
-    { roomNumber: "304", floor: 3, type: "Executive Seaview Room", guestName: "Simon Wong (Demo Tourist)", status: "Occupied", servicePreference: "OPT_OUT_CLEANING", optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: "Skipped (Opt-Out)", ecoPointsEarned: 25, qrToken: "RM304-SEC-426" }
+    { roomNumber: "304", floor: 3, type: "Executive Seaview Room", guestName: "Simon Wong", status: "Occupied", servicePreference: "OPT_OUT_CLEANING", optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: "Skipped (Opt-Out)", ecoPointsEarned: 25, qrToken: "RM304-SEC-426" }
   ],
 
   // Module 4: Eco-Reward Vouchers
