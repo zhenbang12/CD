@@ -6,36 +6,21 @@ export class Module1Dashboard {
     this.container = container;
     this.chartMetric = 'food';
     this.reportPeriod = 'all';
-    this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('system', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('baselines', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('repairTickets', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('plateWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('foodWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('utilityMeters', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('system', () => this.render());
+    db.subscribe('baselines', () => this.render());
+    db.subscribe('auditLogs', () => this.render());
+    db.subscribe('repairTickets', () => this.render());
+    db.subscribe('plateWasteLogs', () => this.render());
+    db.subscribe('foodWasteLogs', () => this.render());
+    db.subscribe('utilityMeters', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
     let compliance;
     let complianceHistory;
 

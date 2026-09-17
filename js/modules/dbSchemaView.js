@@ -11,39 +11,15 @@ export class DbSchemaView {
     this.container = container;
     this.activeTable = 'inventory';
     this.queryResult = null;
-    this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('all', () => {
-        if (!this.isDestroyed) {
-          this.render();
-        }
-      })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('all', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
-    const currentHash = window.location.hash.replace('#/', '').replace('#', '').trim();
-    if (currentHash && currentHash !== 'db' && this.container.id === 'module-mount-point') {
-      this.destroy();
-      return;
-    }
     const baselines = db.getBaselines();
     const inventory = db.get('inventory');
     const foodWaste = db.get('foodWasteLogs');

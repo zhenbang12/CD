@@ -177,23 +177,6 @@ class EcoVoucher {
   });
 }
 
-// Defect Category Catalog — this list is managed (added/edited) from the
-// Web Admin Dashboard only. The mobile app can read and select from it,
-// but ground staff cannot add new categories here, matching the web source of truth.
-class DefectCategory {
-  final String id;
-  final String label;
-  final String resourceType; // 'Water' | 'Electricity'
-  final String hint;
-
-  const DefectCategory({
-    required this.id,
-    required this.label,
-    required this.resourceType,
-    this.hint = '',
-  });
-}
-
 class UtilityMeter {
   final String meterId;
   final String zone;
@@ -221,6 +204,7 @@ class UtilityMeter {
 class RepairTicket {
   final String id;
   final String ticketNumber;
+  final String source;
   final String zone;
   final String defectCategory;
   final String description;
@@ -234,12 +218,11 @@ class RepairTicket {
   final String createdAt;
   String? completedAt;
   String notes;
-  final bool photoAttached;
-  final String? photoDataUrl; // base64-encoded photo evidence, viewable on both Web and Mobile
 
   RepairTicket({
     required this.id,
     required this.ticketNumber,
+    required this.source,
     required this.zone,
     required this.defectCategory,
     required this.description,
@@ -253,8 +236,6 @@ class RepairTicket {
     required this.createdAt,
     this.completedAt,
     required this.notes,
-    this.photoAttached = false,
-    this.photoDataUrl,
   });
 }
 

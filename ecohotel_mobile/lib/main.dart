@@ -1,8 +1,5 @@
 import 'dart:math';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'models/models.dart';
 import 'services/hotel_database.dart';
 
@@ -1190,58 +1187,6 @@ class FacilitiesScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        // Zone Utility Sub-Meters — mirrors the Web Admin Dashboard's meter
-        // table so ground staff can see & update every zone's reading here too.
-        const Text('ZONE UTILITY SUB-METERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
-        const SizedBox(height: 6),
-        ...db.utilityMeters.map((meter) {
-          return Card(
-            child: ListTile(
-              dense: true,
-              leading: Icon(
-                meter.type == 'Water' ? Icons.water_drop_outlined : Icons.bolt_outlined,
-                color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF18181B),
-              ),
-              title: Text('${meter.meterId} • ${meter.zone}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Baseline: ${meter.baselineDaily} ${meter.unit} • Last inspected: ${meter.lastReadingTime}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-                  Row(
-                    children: [
-                      Text(
-                        '${meter.lastReading} ${meter.unit}',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF18181B)),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: meter.isAnomaly ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: Text(meter.status, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF059669))),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              trailing: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF18181B),
-                  side: const BorderSide(color: Color(0xFFD4D4D8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                  minimumSize: const Size(60, 30),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
-                onPressed: () => _showMeterReadingDialog(context, initialMeterId: meter.meterId),
-                child: const Text('Update', style: TextStyle(fontSize: 11)),
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 14),
-
         // Repair Tickets
         const Text('DISPATCHED REPAIR WORK ORDERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
         const SizedBox(height: 6),
@@ -1272,70 +1217,20 @@ class FacilitiesScreen extends StatelessWidget {
                 ],
               ),
               trailing: isCompleted
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (ticket.photoDataUrl != null)
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                            icon: const Icon(Icons.photo_outlined, size: 18, color: Color(0xFF18181B)),
-                            onPressed: () => _showPhotoDialog(context, ticket.photoDataUrl!),
-                          ),
-                        const Text('Fixed', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
-                      ],
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // View Photo Evidence — visible on both Web and Mobile, matching the web ticket table.
-                        if (ticket.photoDataUrl != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: IconButton(
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                              icon: const Icon(Icons.photo_outlined, size: 18, color: Color(0xFF18181B)),
-                              onPressed: () => _showPhotoDialog(context, ticket.photoDataUrl!),
-                            ),
-                          ),
-                        // Matches the Web Admin Dashboard's two-step Start -> Fix
-                        // repair ticket lifecycle so both apps behave the same way.
-                        if (ticket.status != 'In Progress')
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF18181B),
-                                side: const BorderSide(color: Color(0xFFD4D4D8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                minimumSize: const Size(50, 28),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                              ),
-                              onPressed: () {
-                                db.updateTicketStatus(ticket.id, 'In Progress', 'Technician arrived on site with repair tools.');
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked IN PROGRESS.')));
-                              },
-                              child: const Text('Start', style: TextStyle(fontSize: 11)),
-                            ),
-                          ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF059669),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                            minimumSize: const Size(50, 28),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          ),
-                          onPressed: () {
-                            db.updateTicketStatus(ticket.id, 'Completed', 'Defect verified resolved by ground technician.');
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked FIXED!')));
-                          },
-                          child: const Text('Fix', style: TextStyle(fontSize: 11)),
-                        ),
-                      ],
+                  ? const Text('Fixed', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600))
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                        minimumSize: const Size(60, 28),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      ),
+                      onPressed: () {
+                        db.updateTicketStatus(ticket.id, 'Completed', 'Defect verified resolved by ground technician.');
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked FIXED!')));
+                      },
+                      child: const Text('Fix', style: TextStyle(fontSize: 11)),
                     ),
             ),
           );
@@ -1344,55 +1239,9 @@ class FacilitiesScreen extends StatelessWidget {
     );
   }
 
-  void _showPhotoDialog(BuildContext context, String photoDataUrl) {
-    // photoDataUrl is a base64 data URL (e.g. "data:image/jpeg;base64,...."),
-    // matching the format used by the Web Admin Dashboard's photo evidence field.
-    Uint8List? bytes;
-    try {
-      final base64Part = photoDataUrl.contains(',') ? photoDataUrl.split(',').last : photoDataUrl;
-      bytes = base64Decode(base64Part);
-    } catch (_) {
-      bytes = null;
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(left: 6),
-                    child: Text('Defect Photo Evidence', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                ],
-              ),
-              if (bytes != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(bytes, fit: BoxFit.contain),
-                )
-              else
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('Unable to load photo.'),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMeterReadingDialog(BuildContext context, {String? initialMeterId}) {
+  void _showMeterReadingDialog(BuildContext context) {
     final readingCtrl = TextEditingController();
-    String meterId = initialMeterId ?? db.utilityMeters.first.meterId;
+    String meterId = db.utilityMeters.first.meterId;
 
     showDialog(
       context: context,
@@ -1405,16 +1254,11 @@ class FacilitiesScreen extends StatelessWidget {
               DropdownButton<String>(
                 isExpanded: true,
                 value: meterId,
-                items: db.utilityMeters.map((m) => DropdownMenuItem(value: m.meterId, child: Text('${m.meterId} - ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})', style: const TextStyle(fontSize: 12)))).toList(),
+                items: db.utilityMeters.map((m) => DropdownMenuItem(value: m.meterId, child: Text('${m.meterId} - ${m.zone} (${m.type})', style: const TextStyle(fontSize: 12)))).toList(),
                 onChanged: (val) => setDialogState(() => meterId = val!),
               ),
               const SizedBox(height: 8),
               TextField(controller: readingCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading Value')),
-              const SizedBox(height: 4),
-              Text(
-                'If reading is ≥15% above baseline, the zone is flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-              ),
             ],
           ),
           actions: [
@@ -1427,7 +1271,7 @@ class FacilitiesScreen extends StatelessWidget {
                   final isAnomaly = db.logMeterReading(meterId, r);
                   Navigator.pop(ctx);
                   if (isAnomaly) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (>=15% spike)! Report a Facility Defect if it needs a repair ticket.')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (>=15% spike)! High-Priority Ticket dispatched.')));
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reading logged within normal baseline.')));
                   }
@@ -1444,116 +1288,32 @@ class FacilitiesScreen extends StatelessWidget {
   void _showReportDefectDialog(BuildContext context) {
     final zoneCtrl = TextEditingController(text: 'Room 201');
     final descCtrl = TextEditingController();
-    // Category list is sourced from the same catalog as the Web Admin Dashboard.
-    // Ground staff can pick a category here, but new categories can only be
-    // added from the web dashboard.
-    DefectCategory selectedCategory = db.defectCategories.first;
-    String severity = 'High';
-    String resourceType = selectedCategory.resourceType;
-    String? pickedPhotoDataUrl; // base64 data URL, same format used by the web dashboard
+    String category = 'Bathroom Toilet Water Leak';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Report Facility Defect', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(controller: zoneCtrl, decoration: const InputDecoration(labelText: 'Affected Room / Zone')),
-                const SizedBox(height: 8),
-                const Text('Defect Category', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<DefectCategory>(
-                  isExpanded: true,
-                  value: selectedCategory,
-                  items: db.defectCategories.map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(
-                      c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  )).toList(),
-                  onChanged: (val) => setDialogState(() {
-                    selectedCategory = val!;
-                    resourceType = selectedCategory.resourceType;
-                  }),
-                ),
-                const SizedBox(height: 4),
-                const SizedBox(height: 10),
-                const Text('Severity Level', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: severity,
-                  items: const [
-                    DropdownMenuItem(value: 'High', child: Text('High Severity (Continuous Rapid Loss)', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip/Noise)', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic/Slow)', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) => setDialogState(() => severity = val!),
-                ),
-                const SizedBox(height: 10),
-                const Text('Resource Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: resourceType,
-                  items: const [
-                    DropdownMenuItem(value: 'Water', child: Text('Water Resource', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) => setDialogState(() => resourceType = val!),
-                ),
-                const SizedBox(height: 8),
-                TextField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Defect Description & Notes')),
-                const SizedBox(height: 10),
-                const Text('Photo Evidence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                const SizedBox(height: 4),
-                // Tap-to-attach pattern matching the Kitchen (M3) Plate Waste dialog:
-                // a single pill button that flips to a green "Verified" checkmark
-                // once a real photo has been picked & compressed, instead of an
-                // inline thumbnail preview.
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF18181B),
-                        side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFD4D4D8)),
-                      ),
-                      onPressed: () async {
-                        final picker = ImagePicker();
-                        // maxWidth/imageQuality downscale & compress the photo before
-                        // it's base64-encoded, so large camera photos don't bloat
-                        // the in-memory repair ticket data (mirrors the web
-                        // dashboard's canvas-based compression for the same field).
-                        final XFile? file = await picker.pickImage(
-                          source: ImageSource.gallery,
-                          maxWidth: 1000,
-                          imageQuality: 70,
-                        );
-                        if (file != null) {
-                          final bytes = await file.readAsBytes();
-                          final b64 = base64Encode(bytes);
-                          setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
-                        }
-                      },
-                      icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt, size: 14),
-                      label: Text(pickedPhotoDataUrl != null ? 'Photo Attached (Verified)' : 'Attach Photo Evidence', style: const TextStyle(fontSize: 11)),
-                    ),
-                    if (pickedPhotoDataUrl != null) ...[
-                      const SizedBox(width: 4),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.close, size: 16, color: Color(0xFF71717A)),
-                        tooltip: 'Remove photo',
-                        onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: zoneCtrl, decoration: const InputDecoration(labelText: 'Affected Room / Zone')),
+              const SizedBox(height: 8),
+              DropdownButton<String>(
+                isExpanded: true,
+                value: category,
+                items: [
+                  'Bathroom Toilet Water Leak',
+                  'Dripping Basin Faucet',
+                  'HVAC / Aircon Thermostat Stuck',
+                  'Shower Pressure Leak',
+                ].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
+                onChanged: (val) => setDialogState(() => category = val!),
+              ),
+              const SizedBox(height: 8),
+              TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description notes')),
+            ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -1561,7 +1321,7 @@ class FacilitiesScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE11D48), foregroundColor: Colors.white),
               onPressed: () {
                 if (zoneCtrl.text.isNotEmpty) {
-                  db.reportDefect(zoneCtrl.text, selectedCategory.label, severity, resourceType, descCtrl.text, photoDataUrl: pickedPhotoDataUrl);
+                  db.reportDefect(zoneCtrl.text, category, 'High', descCtrl.text);
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Defect reported & ticket dispatched!')));
                 }
@@ -1823,157 +1583,12 @@ class ExecutiveScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // UC3: View Resource Consumption Analytics
-        ..._buildResourceConsumptionSection(),
-
         const Text('DEPARTMENTAL COMPLIANCE OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
         const SizedBox(height: 6),
         _buildDeptTile('Culinary F&B Division', 'Sze Ping & Zhen Bang', '840 kg prep waste diverted', 'Target Met (A+)'),
         _buildDeptTile('Housekeeping Division', 'Simon (Lead Supervisor)', '38% guest linen opt-out rate', 'Target Met (A+)'),
         _buildDeptTile('Facilities & Engineering', 'Wan Ching (Lead Tech)', '2 active repairs in progress', 'Normal (A)'),
       ],
-    );
-  }
-
-  // UC3: View Resource Consumption Analytics — current vs baseline usage,
-  // variance, consumption status, and abnormal-usage alerts for Water &
-  // Electricity, aggregated from the same utilityMeters data as the
-  // Facilities Utility Audit & Maintenance Log (mirrors js/engines/complianceEngine.js).
-  Map<String, dynamic> _computeResourceAnalytics(String type) {
-    final meters = db.utilityMeters.where((m) => m.type == type).toList();
-    if (meters.isEmpty) {
-      return {'hasData': false};
-    }
-    final baselineTotal = meters.fold<double>(0, (a, m) => a + m.baselineDaily);
-    final currentTotal = meters.fold<double>(0, (a, m) => a + m.lastReading);
-    final variancePct = baselineTotal > 0 ? ((currentTotal - baselineTotal) / baselineTotal) * 100 : 0.0;
-    final anomalyZones = meters.where((m) => m.isAnomaly).toList();
-    final isAbnormal = variancePct >= 15 || anomalyZones.isNotEmpty;
-    return {
-      'hasData': true,
-      'unit': meters.first.unit,
-      'meterCount': meters.length,
-      'currentTotal': currentTotal,
-      'baselineTotal': baselineTotal,
-      'variancePct': variancePct,
-      'status': isAbnormal ? 'Abnormal' : 'Normal',
-      'anomalyZones': anomalyZones,
-    };
-  }
-
-  List<Widget> _buildResourceConsumptionSection() {
-    final water = _computeResourceAnalytics('Water');
-    final electricity = _computeResourceAnalytics('Electricity');
-    final hasMissingData = water['hasData'] != true || electricity['hasData'] != true;
-    final hasAbnormal = (water['hasData'] == true && water['status'] == 'Abnormal') ||
-        (electricity['hasData'] == true && electricity['status'] == 'Abnormal');
-
-    return [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('RESOURCE CONSUMPTION ANALYTICS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: hasAbnormal ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              hasAbnormal ? 'Abnormal Consumption Detected' : 'Within Baseline',
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: hasAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669)),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 6),
-      if (hasMissingData)
-        const Padding(
-          padding: EdgeInsets.only(bottom: 6),
-          child: Text('Consumption data unavailable for one or more resources — showing available analytics below.', style: TextStyle(fontSize: 10.5, color: Color(0xFFE11D48))),
-        ),
-      _buildResourcePanel('Water Consumption', water),
-      const SizedBox(height: 8),
-      _buildResourcePanel('Electricity Consumption', electricity),
-      const SizedBox(height: 12),
-    ];
-  }
-
-  Widget _buildResourcePanel(String label, Map<String, dynamic> data) {
-    if (data['hasData'] != true) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(height: 6),
-              const Text('Consumption data unavailable.', style: TextStyle(fontSize: 12, color: Color(0xFFE11D48), fontWeight: FontWeight.w600)),
-              Text('No ${label.toLowerCase()} meter readings are currently available for this property.', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final unit = data['unit'] as String;
-    final currentTotal = data['currentTotal'] as double;
-    final baselineTotal = data['baselineTotal'] as double;
-    final variancePct = data['variancePct'] as double;
-    final meterCount = data['meterCount'] as int;
-    final isAbnormal = data['status'] == 'Abnormal';
-    final anomalyZones = data['anomalyZones'] as List<UtilityMeter>;
-    final barFraction = baselineTotal > 0 ? (currentTotal / baselineTotal).clamp(0.0, 1.0) : 0.0;
-    final varianceSign = variancePct >= 0 ? '+' : '';
-    final statusColor = isAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('${currentTotal.toStringAsFixed(0)} $unit current', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isAbnormal ? statusColor : const Color(0xFF18181B))),
-            Text('Baseline: ${baselineTotal.toStringAsFixed(0)} $unit across $meterCount sub-meter${meterCount == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: barFraction,
-                minHeight: 6,
-                backgroundColor: const Color(0xFFF0F0F0),
-                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text('Variance vs baseline: $varianceSign${variancePct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: isAbnormal ? statusColor : const Color(0xFF71717A))),
-            if (isAbnormal) ...[
-              const Divider(height: 16),
-              Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: statusColor)),
-              if (anomalyZones.isNotEmpty)
-                ...anomalyZones.map((z) => Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text('${z.zone} (${z.meterId}) — ${z.lastReading.toStringAsFixed(0)} ${z.unit} vs ${z.baselineDaily.toStringAsFixed(0)} ${z.unit} baseline', style: const TextStyle(fontSize: 10, color: Color(0xFF71717A))),
-                    ))
-              else
-                const Text('Aggregate usage exceeds the +15% baseline threshold.', style: TextStyle(fontSize: 10, color: Color(0xFF71717A))),
-            ],
-          ],
-        ),
-      ),
     );
   }
 

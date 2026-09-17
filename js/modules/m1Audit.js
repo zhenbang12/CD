@@ -4,30 +4,15 @@ export class Module1Audit {
   constructor(container) {
     this.container = container;
     this.auditFilters = { date: '', user: '', action: '', baseline: '' };
-    this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('auditLogs', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
     let auditLogs = [];
     try {
       const allLogs = db.get('auditLogs') || [];
