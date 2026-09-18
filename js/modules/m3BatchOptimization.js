@@ -67,7 +67,7 @@ export class Module3BatchOptimizer {
                 <select class="form-input" id="select-prep-date" style="font-size: 13.5px; padding: 8px 12px;">
                   <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today (13 Aug 2026)</option>
                   <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow (14 Aug 2026)</option>
-                  <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Advance Booking (20 Aug 2026)</option>
+                  <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Future Date (20 Aug 2026 - Empty State)</option>
                 </select>
               </div>
               <div class="filter-item">
@@ -181,7 +181,7 @@ export class Module3BatchOptimizer {
               </strong>
             </div>
             <button class="btn btn-xs btn-outline" id="btn-toggle-oracle-sync" style="font-size: 11px;">
-              ${data.oracleConnectionStatus === 'ONLINE' ? 'Test Failover (Disconnect)' : 'Restore Oracle Link'}
+              Simulate: ${data.oracleConnectionStatus === 'ONLINE' ? 'Disconnect Oracle link' : 'Reconnect Oracle link'}
             </button>
           </div>
 
@@ -191,7 +191,7 @@ export class Module3BatchOptimizer {
               <select class="form-input" id="select-prep-date" style="font-size: 13.5px; padding: 8px 12px;">
                 <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today (13 Aug 2026)</option>
                 <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow (14 Aug 2026)</option>
-                <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Advance Booking (20 Aug 2026)</option>
+                <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Future Date (20 Aug 2026 - Empty State)</option>
               </select>
             </div>
             <div class="filter-item">

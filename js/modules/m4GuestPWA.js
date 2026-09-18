@@ -1,13 +1,11 @@
 /**
- * Module 4: Guest Eco-Engagement PWA & Housekeeping Dispatch
+ * Module 4: Housekeeping Dispatch & Corridor Operations
  * Features:
- * 1. In-Room Guest Terminal PWA (Guest View) with housekeeping green choices,
- *    Success Confirmation Panel, 30-minute adjustment window countdown,
- *    milestone-based voucher unlocking without point deduction, and digital QR passes.
- * 2. Housekeeping Corridor Operations (Staff View) with interactive horizontal slider,
- *    door turnover status, printable manifest, and in-room QR tent card generator.
- * 3. Supervisor Housekeeping Override with audit log justification.
- * 4. Popup Guest Interaction & Audit Ledger panel with search and filter toolbar.
+ * 1. Housekeeping Corridor Navigation Route with interactive horizontal slider (showing door turnover status & bypasses).
+ * 2. Instant In-Room QR Code generator, preview, token management, and printable guest tent-cards.
+ * 3. Ground staff operational tools (Daily route manifest PDF print, floor turnover filters).
+ * 4. Popup Guest Interaction & Audit Ledger panel with real-time text search and action/room filters.
+ * 5. Supervisor Housekeeping Override with mandatory audit justification and real-time dispatch queue sync.
  */
 
 import { db } from '../db/storage.js';
@@ -85,15 +83,6 @@ export class Module4GuestPWA {
     this.floorFilter = 'ALL'; // 'ALL' | '1' | '2' | '3'
     this.selectedQrRoom = '304';
     
-    // Check URL parameters for Guest Mode access
-    const urlParams = new URLSearchParams(window.location.search);
-    this.isGuestMode = urlParams.has('room') || urlParams.get('mode') === 'guest' || urlParams.has('token');
-    this.guestRoomNumber = urlParams.get('room') || '304';
-    this.guestActiveTab = 'stay'; // 'stay' | 'rewards' | 'impact'
-    this.isAdjustingChoices = false;
-    this.activeVoucherModal = null;
-    this.timerInterval = null;
-
     // Modal states to prevent accidental closures during reactive updates
     this.isQrModalOpen = false;
     this.isOverrideModalOpen = false;
@@ -112,30 +101,16 @@ export class Module4GuestPWA {
     this.render();
     this.unsubs.push(
       db.subscribe('rooms', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('ecoVouchers', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('guestInteractions', () => { 
         if (!this.isDestroyed) {
           this.render();
         } 
       })
     );
-
-    // 1-second interval for live countdown update
-    this.timerInterval = setInterval(() => {
-      if (this.isDestroyed) {
-        clearInterval(this.timerInterval);
-        return;
-      }
-      this.tickCountdown();
-    }, 1000);
   }
 
   destroy() {
     this.isDestroyed = true;
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
     if (this.unsubs) {
       this.unsubs.forEach(unsub => {
         try { unsub(); } catch (err) { /* ignore */ }
@@ -144,637 +119,11 @@ export class Module4GuestPWA {
     }
   }
 
-  tickCountdown() {
-    const timerElem = this.container.querySelector('#guest-countdown-timer');
-    if (!timerElem) return;
-
-    const rooms = db.get('rooms') || [];
-    const room = rooms.find(r => r.roomNumber === this.guestRoomNumber) || rooms[0];
-    if (!room || !room.choiceConfirmedAt) return;
-
-    const confirmedAt = new Date(room.choiceConfirmedAt);
-    const elapsedSec = Math.floor((Date.now() - confirmedAt.getTime()) / 1000);
-    const remainingSec = 1800 - elapsedSec; // 30 minutes = 1800 seconds
-
-    if (remainingSec > 0) {
-      const remMin = Math.floor(remainingSec / 60);
-      const remSec = remainingSec % 60;
-      timerElem.innerText = `${remMin}:${remSec < 10 ? '0' : ''}${remSec}`;
-    } else {
-      timerElem.innerText = '00:00 (Finalized)';
-      if (room.isChoiceLocked && !this.isAdjustingChoices) {
-        this.render();
-      }
-    }
-  }
-
   render() {
     if (this.isDestroyed) return;
     const rooms = db.get('rooms') || [];
     const interactions = db.get('guestInteractions') || [];
 
-    // Toggle staff navigation bar visibility based on mode
-    const nav = document.querySelector('.main-navbar');
-    if (nav) {
-      nav.style.display = this.isGuestMode ? 'none' : 'block';
-    }
-
-    if (this.isGuestMode) {
-      this.renderGuestTerminal(rooms, interactions);
-    } else {
-      this.renderStaffOperations(rooms, interactions);
-    }
-  }
-
-  // =========================================================================
-  // GUEST IN-ROOM TERMINAL VIEW (Guest PWA Choice Panel)
-  // =========================================================================
-  renderGuestTerminal(rooms, interactions) {
-    let room = rooms.find(r => r.roomNumber === this.guestRoomNumber);
-    if (!room) {
-      room = rooms[0] || { roomNumber: '304', guestName: 'Simon Wong', type: 'Executive Seaview Room', floor: 3, ecoPointsEarned: 25 };
-      this.guestRoomNumber = room.roomNumber;
-    }
-
-    const allVouchers = db.get('ecoVouchers') || [];
-    const vouchersForRoom = allVouchers.filter(v => String(v.roomNumber) === String(room.roomNumber));
-
-    // Confirmation & 30-Minute Grace Window Calculation
-    const confirmedAt = room.choiceConfirmedAt ? new Date(room.choiceConfirmedAt) : null;
-    const elapsedSec = confirmedAt ? Math.floor((Date.now() - confirmedAt.getTime()) / 1000) : null;
-    const isWithin30Mins = elapsedSec !== null && elapsedSec < 1800;
-    const isChoiceLocked = Boolean(room.isChoiceLocked) && !this.isAdjustingChoices;
-    const remMin = isWithin30Mins ? Math.floor((1800 - elapsedSec) / 60) : 0;
-    const remSec = isWithin30Mins ? (1800 - elapsedSec) % 60 : 0;
-
-    // Milestone Tiers (Pure cumulative milestones without point deduction)
-    const milestoneTiers = [
-      {
-        key: 'tier-dining',
-        title: '15% Farm-to-Table Dining Voucher',
-        shortTitle: 'Dining',
-        cost: 25,
-        desc: 'Valid at Ocean Reef Organic Bistro & Farm-to-Table Kitchen.',
-        icon: '🍽️'
-      },
-      {
-        key: 'tier-geopark',
-        title: 'Langkawi UNESCO Geopark Mangrove Pass',
-        shortTitle: 'Geopark',
-        cost: 30,
-        desc: 'Zero-emission solar boat eco-safari guided expedition.',
-        icon: '🚤'
-      },
-      {
-        key: 'tier-canopy',
-        title: 'Rainforest Canopy Walk & Eco-Trek',
-        shortTitle: 'Canopy',
-        cost: 45,
-        desc: 'Guided rainforest eco-trek and native mangrove sapling planting.',
-        icon: '🌿'
-      }
-    ];
-
-    this.container.innerHTML = `
-      <div class="module-view m4-guest-terminal fade-in" style="max-width: 680px; margin: 0 auto; padding: 12px 14px 40px 14px;">
-        
-        <!-- Guest Terminal Header Strip -->
-        <div class="guest-terminal-header card" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; padding: 16px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; margin-bottom: 2px;">
-                <span>🌿</span> GRAND BAY ECO-RESORT & SPA • IN-ROOM TERMINAL
-              </div>
-              <h2 style="margin: 0; font-size: 19px; font-weight: 800; color: #ffffff;">Welcome, ${room.guestName}</h2>
-              <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
-                Room <strong>${room.roomNumber}</strong> • ${room.type} (Floor ${room.floor})
-              </div>
-            </div>
-            <button id="btn-switch-to-staff" class="btn btn-xs" style="background: rgba(255,255,255,0.2); color: #ffffff; border: 1px solid rgba(255,255,255,0.4); padding: 5px 9px; font-size: 11px; border-radius: 6px; cursor: pointer; white-space: nowrap;">
-              👔 Staff View
-            </button>
-          </div>
-
-          <!-- Room Selector & Token Pill -->
-          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 8px; font-size: 11.5px; flex-wrap: wrap; gap: 6px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span>Room Terminal:</span>
-              <select id="guest-select-active-room" style="background: rgba(255,255,255,0.9); color: #0f172a; border: none; border-radius: 4px; padding: 2px 6px; font-size: 11.5px; font-weight: 700; cursor: pointer;">
-                ${rooms.map(r => `
-                  <option value="${r.roomNumber}" ${r.roomNumber === room.roomNumber ? 'selected' : ''}>
-                    Room ${r.roomNumber} - ${r.guestName}
-                  </option>
-                `).join('')}
-              </select>
-            </div>
-            <div style="font-family: monospace; font-size: 10.5px; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px;">
-              Token: ${room.qrToken || 'RM' + room.roomNumber}
-            </div>
-          </div>
-        </div>
-
-        <!-- 3 Segmented Tabs Navigation -->
-        <div class="guest-tabs-bar" style="display: flex; background: var(--bg-card-subtle, #f1f5f9); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-subtle, #e2e8f0);">
-          <button class="btn-guest-tab ${this.guestActiveTab === 'stay' ? 'active' : ''}" data-tab="stay" style="flex: 1; border: none; background: ${this.guestActiveTab === 'stay' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'stay' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'stay' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
-            🌿 Green Stay
-          </button>
-          <button class="btn-guest-tab ${this.guestActiveTab === 'rewards' ? 'active' : ''}" data-tab="rewards" style="flex: 1; border: none; background: ${this.guestActiveTab === 'rewards' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'rewards' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'rewards' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
-            🎁 Eco-Rewards (${vouchersForRoom.length})
-          </button>
-          <button class="btn-guest-tab ${this.guestActiveTab === 'impact' ? 'active' : ''}" data-tab="impact" style="flex: 1; border: none; background: ${this.guestActiveTab === 'impact' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'impact' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'impact' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
-            🌍 My Impact
-          </button>
-        </div>
-
-        <!-- TAB CONTENT 1: GREEN STAY -->
-        <div id="tab-guest-stay" style="display: ${this.guestActiveTab === 'stay' ? 'block' : 'none'};">
-          
-          <!-- Eco-Rewards Balance & Milestone Card -->
-          <div class="card" style="padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">
-                Cumulative Eco-Rewards Balance
-              </span>
-              <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10.5px; border: 1px solid rgba(5,150,105,0.2); padding: 3px 8px; border-radius: 6px;">
-                ${(room.ecoPointsEarned || 0) >= 40 ? 'Gold Eco-Guest' : (room.ecoPointsEarned || 0) >= 20 ? 'Silver Eco-Guest' : 'Bronze Guest'}
-              </span>
-            </div>
-            
-            <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
-              <span style="font-size: 32px; font-weight: 900; color: #059669; letter-spacing: -0.02em;">${room.ecoPointsEarned || 0}</span>
-              <span style="font-size: 13px; font-weight: 600; color: #059669;">Eco-Points Earned</span>
-            </div>
-
-            <!-- Milestone Progress Bar -->
-            <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
-              <div style="background: #059669; height: 100%; width: ${Math.min(100, ((room.ecoPointsEarned || 0) / 45) * 100)}%; transition: width 0.3s ease;"></div>
-            </div>
-
-            <div style="font-size: 11.5px; color: #64748b;">
-              ${(room.ecoPointsEarned || 0) >= 45 
-                ? '🎉 <strong>All eco-milestones achieved!</strong> You have unlocked all reward vouchers.' 
-                : (room.ecoPointsEarned || 0) >= 30 
-                  ? `✓ <strong>Milestone 2 reached!</strong> ${45 - (room.ecoPointsEarned || 0)} more pts to unlock Rainforest Canopy Walk (45 pts).` 
-                  : (room.ecoPointsEarned || 0) >= 25 
-                    ? `✓ <strong>Milestone 1 reached!</strong> ${30 - (room.ecoPointsEarned || 0)} more pts to unlock Geopark Mangrove Pass (30 pts).` 
-                    : `<strong>${25 - (room.ecoPointsEarned || 0)} more points</strong> to unlock your 15% Farm-to-Table Dining Voucher.`
-              }
-            </div>
-          </div>
-
-          <!-- SUCCESS CONFIRMATION PANEL (ITEM 4) -->
-          ${room.choiceConfirmedAt ? `
-            <div class="card success-panel fade-in" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
-              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 22px;">🎉</span>
-                  <div>
-                    <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #065f46;">Green Choices Confirmed & Synchronized</h3>
-                    <div style="font-size: 11px; color: #047857; margin-top: 1px;">Housekeeping dispatch route updated in real-time.</div>
-                  </div>
-                </div>
-                <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 5px;">
-                  ✓ Confirmed
-                </span>
-              </div>
-
-              <!-- Summary of Selected Preferences -->
-              <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11.5px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #64748b;">Housekeeping Service:</span>
-                  <strong>${room.servicePreference === 'OPT_OUT_CLEANING' ? 'Skip Daily Room Cleaning (+15 Pts)' : room.servicePreference === 'LINEN_DELAY' ? `Delay Linen Change (+${room.linenDelayDays >= 3 ? 12 : 10} Pts)` : 'Standard Daily Service'}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #64748b;">Towel Policy:</span>
-                  <strong>${room.towelReuse ? 'Confirm Towel Reuse (+5 Pts)' : 'Standard Turnover'}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="color: #64748b;">Ground Route Status:</span>
-                  <span style="color: #059669; font-weight: 700;">${room.cleaningStatus}</span>
-                </div>
-              </div>
-
-              <!-- 30-Minute Grace Window Countdown Bar -->
-              ${isWithin30Mins ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px 12px;">
-                  <div>
-                    <div style="font-size: 11.5px; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 4px;">
-                      <span>⏱️</span> 30-Minute Adjustment Window Active
-                    </div>
-                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">
-                      Housekeeping routes finalize in: <strong id="guest-countdown-timer" style="color: #059669;">${remMin}:${remSec < 10 ? '0' : ''}${remSec}</strong>
-                    </div>
-                  </div>
-                  <button id="btn-adjust-choices" class="btn btn-xs" style="background: #ffffff; color: #059669; border: 1px solid #059669; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
-                    ✏️ Adjust Choices
-                  </button>
-                </div>
-              ` : `
-                <div style="font-size: 11px; color: #64748b; padding: 6px 0 0 0; display: flex; align-items: center; gap: 6px;">
-                  <span>🔒</span> Choices locked for today. Housekeeping dispatch routes have been finalized.
-                </div>
-              `}
-            </div>
-          ` : ''}
-
-          <!-- DAILY HOUSEKEEPING PREFERENCE FORM -->
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h4 style="margin: 0; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">
-                Today's Housekeeping Preference
-              </h4>
-              ${isChoiceLocked ? `
-                <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 10.5px; padding: 2px 6px;">
-                  🔒 Locked
-                </span>
-              ` : ''}
-            </div>
-
-            <!-- Choice 1: Opt Out Cleaning -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'OPT_OUT_CLEANING' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'OPT_OUT_CLEANING' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'OPT_OUT_CLEANING' ? '0.6' : '1'};">
-              <input type="radio" name="guest_pref" value="OPT_OUT_CLEANING" ${room.servicePreference === 'OPT_OUT_CLEANING' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
-              <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Skip Daily Room Cleaning</strong>
-                  <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+15 Pts</span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                  Saves ~180L water & chemical runoff. Housekeeping skips your room turnover today.
-                </div>
-              </div>
-            </label>
-
-            <!-- Choice 2: Linen Delay -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'LINEN_DELAY' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'LINEN_DELAY' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'LINEN_DELAY' ? '0.6' : '1'};">
-              <input type="radio" name="guest_pref" value="LINEN_DELAY" ${room.servicePreference === 'LINEN_DELAY' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
-              <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Delay Bed Linen Change</strong>
-                  <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+10 Pts</span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                  Keep existing bed linen for 2 more days. Room is tidied, trash emptied, amenities restocked.
-                </div>
-              </div>
-            </label>
-
-            <!-- Choice 3: Standard Service -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'STANDARD' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'STANDARD' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 12px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'STANDARD' ? '0.6' : '1'};">
-              <input type="radio" name="guest_pref" value="STANDARD" ${room.servicePreference === 'STANDARD' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
-              <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Standard Daily Service</strong>
-                  <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 10px;">0 Pts</span>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                  Standard full room turnover with fresh linen and complete servicing.
-                </div>
-              </div>
-            </label>
-
-            <!-- Towel Reuse Checkbox -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
-              <label style="display: flex; align-items: center; justify-content: space-between; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'};">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" id="guest-chk-towel" ${room.towelReuse ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} />
-                  <div>
-                    <strong style="font-size: 12.5px; color: #0f172a;">Confirm Towel Reuse</strong>
-                    <div style="font-size: 11px; color: #64748b;">I will hang my towels to reuse them today.</div>
-                  </div>
-                </div>
-                <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+5 Pts</span>
-              </label>
-            </div>
-
-            <!-- Confirm / Re-confirm Button -->
-            ${!isChoiceLocked ? `
-              <button id="btn-confirm-guest-choices" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px;">
-                <span>✓</span> ${this.isAdjustingChoices ? 'Save & Re-confirm Choices' : 'Confirm Today’s Green Choices'}
-              </button>
-            ` : `
-              <div style="text-align: center; padding: 8px; font-size: 11.5px; color: #64748b;">
-                Preferences are locked for today. ${isWithin30Mins ? 'Use "Adjust Choices" above to make edits.' : ''}
-              </div>
-            `}
-          </div>
-
-        </div>
-
-        <!-- TAB CONTENT 2: REWARDS & MILESTONES (ITEM 3) -->
-        <div id="tab-guest-rewards" style="display: ${this.guestActiveTab === 'rewards' ? 'block' : 'none'};">
-          
-          <!-- Milestone Rewards Catalog (Points are NOT deducted) -->
-          <div class="card" style="padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <div>
-                <h4 style="margin: 0; font-size: 13px; font-weight: 800; color: #0f172a;">
-                  Sustainability Milestone Rewards
-                </h4>
-                <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
-                  Unlocking milestone vouchers does not deduct from your points balance!
-                </div>
-              </div>
-              <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 11px;">
-                ${room.ecoPointsEarned || 0} Pts
-              </span>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              ${milestoneTiers.map(tier => {
-                const canClaim = (room.ecoPointsEarned || 0) >= tier.cost;
-                const isClaimed = (room.claimedTiers || []).includes(tier.key) || vouchersForRoom.some(v => v.rewardTitle === tier.title || v.rewardTitle.includes(tier.shortTitle));
-
-                return `
-                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: ${isClaimed ? '#f0fdf4' : '#ffffff'};">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <div style="font-size: 24px; background: #f8fafc; border-radius: 8px; padding: 8px;">${tier.icon}</div>
-                      <div>
-                        <strong style="font-size: 12.5px; color: #0f172a;">${tier.title}</strong>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${tier.desc}</div>
-                        <span class="badge" style="background: #f1f5f9; color: #059669; font-size: 10px; font-weight: 700; margin-top: 4px; display: inline-block;">
-                          ${tier.cost} Eco-Points Milestone
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      ${isClaimed ? `
-                        <span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 11px; padding: 6px 10px; border-radius: 6px; white-space: nowrap;">
-                          ✓ Unlocked
-                        </span>
-                      ` : canClaim ? `
-                        <button class="btn btn-sm btn-primary btn-claim-milestone" data-tier="${tier.key}" style="font-weight: 700; font-size: 11px; padding: 6px 12px; white-space: nowrap;">
-                          Claim Voucher
-                        </button>
-                      ` : `
-                        <button class="btn btn-sm btn-outline" disabled style="font-size: 10.5px; padding: 6px 8px; color: #94a3b8; border-color: #cbd5e1; white-space: nowrap;">
-                          ${tier.cost - (room.ecoPointsEarned || 0)} pts short
-                        </button>
-                      `}
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          <!-- Active Digital Vouchers List -->
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: #0f172a;">
-              My Active Vouchers (${vouchersForRoom.length})
-            </h4>
-
-            ${vouchersForRoom.length === 0 ? `
-              <div style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
-                No reward vouchers unlocked yet. Earn points by opting out of daily cleaning!
-              </div>
-            ` : `
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                ${vouchersForRoom.map(v => `
-                  <div style="border: 1.5px dashed ${v.isRedeemed ? '#cbd5e1' : '#059669'}; border-radius: 10px; padding: 12px; background: ${v.isRedeemed ? '#f8fafc' : '#ffffff'};">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                      <div>
-                        <strong style="font-size: 13px; color: ${v.isRedeemed ? '#94a3b8' : '#0f172a'};">${v.rewardTitle}</strong>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${v.description}</div>
-                      </div>
-                      <span class="badge" style="background: ${v.isRedeemed ? '#e2e8f0' : '#ecfdf5'}; color: ${v.isRedeemed ? '#64748b' : '#059669'}; font-family: monospace; font-weight: 700; font-size: 11px;">
-                        ${v.code}
-                      </span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px;">
-                      <span style="color: #64748b;">Expires: <strong>${v.expiryDate || '2026-08-25'}</strong></span>
-                      <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-xs btn-outline btn-view-voucher-qr" data-code="${v.code}" style="font-size: 11px; padding: 4px 8px;">
-                          📱 View Digital Pass
-                        </button>
-                        ${!v.isRedeemed ? `
-                          <button class="btn btn-xs btn-primary btn-redeem-voucher" data-code="${v.code}" style="font-size: 11px; padding: 4px 8px;">
-                            Redeem
-                          </button>
-                        ` : `
-                          <span style="color: #64748b; font-weight: 600; padding: 4px 0;">✓ Redeemed</span>
-                        `}
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            `}
-          </div>
-
-        </div>
-
-        <!-- TAB CONTENT 3: MY IMPACT -->
-        <div id="tab-guest-impact" style="display: ${this.guestActiveTab === 'impact' ? 'block' : 'none'};">
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px; margin-bottom: 14px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: #0f172a;">
-              My Sustainability Contribution
-            </h4>
-
-            <div class="grid grid-3" style="gap: 10px; margin-bottom: 16px;">
-              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px;">💧</div>
-                <div style="font-size: 20px; font-weight: 900; color: #059669; margin: 4px 0 2px 0;">
-                  ${((room.optOutDays || 0) * 180) + (room.towelReuse ? 40 : 0)} L
-                </div>
-                <div style="font-size: 10.5px; color: #64748b;">Water Conserved</div>
-              </div>
-
-              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px;">⚡</div>
-                <div style="font-size: 20px; font-weight: 900; color: #d97706; margin: 4px 0 2px 0;">
-                  ${((room.optOutDays || 0) * 3.5).toFixed(1)} kWh
-                </div>
-                <div style="font-size: 10.5px; color: #64748b;">Power Saved</div>
-              </div>
-
-              <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px; text-align: center;">
-                <div style="font-size: 22px;">🧪</div>
-                <div style="font-size: 20px; font-weight: 900; color: #2563eb; margin: 4px 0 2px 0;">
-                  ${(room.optOutDays || 0) * 85} g
-                </div>
-                <div style="font-size: 10.5px; color: #64748b;">Runoff Avoided</div>
-              </div>
-            </div>
-
-            <!-- VM2026 Badge Details -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                <span style="font-size: 18px;">🌿</span>
-                <strong style="font-size: 12.5px; color: #065f46;">Visit Malaysia 2026 Sustainable Tourism Pledge</strong>
-              </div>
-              <p style="margin: 0; font-size: 11px; color: #64748b; line-height: 1.5;">
-                By choosing eco-friendly housekeeping options, you directly contribute to protecting Malaysia’s coastal marine corridors and tropical rainforests. Thank you for your green commitment!
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Voucher Pass Modal -->
-        <div class="modal-backdrop" id="guest-voucher-pass-modal" style="display: ${this.activeVoucherModal ? 'flex' : 'none'};">
-          <div class="modal-card" style="max-width: 360px; text-align: center;">
-            <div class="modal-header">
-              <h3 class="modal-title" style="font-size: 14px;">🌿 VM2026 Digital Pass</h3>
-              <button class="modal-close" id="btn-close-pass-modal">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 16px;" id="pass-modal-body">
-              ${this.activeVoucherModal ? `
-                <div style="font-weight: 800; font-size: 14.5px; color: #0f172a; margin-bottom: 4px;">
-                  ${this.activeVoucherModal.rewardTitle}
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
-                  ${this.activeVoucherModal.description}
-                </div>
-
-                <div style="display: flex; justify-content: center; margin-bottom: 12px;">
-                  ${generateQRCodeSVG(this.activeVoucherModal.code, 170)}
-                </div>
-
-                <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 13px; font-weight: 800; color: #059669; letter-spacing: 0.05em; margin-bottom: 10px;">
-                  ${this.activeVoucherModal.code}
-                </div>
-
-                <div style="font-size: 10.5px; color: #94a3b8;">
-                  Present this QR pass to the outlet staff to claim your discount.
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        </div>
-
-      </div>
-    `;
-
-    this.attachGuestTerminalListeners(room, rooms);
-  }
-
-  attachGuestTerminalListeners(room, rooms) {
-    // Switch to staff view
-    const switchStaffBtn = this.container.querySelector('#btn-switch-to-staff');
-    if (switchStaffBtn) {
-      switchStaffBtn.onclick = () => {
-        this.isGuestMode = false;
-        this.render();
-      };
-    }
-
-    // Room switcher
-    const selectRoom = this.container.querySelector('#guest-select-active-room');
-    if (selectRoom) {
-      selectRoom.onchange = () => {
-        this.guestRoomNumber = selectRoom.value;
-        this.isAdjustingChoices = false;
-        this.render();
-      };
-    }
-
-    // Tab buttons
-    this.container.querySelectorAll('.btn-guest-tab').forEach(btn => {
-      btn.onclick = () => {
-        this.guestActiveTab = btn.dataset.tab;
-        this.render();
-      };
-    });
-
-    // Radio choice card selection highlighting
-    this.container.querySelectorAll('input[name="guest_pref"]').forEach(input => {
-      input.onchange = () => {
-        this.container.querySelectorAll('.choice-card').forEach(card => {
-          card.style.borderColor = '#e2e8f0';
-          card.style.backgroundColor = '#ffffff';
-        });
-        const parent = input.closest('.choice-card');
-        if (parent) {
-          parent.style.borderColor = '#059669';
-          parent.style.backgroundColor = '#f0fdf4';
-        }
-      };
-    });
-
-    // Adjust Choices button (during 30m grace window)
-    const adjustBtn = this.container.querySelector('#btn-adjust-choices');
-    if (adjustBtn) {
-      adjustBtn.onclick = () => {
-        this.isAdjustingChoices = true;
-        this.render();
-      };
-    }
-
-    // Confirm Today's Green Choices button
-    const confirmBtn = this.container.querySelector('#btn-confirm-guest-choices');
-    if (confirmBtn) {
-      confirmBtn.onclick = () => {
-        const pref = this.container.querySelector('input[name="guest_pref"]:checked')?.value || 'OPT_OUT_CLEANING';
-        const towel = this.container.querySelector('#guest-chk-towel')?.checked ?? true;
-        const now = new Date().toISOString();
-
-        db.updateGuestPreference(room.roomNumber, {
-          servicePreference: pref,
-          towelReuse: towel,
-          linenDelayDays: pref === 'LINEN_DELAY' ? 2 : 0,
-          choiceConfirmedAt: now,
-          isChoiceLocked: true
-        });
-
-        this.isAdjustingChoices = false;
-        window.showGlobalToast?.(`Choices confirmed for Room ${room.roomNumber}! Housekeeping route synchronized.`, 'success');
-        this.render();
-      };
-    }
-
-    // Claim Milestone Rewards (ITEM 3 - No point deduction!)
-    this.container.querySelectorAll('.btn-claim-milestone').forEach(btn => {
-      btn.onclick = () => {
-        const tierKey = btn.dataset.tier;
-        const success = db.claimRewardTier(room.roomNumber, tierKey);
-        if (success) {
-          window.showGlobalToast?.(`🎉 Milestone voucher claimed! You can view your pass in Active Vouchers.`, 'success');
-          this.render();
-        }
-      };
-    });
-
-    // View Digital Pass QR
-    this.container.querySelectorAll('.btn-view-voucher-qr').forEach(btn => {
-      btn.onclick = () => {
-        const code = btn.dataset.code;
-        const allVouchers = db.get('ecoVouchers') || [];
-        this.activeVoucherModal = allVouchers.find(v => v.code === code) || null;
-        this.render();
-      };
-    });
-
-    // Close Digital Pass Modal
-    const closePassBtn = this.container.querySelector('#btn-close-pass-modal');
-    const passModal = this.container.querySelector('#guest-voucher-pass-modal');
-    if (closePassBtn && passModal) {
-      closePassBtn.onclick = () => {
-        this.activeVoucherModal = null;
-        passModal.style.display = 'none';
-      };
-      passModal.onclick = (e) => {
-        if (e.target === passModal) {
-          this.activeVoucherModal = null;
-          passModal.style.display = 'none';
-        }
-      };
-    }
-
-    // Redeem voucher at counter
-    this.container.querySelectorAll('.btn-redeem-voucher').forEach(btn => {
-      btn.onclick = () => {
-        const code = btn.dataset.code;
-        db.redeemVoucher(code);
-        window.showGlobalToast?.(`Voucher ${code} successfully redeemed!`, 'info');
-        this.render();
-      };
-    });
-  }
-
-  // =========================================================================
-  // STAFF OPERATIONS VIEW (Housekeeping Corridor & Dispatch Dashboard)
-  // =========================================================================
-  renderStaffOperations(rooms, interactions) {
     // Queue status counts
     const activeCleaningQueue = rooms.filter(r => r.cleaningStatus.includes('Active Clean') || r.cleaningStatus.includes('Light Service'));
     const optedOutRooms = rooms.filter(r => r.cleaningStatus.includes('Skipped'));
@@ -801,9 +150,6 @@ export class Module4GuestPWA {
             <p class="view-subtitle">Dynamic turnover schedule synchronized in real-time with guest in-room eco-choices and corridor routing.</p>
           </div>
           <div class="header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <button class="btn btn-sm btn-outline" id="btn-switch-to-guest-mode" style="color: #059669; border-color: #059669; font-weight: 700;" title="Switch to In-Room Guest Terminal view">
-              🌿 In-Room Guest Terminal
-            </button>
             <button class="btn btn-sm btn-outline" id="btn-print-manifest" title="Print daily housekeeping dispatch route sheet">
               🖨️ Print Route Manifest
             </button>
@@ -855,93 +201,110 @@ export class Module4GuestPWA {
           <button class="tab-btn ${this.floorFilter === '3' ? 'active' : ''}" data-floor="3">Floor 3 (${rooms.filter(r => r.floor.toString() === '3').length} Rooms)</button>
         </div>
 
-        <!-- Section 1: Corridor Slider -->
-        <div class="card" style="margin-bottom: 20px;">
-          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h2 class="card-title">Housekeeping Corridor Navigation Route</h2>
-              <p class="card-subtitle">Real-time door status. Rooms that opted out are bypassed automatically to optimize trolley transit time.</p>
+        <!-- Housekeeping Corridor Navigation Route (Horizontal Slider) -->
+        <div class="corridor-map-container">
+          <div class="corridor-header">
+            <div class="corridor-title">
+              <span>🗺️</span>
+              <span>Housekeeping Corridor Route (${this.floorFilter === 'ALL' ? 'All Floors' : 'Floor ' + this.floorFilter})</span>
+              <span class="badge badge-secondary" style="font-size:10.5px;">${filteredRooms.length} Rooms in Route</span>
             </div>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn btn-xs btn-outline" id="btn-corridor-prev" title="Scroll Left">&larr; Left</button>
-              <button class="btn btn-xs btn-outline" id="btn-corridor-next" title="Scroll Right">Right &rarr;</button>
+            <div class="corridor-controls-wrap">
+              <div class="corridor-legend">
+                <span><span class="legend-dot" style="background:var(--secondary, #3b82f6)"></span>Active Clean</span>
+                <span><span class="legend-dot" style="background:var(--warning, #f59e0b)"></span>Light Svc</span>
+                <span><span class="legend-dot" style="background:var(--primary, #10b981)"></span>Skipped</span>
+                <span><span class="legend-dot" style="background:var(--danger, #ef4444)"></span>Overridden</span>
+              </div>
+              <div class="slider-nav-btns">
+                <button type="button" class="btn-slider-nav" id="btn-corridor-prev" title="Scroll route left">‹</button>
+                <button type="button" class="btn-slider-nav" id="btn-corridor-next" title="Scroll route right">›</button>
+              </div>
             </div>
           </div>
-          <div class="corridor-slider-track" id="corridor-slider-track" style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 6px; scroll-behavior: smooth;">
-            ${filteredRooms.map(r => `
-              <div class="door-card ${r.cleaningStatus.includes('Skipped') ? 'door-skipped' : r.cleaningStatus.includes('Light') ? 'door-light' : 'door-active'}" style="min-width: 170px; border: 1.5px solid ${r.cleaningStatus.includes('Skipped') ? '#10b981' : r.cleaningStatus.includes('Light') ? '#f59e0b' : '#cbd5e1'}; border-radius: 10px; padding: 12px; background: ${r.cleaningStatus.includes('Skipped') ? '#f0fdf4' : r.cleaningStatus.includes('Light') ? '#fffbeb' : '#ffffff'}; flex-shrink: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <strong style="font-size: 15px;">Room ${r.roomNumber}</strong>
-                  <span style="font-size: 11px; font-weight: 700; color: ${r.cleaningStatus.includes('Skipped') ? '#059669' : r.cleaningStatus.includes('Light') ? '#d97706' : '#2563eb'};">
-                    ${r.cleaningStatus.includes('Skipped') ? 'BYPASS' : r.cleaningStatus.includes('Light') ? 'LIGHT' : 'CLEAN'}
-                  </span>
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                  ${r.guestName}
-                </div>
-                <div style="font-size: 10px; padding: 4px 6px; border-radius: 4px; background: rgba(0,0,0,0.04); margin-bottom: 8px;">
-                  ${r.servicePreference === 'OPT_OUT_CLEANING' ? 'Opt-out Cleaning' : r.servicePreference === 'LINEN_DELAY' ? `Linen delay (${r.linenDelayDays}d)` : 'Standard'}
-                </div>
-                <div style="display: flex; gap: 4px;">
-                  <button class="btn btn-xs btn-outline btn-door-qr" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0;" title="View QR">QR</button>
-                  <button class="btn btn-xs btn-outline btn-door-terminal" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0; color: #059669; border-color: #059669;" title="Open Terminal">Terminal</button>
-                  <button class="btn btn-xs btn-outline btn-door-override" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0;" title="Override">Override</button>
-                </div>
-              </div>
-            `).join('')}
+
+          <div class="corridor-slider-outer">
+            <div class="corridor-hallway-slider" id="corridor-slider-track">
+              ${filteredRooms.map(r => {
+                const isSkipped = r.cleaningStatus.includes('Skipped');
+                const isLight = r.cleaningStatus.includes('Light');
+                const isOverridden = r.cleaningStatus.includes('Override');
+                const statusClass = isOverridden ? 'is-overridden' : isSkipped ? 'is-skipped' : isLight ? 'is-light' : 'is-active';
+
+                return `
+                  <div class="corridor-door-card ${statusClass}">
+                    <div class="corridor-door-top">
+                      <span class="corridor-door-num">🚪 Room ${r.roomNumber}</span>
+                      <span class="corridor-door-type">${r.type.split(' ')[0]}</span>
+                    </div>
+                    <div class="corridor-door-guest">${r.guestName}</div>
+                    <span class="corridor-door-status ${isSkipped ? 'pill-skipped' : isLight ? 'pill-light' : isOverridden ? 'badge-danger' : 'pill-active'}">
+                      ${isSkipped ? 'Skipped' : isLight ? 'Light Service' : isOverridden ? 'Overridden' : 'Active Clean'}
+                    </span>
+                    ${isSkipped ? '<div class="corridor-bypass-pill">↷ Bypassed (-180L)</div>' : '<div style="font-size:9px; color:var(--text-muted);">↳ On Cleaning Route</div>'}
+                    <div class="corridor-action-row">
+                      <button type="button" class="btn-door-action btn-door-qr" data-room="${r.roomNumber}" title="View in-room QR code">
+                        📱 QR
+                      </button>
+                      <button type="button" class="btn-door-action btn-door-override" data-room="${r.roomNumber}" title="Supervisor Override">
+                        ⚡ Override
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
           </div>
         </div>
 
-        <!-- Section 2: Rooms Master Housekeeping Table -->
-        <div class="card">
+        <!-- Master Housekeeping Dispatch Route Table -->
+        <div class="card" style="margin-bottom: 16px;">
           <div class="card-header">
-            <h2 class="card-title">Housekeeping Turnover Master Schedule</h2>
-            <p class="card-subtitle">Real-time room occupancy, turnover requirements, and guest in-room eco-rewards.</p>
+            <div>
+              <h3 class="card-title">Master Housekeeping Dispatch Route</h3>
+              <p class="card-subtitle">Ground staff room turnover schedule and guest eco-preference status.</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="badge badge-secondary">Live Room Sync</span>
+            </div>
           </div>
+          
           <div class="table-responsive">
-            <table class="data-table">
+            <table class="data-table" id="table-dispatch-route">
               <thead>
                 <tr>
-                  <th>Room #</th>
-                  <th>Floor</th>
-                  <th>Room Type</th>
+                  <th>Room</th>
                   <th>Guest In-House</th>
-                  <th>Service Preference</th>
-                  <th>Towel Policy</th>
+                  <th>Guest Selection</th>
+                  <th>Towel</th>
                   <th>Cleaning Status</th>
                   <th class="col-number">Eco-Points</th>
-                  <th>In-Room Terminal</th>
-                  <th class="col-action">Action</th>
+                  <th>In-Room QR</th>
+                  <th class="col-action" style="width: 100px;">Staff Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredRooms.map(r => `
-                  <tr>
-                    <td><strong>Room ${r.roomNumber}</strong></td>
-                    <td>Floor ${r.floor}</td>
-                    <td>${r.type}</td>
+                  <tr class="${r.cleaningStatus.includes('Skipped') ? 'row-opted-out' : ''}">
+                    <td><strong>Room ${r.roomNumber}</strong> <span style="font-size: 11px; color: var(--text-muted);">(${r.type})</span></td>
                     <td>${r.guestName}</td>
                     <td>
-                      <span class="badge ${r.servicePreference === 'OPT_OUT_CLEANING' ? 'badge-success' : r.servicePreference === 'LINEN_DELAY' ? 'badge-warning' : 'badge-secondary'}">
-                        ${r.servicePreference.replace(/_/g, ' ')}
+                      <span class="badge ${r.servicePreference === 'OPT_OUT_CLEANING' ? 'badge-success' : r.servicePreference === 'LINEN_DELAY' ? 'badge-info' : 'badge-secondary'}">
+                        ${r.servicePreference === 'OPT_OUT_CLEANING' ? 'Skip Cleaning (+15p)' : r.servicePreference === 'LINEN_DELAY' ? `Delay Linen (${r.linenDelayDays || 2}d)` : 'Standard Daily'}
                       </span>
                     </td>
-                    <td>${r.towelReuse ? '✓ Reusing Towels (+5p)' : 'Fresh Towels'}</td>
+                    <td>${r.towelReuse ? '<span class="text-primary font-medium">🌿 Reuse</span>' : '<span class="text-muted">Replace</span>'}</td>
                     <td>
-                      <span class="badge ${r.cleaningStatus.includes('Skipped') ? 'badge-success' : r.cleaningStatus.includes('Light') ? 'badge-warning' : 'badge-primary'}">
+                      <span class="status-dot-wrap" style="color: ${r.cleaningStatus.includes('Skipped') ? 'var(--primary)' : 'var(--text-main)'};">
+                        <span class="status-dot ${r.cleaningStatus.includes('Skipped') ? 'success' : r.cleaningStatus.includes('Active') ? 'warning' : 'neutral'}"></span>
                         ${r.cleaningStatus}
                       </span>
                     </td>
                     <td class="col-number"><strong>${r.ecoPointsEarned || 0} pts</strong></td>
                     <td>
-                      <div style="display: flex; gap: 4px;">
-                        <button class="btn btn-xs btn-outline btn-row-qr" data-room="${r.roomNumber}" title="View In-Room QR Code">
-                          📱 QR
-                        </button>
-                        <button class="btn btn-xs btn-outline btn-row-terminal" data-room="${r.roomNumber}" title="Open Guest In-Room Terminal" style="color: #059669; border-color: #059669; font-weight: 600;">
-                          🌿 Terminal
-                        </button>
-                      </div>
+                      <button class="btn btn-xs btn-outline btn-row-qr" data-room="${r.roomNumber}" title="View In-Room QR Code">
+                        📱 QR Code
+                      </button>
                     </td>
                     <td class="col-action" style="width: 100px;">
                       <button class="btn btn-xs btn-outline btn-quick-override row-action-hover" data-room="${r.roomNumber}">
@@ -957,7 +320,7 @@ export class Module4GuestPWA {
 
       </div>
 
-      <!-- Modal 1: In-Room QR Code Generator & Tent Card Printer (ITEM 5) -->
+      <!-- Modal 1: Usable In-Room QR Code Generator & Tent Card Printer -->
       <div class="modal-backdrop" id="qr-modal" style="display: ${this.isQrModalOpen ? 'flex' : 'none'};">
         <div class="modal-card" style="max-width: 440px;">
           <div class="modal-header">
@@ -993,13 +356,10 @@ export class Module4GuestPWA {
 
             <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
               <button type="button" class="btn btn-sm btn-outline" id="btn-copy-qr-link">
-                📋 Copy Link
+                📋 Copy In-Room Link
               </button>
-              <button type="button" class="btn btn-sm btn-outline" id="btn-print-qr-card">
-                🖨️ Print Card
-              </button>
-              <button type="button" class="btn btn-sm btn-success" id="btn-open-guest-terminal" style="background:#059669; color:#ffffff; font-weight:700; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
-                🚀 Open In-Room Guest Terminal
+              <button type="button" class="btn btn-sm btn-primary" id="btn-print-qr-card">
+                🖨️ Print In-Room Tent Card
               </button>
             </div>
           </div>
@@ -1038,7 +398,7 @@ export class Module4GuestPWA {
         </div>
       </div>
 
-      <!-- Modal 3: Guest Interaction & Audit Ledger Panel -->
+      <!-- Modal 3: Guest Interaction & Audit Ledger Panel (Searchable & Filterable) -->
       <div class="modal-backdrop" id="ledger-modal" style="display: ${this.isLedgerModalOpen ? 'flex' : 'none'};">
         <div class="modal-card" style="max-width: 780px; width: 95%;">
           <div class="modal-header">
@@ -1082,7 +442,7 @@ export class Module4GuestPWA {
             <!-- Record count indicator -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: var(--text-muted); padding: 0 2px;">
               <span id="ledger-count-display">Loading interaction log...</span>
-              <span>Live Deduplicated Immutable Ledger</span>
+              <span>Live Immutable Ledger</span>
             </div>
 
             <!-- Scrollable Table Container -->
@@ -1090,26 +450,29 @@ export class Module4GuestPWA {
               <table class="data-table" id="table-ledger-modal">
                 <thead>
                   <tr>
-                    <th>Log ID</th>
-                    <th>Timestamp</th>
-                    <th>Room #</th>
-                    <th>Action Category</th>
-                    <th>Event Details</th>
-                    <th class="col-number">Pts</th>
+                    <th style="position: sticky; top: 0; background: var(--bg-surface); z-index: 2;">Room</th>
+                    <th style="position: sticky; top: 0; background: var(--bg-surface); z-index: 2;">Timestamp</th>
+                    <th style="position: sticky; top: 0; background: var(--bg-surface); z-index: 2;">Action Type</th>
+                    <th style="position: sticky; top: 0; background: var(--bg-surface); z-index: 2;">Details & Justification</th>
+                    <th class="col-number" style="position: sticky; top: 0; background: var(--bg-surface); z-index: 2;">Points</th>
                   </tr>
                 </thead>
-                <tbody id="ledger-tbody"></tbody>
+                <tbody id="ledger-tbody">
+                  <!-- Dynamically populated via renderLedgerList() -->
+                </tbody>
               </table>
             </div>
           </div>
-          <div class="modal-footer" style="padding: 12px 16px; display: flex; justify-content: flex-end;">
-            <button class="btn btn-sm btn-outline" id="btn-footer-close-ledger">Close Ledger</button>
+
+          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+            <span class="text-muted" style="font-size: 11px;">Audit entries are secured with system timestamps.</span>
+            <button type="button" class="btn btn-sm btn-outline" id="btn-footer-close-ledger">Close</button>
           </div>
         </div>
       </div>
     `;
 
-    this.attachStaffEventListeners(rooms, filteredRooms);
+    this.attachEventListeners(rooms, filteredRooms);
   }
 
   buildGuestUrl(room) {
@@ -1117,31 +480,7 @@ export class Module4GuestPWA {
     return `${origin}${window.location.pathname}?room=${room.roomNumber}&token=${room.qrToken || 'RM' + room.roomNumber}&mode=guest`;
   }
 
-  attachStaffEventListeners(rooms, filteredRooms) {
-    // Switch to guest mode
-    const switchGuestBtn = this.container.querySelector('#btn-switch-to-guest-mode');
-    if (switchGuestBtn) {
-      switchGuestBtn.onclick = () => {
-        this.isGuestMode = true;
-        this.guestRoomNumber = this.selectedQrRoom || '304';
-        this.render();
-      };
-    }
-
-    // Direct terminal buttons from table rows and door cards
-    this.container.querySelectorAll('.btn-row-terminal, .btn-door-terminal').forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const roomNum = btn.dataset.room;
-        if (roomNum) {
-          this.isGuestMode = true;
-          this.guestRoomNumber = roomNum;
-          this.render();
-        }
-      };
-    });
-
+  attachEventListeners(rooms, filteredRooms) {
     // Floor Filter Tabs
     this.container.querySelectorAll('.tab-btn[data-floor]').forEach(btn => {
       btn.onclick = () => {
@@ -1171,7 +510,6 @@ export class Module4GuestPWA {
     const selectQrRoom = this.container.querySelector('#qr-select-room');
     const copyLinkBtn = this.container.querySelector('#btn-copy-qr-link');
     const printTentCardBtn = this.container.querySelector('#btn-print-qr-card');
-    const openTerminalFromQrBtn = this.container.querySelector('#btn-open-guest-terminal');
     const qrDisplayBox = this.container.querySelector('#qr-code-display-box');
     const qrLinkText = this.container.querySelector('#qr-link-text');
 
@@ -1193,6 +531,8 @@ export class Module4GuestPWA {
         `;
       }
       if (qrLinkText) qrLinkText.innerText = guestUrl;
+      // NOTE: We do NOT trigger database writes here on client modal preview!
+      // This prevents reactive render cycles that previously closed the modal on first click.
     };
 
     if (openQrBtn && qrModal) {
@@ -1233,30 +573,6 @@ export class Module4GuestPWA {
       };
     });
 
-    // Direct Terminal buttons on Table rows and Corridor Door Cards
-    this.container.querySelectorAll('.btn-row-terminal, .btn-door-terminal').forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const roomNum = btn.dataset.room;
-        if (roomNum) {
-          this.isGuestMode = true;
-          this.guestRoomNumber = roomNum;
-          this.render();
-        }
-      };
-    });
-
-    // Header Switch to Guest Terminal button
-    const switchToGuestBtn = this.container.querySelector('#btn-switch-to-guest-mode');
-    if (switchToGuestBtn) {
-      switchToGuestBtn.onclick = () => {
-        this.isGuestMode = true;
-        this.guestRoomNumber = this.selectedQrRoom || '304';
-        this.render();
-      };
-    }
-
     if (selectQrRoom) {
       selectQrRoom.onchange = () => {
         updateQrModalForRoom(selectQrRoom.value);
@@ -1269,29 +585,6 @@ export class Module4GuestPWA {
         const url = this.buildGuestUrl(targetRoom);
         navigator.clipboard?.writeText(url);
         window.showGlobalToast?.(`In-room QR link for Room ${targetRoom.roomNumber} copied to clipboard!`, 'info');
-      };
-    }
-
-    // Open terminal from QR modal & make preview box clickable
-    if (qrDisplayBox) {
-      qrDisplayBox.style.cursor = 'pointer';
-      qrDisplayBox.title = 'Click to open In-Room Terminal for this room';
-      qrDisplayBox.onclick = () => {
-        this.isQrModalOpen = false;
-        if (qrModal) qrModal.style.display = 'none';
-        this.isGuestMode = true;
-        this.guestRoomNumber = this.selectedQrRoom;
-        this.render();
-      };
-    }
-
-    if (openTerminalFromQrBtn) {
-      openTerminalFromQrBtn.onclick = () => {
-        this.isQrModalOpen = false;
-        if (qrModal) qrModal.style.display = 'none';
-        this.isGuestMode = true;
-        this.guestRoomNumber = this.selectedQrRoom;
-        this.render();
       };
     }
 
@@ -1325,21 +618,25 @@ export class Module4GuestPWA {
                 }
                 .hotel-title { font-size: 13px; font-weight: 800; letter-spacing: 0.1em; color: #065f46; text-transform: uppercase; margin-bottom: 4px; }
                 .card-sub { font-size: 10.5px; color: #71717a; margin-bottom: 16px; }
-                .qr-container { margin: 12px 0; }
-                .room-tag { font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 12px; }
-                .guest-tag { font-size: 12px; color: #52525b; margin-top: 2px; }
-                .token-tag { font-family: monospace; font-size: 10.5px; background: #ecfdf5; color: #059669; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
+                .room-badge { font-size: 18px; font-weight: 800; color: #18181b; margin-bottom: 2px; }
+                .guest-name { font-size: 12px; color: #52525b; margin-bottom: 16px; font-weight: 500; }
+                .qr-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+                .instruction { font-size: 11px; color: #3f3f46; line-height: 1.4; margin-bottom: 12px; }
+                .token-tag { font-family: monospace; font-size: 10.5px; background: #ecfdf5; color: #065f46; padding: 4px 8px; border-radius: 4px; display: inline-block; }
               </style>
             </head>
             <body>
               <div class="tent-card">
-                <div class="hotel-title">Grand Bay Eco-Resort</div>
-                <div class="card-sub">In-Room Sustainable Guest Terminal</div>
-                <div class="qr-container">
-                  ${generateQRCodeSVG(url, 200)}
+                <div class="hotel-title">🌿 GRAND BAY ECO-RESORT</div>
+                <div class="card-sub">In-Room Guest Eco-Service Terminal</div>
+                <div class="room-badge">ROOM ${targetRoom.roomNumber}</div>
+                <div class="guest-name">Welcome, ${targetRoom.guestName}</div>
+                <div class="qr-wrap">
+                  ${generateQRCodeSVG(url, 190)}
                 </div>
-                <div class="room-tag">Room ${targetRoom.roomNumber} • ${targetRoom.type}</div>
-                <div class="guest-tag">Guest: ${targetRoom.guestName}</div>
+                <div class="instruction">
+                  Scan this QR code with your phone camera to customize your daily housekeeping preferences, opt out of unnecessary cleaning, and earn Eco-Rewards!
+                </div>
                 <div class="token-tag">Token: ${targetRoom.qrToken || 'RM' + targetRoom.roomNumber}</div>
               </div>
             </body>
@@ -1399,7 +696,7 @@ export class Module4GuestPWA {
       if (filtered.length === 0) {
         ledgerTbody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+            <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">
               🔍 No interaction records match your filter criteria.
             </td>
           </tr>
@@ -1422,23 +719,29 @@ export class Module4GuestPWA {
           actionLabel = 'QR / Terminal Access';
         } else if (log.action.includes('VOUCHER')) {
           badgeClass = 'badge-warning';
-          actionLabel = 'Voucher Unlocked';
+          actionLabel = 'Voucher Claim';
         }
 
         return `
           <tr>
-            <td><code>${log.id || '-'}</code></td>
-            <td style="font-size: 11px; white-space: nowrap;">${log.timestamp}</td>
             <td><strong>Room ${log.roomNumber}</strong></td>
+            <td><small class="text-muted">${log.timestamp}</small></td>
             <td><span class="badge ${badgeClass}">${actionLabel}</span></td>
-            <td style="font-size: 11.5px;">${log.details}</td>
+            <td><small>${log.details}</small></td>
             <td class="col-number">
-              ${log.pointsEarned ? `<span style="color: var(--primary); font-weight: bold;">+${log.pointsEarned}p</span>` : '<span class="text-muted">0</span>'}
+              ${log.pointsEarned > 0 
+                ? `<strong class="text-primary">+${log.pointsEarned} pts</strong>` 
+                : log.pointsEarned < 0 
+                ? `<strong style="color: var(--danger);">${log.pointsEarned} pts</strong>`
+                : '—'}
             </td>
           </tr>
         `;
       }).join('');
     };
+
+    // Initialize list when rendering
+    renderLedgerList();
 
     if (openLedgerBtn && ledgerModal) {
       openLedgerBtn.onclick = (e) => {

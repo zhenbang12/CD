@@ -145,7 +145,7 @@ class App {
           </button>
 
           <!-- Reset Database Button (Available for everyone) -->
-          <button id="btn-global-reset-db" class="btn btn-xs btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 11.5px;" title="Reset database to factory defaults">
+          <button id="btn-global-reset-db" class="btn btn-xs btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 11.5px;" title="Reset database to clean initial seed data">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             Reset
           </button>
@@ -239,11 +239,11 @@ class App {
     const resetBtn = document.getElementById('btn-global-reset-db');
     if (resetBtn) {
       resetBtn.onclick = () => {
-        if (confirm('Reset database to factory defaults? All modified baselines, logs, and tickets will be restored.')) {
+        if (confirm('Reset database to clean initial demonstration dataset? All modified baselines, logs, and tickets will be restored to default.')) {
           db.resetDatabase();
           this.loadActiveModule();
           this.updateAlertBadges();
-          window.showGlobalToast?.('Database successfully reset to standard baseline state!', 'success');
+          window.showGlobalToast?.('Database successfully reset to initial VM2026 seed state!', 'success');
         }
       };
     }
@@ -748,7 +748,7 @@ class App {
 
           <!-- Quick Role Impersonation / Switch User -->
           <div style="padding: 4px 12px 2px; font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-            Switch Active Account
+            Switch Account (Demo Roles)
           </div>
           <div style="display: flex; flex-direction: column; gap: 2px; max-height: 130px; overflow-y: auto; padding: 0 4px;">
             ${allUsers.map(u => `

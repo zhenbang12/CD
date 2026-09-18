@@ -119,11 +119,6 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
                 meters = db_state.get('utilityMeters', [])
                 self.send_json_response(200, {"meters": meters})
             return
-        elif path == '/api/interactions':
-            with db_lock:
-                interactions = db_state.get('guestInteractions', [])
-                self.send_json_response(200, {"interactions": interactions})
-            return
         elif path == '/api/health':
             self.send_json_response(200, {"status": "ok", "service": "EcoHotel OS API", "time": time.time()})
             return
@@ -226,11 +221,6 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             room['towelReuse'] = towel
             room['linenDelayDays'] = linen_days
 
-            if 'choiceConfirmedAt' in body:
-                room['choiceConfirmedAt'] = body['choiceConfirmedAt']
-            if 'isChoiceLocked' in body:
-                room['isChoiceLocked'] = body['isChoiceLocked']
-
             if pref == 'OPT_OUT_CLEANING':
                 room['cleaningStatus'] = 'Skipped (Opt-Out)'
             elif pref == 'LINEN_DELAY':
@@ -238,14 +228,7 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             else:
                 room['cleaningStatus'] = 'Active Clean List'
 
-            # Standardized baseline historical points per room
-            base_points_map = {
-                '101': 0, '102': 0, '103': 0, '201': 0, '202': 10,
-                '203': 0, '301': 0, '302': 0, '303': 0, '304': 5
-            }
-            base = base_points_map.get(room_number, 0)
-
-            # Recalculate today's eco-points
+            # Recalculate eco-points
             today_pts = 0
             if pref == 'OPT_OUT_CLEANING':
                 today_pts += 15
@@ -254,39 +237,14 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             if towel:
                 today_pts += 5
 
-            room['ecoPointsEarned'] = base + today_pts
-
-            # Record Guest Interaction Log (Deduplicated within 60 seconds)
-            action_desc = f"Selected {pref.replace('_', ' ').title()}{' + Towel Reuse' if towel else ''}"
-            now_iso = time.strftime('%Y-%m-%d %H:%M:%S')
-            interactions = db_state.setdefault('guestInteractions', [])
-            
-            recent_duplicate = next(
-                (i for i in interactions[:10]
-                 if str(i.get('roomNumber')) == room_number
-                 and i.get('action') == 'PWA_SERVICE_SELECTION'
-                 and i.get('details') == action_desc
-                 and i.get('timestamp', '')[:16] == now_iso[:16]),
-                None
-            )
-            new_log = None
-            if not recent_duplicate:
-                new_log = {
-                    "id": f"GIL-{int(time.time() * 1000) % 100000:04d}",
-                    "roomNumber": room_number,
-                    "timestamp": now_iso,
-                    "action": "PWA_SERVICE_SELECTION",
-                    "details": action_desc,
-                    "pointsEarned": today_pts
-                }
-                interactions.insert(0, new_log)
+            base = 10
+            points_spent = room.get('pointsSpent', 0)
+            room['ecoPointsEarned'] = max(0, base + today_pts - points_spent)
 
             save_db()
             broadcast_event('room_updated', room)
-            if new_log:
-                broadcast_event('interaction_logged', new_log)
 
-        self.send_json_response(200, {"success": True, "room": room, "interaction": new_log})
+        self.send_json_response(200, {"success": True, "room": room})
 
     def handle_room_status(self, body):
         room_number = str(body.get('roomNumber', ''))
@@ -319,23 +277,8 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             room['servicePreference'] = 'OVERRIDDEN'
             room['cleaningStatus'] = 'Active Clean List'
             room['overrideReason'] = reason
-
-            # Log Supervisor Override
-            now_iso = time.strftime('%Y-%m-%d %H:%M:%S')
-            interactions = db_state.setdefault('guestInteractions', [])
-            log_entry = {
-                "id": f"GIL-{int(time.time() * 1000) % 100000:04d}",
-                "roomNumber": room_number,
-                "timestamp": now_iso,
-                "action": "SUPERVISOR_OVERRIDE",
-                "details": f"Reinstated to active clean list: {reason}",
-                "pointsEarned": 0
-            }
-            interactions.insert(0, log_entry)
-
             save_db()
             broadcast_event('room_updated', room)
-            broadcast_event('interaction_logged', log_entry)
 
         self.send_json_response(200, {"success": True, "room": room})
 
@@ -361,63 +304,28 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
                 return
 
             cost = tier['cost']
-            # Milestone Validation: cumulative ecoPointsEarned must reach the milestone cost
             if room.get('ecoPointsEarned', 0) < cost:
-                self.send_json_response(400, {"error": f"Milestone requires {cost} points (Current balance: {room.get('ecoPointsEarned', 0)})"})
+                self.send_json_response(400, {"error": "Insufficient points"})
                 return
 
-            claimed_tiers = room.setdefault('claimedTiers', [])
-            vouchers = db_state.setdefault('ecoVouchers', [])
+            room['ecoPointsEarned'] -= cost
+            room['pointsSpent'] = room.get('pointsSpent', 0) + cost
 
-            # Check if matching voucher already unlocked for this room and tier
-            voucher = next(
-                (v for v in vouchers
-                 if str(v.get('roomNumber')) == room_number and v.get('rewardTitle') == tier['title']),
-                None
-            )
-
-            if tier_key in claimed_tiers and voucher:
-                # Already claimed this milestone tier
-                self.send_json_response(200, {"success": True, "voucher": voucher, "room": room, "alreadyClaimed": True})
-                return
-
-            if tier_key not in claimed_tiers:
-                claimed_tiers.append(tier_key)
-
-            # NOTE: Cumulative milestone system does NOT deduct points from room balance!
-
-            if not voucher:
-                client_code = body.get('code')
-                voucher_code = client_code if (client_code and not any(v.get('code') == client_code for v in vouchers)) else f"{tier['prefix']}-{random.randint(1000, 9999)}"
-                voucher = {
-                    "code": voucher_code,
-                    "roomNumber": room['roomNumber'],
-                    "guestName": room['guestName'],
-                    "rewardTitle": tier['title'],
-                    "description": tier['desc'],
-                    "pointsCost": cost,
-                    "issueDate": time.strftime('%Y-%m-%d %H:%M'),
-                    "expiryDate": "2026-08-25",
-                    "isRedeemed": False
-                }
-                vouchers.insert(0, voucher)
-
-            # Log Milestone Interaction Event
-            now_iso = time.strftime('%Y-%m-%d %H:%M:%S')
-            interactions = db_state.setdefault('guestInteractions', [])
-            log_entry = {
-                "id": f"GIL-{int(time.time() * 1000) % 100000:04d}",
-                "roomNumber": room_number,
-                "timestamp": now_iso,
-                "action": "VOUCHER_UNLOCKED",
-                "details": f"Milestone reached ({cost} pts) -> Voucher {voucher['code']} unlocked ({tier['title']})",
-                "pointsEarned": 0
+            voucher = {
+                "code": f"{tier['prefix']}-{random.randint(1000, 9999)}",
+                "roomNumber": room['roomNumber'],
+                "guestName": room['guestName'],
+                "rewardTitle": tier['title'],
+                "description": tier['desc'],
+                "pointsCost": cost,
+                "expiryDate": "2026-08-25",
+                "isRedeemed": False
             }
-            interactions.insert(0, log_entry)
+            vouchers = db_state.setdefault('ecoVouchers', [])
+            vouchers.insert(0, voucher)
 
             save_db()
             broadcast_event('voucher_claimed', {"room": room, "voucher": voucher})
-            broadcast_event('interaction_logged', log_entry)
 
         self.send_json_response(200, {"success": True, "voucher": voucher, "room": room})
 
@@ -475,14 +383,14 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
     def handle_bulk_sync(self, body):
         with db_lock:
             for key, val in body.items():
-                if isinstance(val, (list, dict)):
+                if isinstance(val, list):
                     db_state[key] = val
             save_db()
             broadcast_event('bulk_synced', {"keys": list(body.keys())})
 
         self.send_json_response(200, {"success": True})
 
-def run(primary_port=3000, secondary_port=8000):
+def run(port=8000):
     try:
         if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
             sys.stdout.reconfigure(encoding='utf-8')
@@ -490,54 +398,25 @@ def run(primary_port=3000, secondary_port=8000):
         pass
 
     load_db()
-
-    servers = []
-    ports = [primary_port]
-    if secondary_port and secondary_port != primary_port:
-        ports.append(secondary_port)
-
-    for p in ports:
-        try:
-            srv = ThreadingHTTPServer(('', p), EcoHotelHandler)
-            servers.append((p, srv))
-        except Exception as e:
-            print(f"[EcoHotel OS] Notice: Port {p} unavailable: {e}")
-
-    if not servers:
-        print("[EcoHotel OS] Error: Could not bind to any port!")
-        return
-
-    print("==================================================")
-    print(f"[EcoHotel OS] Unified Production Server Running")
-    for p, _ in servers:
-        print(f"   Dashboard & Static: http://localhost:{p}/")
-        print(f"   REST Database API:  http://localhost:{p}/api/db")
-        print(f"   Real-time SSE:      http://localhost:{p}/api/events")
-    print("==================================================")
-
-    for p, srv in servers[1:]:
-        t = threading.Thread(target=srv.serve_forever, daemon=True)
-        t.start()
-
+    server_address = ('', port)
+    httpd = ThreadingHTTPServer(server_address, EcoHotelHandler)
+    print(f"==================================================")
+    print(f"[EcoHotel OS] Unified Server running on port {port}")
+    print(f"   Web Dashboard: http://localhost:{port}/")
+    print(f"   REST API:      http://localhost:{port}/api/db")
+    print(f"   Real-time SSE: http://localhost:{port}/api/events")
+    print(f"==================================================")
     try:
-        servers[0][1].serve_forever()
+        httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nShutting down server...")
-        for _, srv in servers:
-            srv.server_close()
+        httpd.server_close()
 
 if __name__ == '__main__':
-    p1 = 3000
-    p2 = 8000
+    p = 8000
     if len(sys.argv) > 1:
         try:
-            p1 = int(sys.argv[1])
+            p = int(sys.argv[1])
         except ValueError:
             pass
-    if len(sys.argv) > 2:
-        try:
-            p2 = int(sys.argv[2])
-        except ValueError:
-            pass
-    run(p1, p2)
-
+    run(p)

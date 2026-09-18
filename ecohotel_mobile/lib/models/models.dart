@@ -141,9 +141,6 @@ class RoomModel {
   int ecoPointsEarned;
   int pointsSpent;
   final String qrToken;
-  String? choiceConfirmedAt;
-  bool isChoiceLocked;
-  List<String> claimedTiers;
 
   RoomModel({
     required this.roomNumber,
@@ -159,27 +156,6 @@ class RoomModel {
     this.ecoPointsEarned = 0,
     this.pointsSpent = 0,
     required this.qrToken,
-    this.choiceConfirmedAt,
-    this.isChoiceLocked = false,
-    List<String>? claimedTiers,
-  }) : claimedTiers = claimedTiers ?? [];
-}
-
-class GuestInteraction {
-  final String id;
-  final String roomNumber;
-  final String timestamp;
-  final String action;
-  final String details;
-  final int pointsEarned;
-
-  GuestInteraction({
-    required this.id,
-    required this.roomNumber,
-    required this.timestamp,
-    required this.action,
-    required this.details,
-    required this.pointsEarned,
   });
 }
 

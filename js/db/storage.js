@@ -49,12 +49,7 @@ class StorageEngine {
         const backendData = await res.json();
         if (backendData && typeof backendData === 'object') {
           // Merge collections from backend
-          const syncKeys = [
-            'rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory',
-            'foodWasteLogs', 'plateWasteLogs', 'baselines', 'userAudit', 'users',
-            'dishes', 'technicians', 'defectCategories', 'prepRecommendations', 'reservationForecast',
-            'guestInteractions'
-          ];
+          const syncKeys = ['rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory', 'foodWasteLogs', 'plateWasteLogs'];
           let changed = false;
           for (const key of syncKeys) {
             if (Array.isArray(backendData[key]) && backendData[key].length > 0) {
@@ -67,10 +62,6 @@ class StorageEngine {
             this.notify('all', this.data);
             this.notify('rooms', this.data.rooms);
             this.notify('ecoVouchers', this.data.ecoVouchers);
-            this.notify('baselines', this.data.baselines);
-            this.notify('repairTickets', this.data.repairTickets);
-            this.notify('utilityMeters', this.data.utilityMeters);
-            this.notify('guestInteractions', this.data.guestInteractions);
             console.log('[Backend Sync] Synchronized initial state with Python backend');
           }
         }
@@ -101,13 +92,7 @@ class StorageEngine {
             } else if (event.type === 'voucher_claimed' && event.payload) {
               if (event.payload.voucher) {
                 this.data.ecoVouchers = this.data.ecoVouchers || [];
-                const exists = this.data.ecoVouchers.some(v => 
-                  v.code === event.payload.voucher.code ||
-                  (String(v.roomNumber) === String(event.payload.voucher.roomNumber) && v.rewardTitle === event.payload.voucher.rewardTitle)
-                );
-                if (!exists) {
-                  this.data.ecoVouchers.unshift(event.payload.voucher);
-                }
+                this.data.ecoVouchers.unshift(event.payload.voucher);
               }
               if (event.payload.room) {
                 const idx = this.data.rooms.findIndex(r => String(r.roomNumber) === String(event.payload.room.roomNumber));
@@ -116,19 +101,6 @@ class StorageEngine {
               this.saveDatabase(this.data, false);
               this.notify('ecoVouchers', this.data.ecoVouchers);
               this.notify('rooms', this.data.rooms);
-            } else if (event.type === 'interaction_logged' && event.payload) {
-              this.data.guestInteractions = this.data.guestInteractions || [];
-              const exists = this.data.guestInteractions.some(i => 
-                i.id === event.payload.id ||
-                (String(i.roomNumber) === String(event.payload.roomNumber) && 
-                 i.action === event.payload.action && 
-                 (i.timestamp || '').substring(0, 16) === (event.payload.timestamp || '').substring(0, 16))
-              );
-              if (!exists) {
-                this.data.guestInteractions.unshift(event.payload);
-                this.saveDatabase(this.data, false);
-                this.notify('guestInteractions', this.data.guestInteractions);
-              }
             } else if (event.type === 'voucher_redeemed' && event.payload) {
               const v = (this.data.ecoVouchers || []).find(x => x.code === event.payload.code);
               if (v) v.isRedeemed = true;
@@ -333,16 +305,7 @@ class StorageEngine {
               utilityMeters: this.data.utilityMeters,
               inventory: this.data.inventory,
               foodWasteLogs: this.data.foodWasteLogs,
-              plateWasteLogs: this.data.plateWasteLogs,
-              baselines: this.data.baselines,
-              userAudit: this.data.userAudit,
-              users: this.data.users,
-              dishes: this.data.dishes,
-              technicians: this.data.technicians,
-              defectCategories: this.data.defectCategories,
-              prepRecommendations: this.data.prepRecommendations,
-              reservationForecast: this.data.reservationForecast,
-              guestInteractions: this.data.guestInteractions
+              plateWasteLogs: this.data.plateWasteLogs
             })
           }).catch(() => {});
         }, 300);
@@ -1176,7 +1139,7 @@ updateInventoryItem(id, updates) {
     return true;
   }
 
-  updateGuestPreference(roomNumber, { servicePreference, linenDelayDays = 0, towelReuse = true, choiceConfirmedAt = null, isChoiceLocked = false }) {
+  updateGuestPreference(roomNumber, { servicePreference, linenDelayDays = 0, towelReuse = true }) {
     const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
     if (!room) return false;
 
@@ -1186,8 +1149,6 @@ updateInventoryItem(id, updates) {
     room.servicePreference = servicePreference;
     room.linenDelayDays = parseInt(linenDelayDays, 10);
     room.towelReuse = towelReuse;
-    if (choiceConfirmedAt !== undefined) room.choiceConfirmedAt = choiceConfirmedAt;
-    if (isChoiceLocked !== undefined) room.isChoiceLocked = isChoiceLocked;
 
     let pointsForToday = 0;
     if (servicePreference === 'OPT_OUT_CLEANING') {
@@ -1195,7 +1156,7 @@ updateInventoryItem(id, updates) {
       pointsForToday = 15;
     } else if (servicePreference === 'LINEN_DELAY') {
       room.cleaningStatus = 'Light Service Only';
-      pointsForToday = room.linenDelayDays >= 3 ? 12 : 10;
+      pointsForToday = 10;
     } else {
       room.cleaningStatus = 'Active Clean List';
       pointsForToday = 0;
@@ -1205,43 +1166,25 @@ updateInventoryItem(id, updates) {
       pointsForToday += 5;
     }
 
-    // Standardized baseline historical points
-    const baseMap = {
-      '101': 0, '102': 0, '103': 0, '201': 0, '202': 10,
-      '203': 0, '301': 0, '302': 0, '303': 0, '304': 5
-    };
-    const baseHistorical = baseMap[roomNumber] || 0;
+    // Baseline historical points (Room 304 baseline is 5 pts)
+    const baseHistorical = 5;
     room.ecoPointsEarned = baseHistorical + pointsForToday;
 
-    // Log Interaction Event only if changed or first confirmed
-    if (!isUnchanged || choiceConfirmedAt) {
-      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-      const actionDesc = `Selected ${servicePreference.replace(/_/g, ' ')}${towelReuse ? ' + Towel Reuse' : ''}`;
-      
-      const existing = (this.data.guestInteractions || []).slice(0, 10).find(i =>
-        i.roomNumber === roomNumber &&
-        i.action === 'PWA_SERVICE_SELECTION' &&
-        i.details === actionDesc &&
-        (i.timestamp || '').substring(0, 16) === now.substring(0, 16)
-      );
-
-      if (!existing) {
-        this.data.guestInteractions = this.data.guestInteractions || [];
-        this.data.guestInteractions.unshift({
-          id: `GIL-${Date.now().toString().slice(-4)}`,
-          roomNumber: roomNumber,
-          timestamp: now,
-          action: 'PWA_SERVICE_SELECTION',
-          details: actionDesc,
-          pointsEarned: pointsForToday
-        });
-        this.notify('guestInteractions', this.data.guestInteractions);
-      }
+    // Log Interaction Event (FR_12) only if changed
+    if (!isUnchanged) {
+      this.data.guestInteractions.unshift({
+        id: `GIL-${Date.now().toString().slice(-4)}`,
+        roomNumber: roomNumber,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        action: 'PWA_SERVICE_SELECTION',
+        details: `Selected ${servicePreference}${towelReuse ? ' + Towel Reuse' : ''}`,
+        pointsEarned: pointsForToday
+      });
     }
 
-    // Check Voucher Milestone (Every 25 points - unlocked without deduction)
+    // Check Voucher Milestone (Every 25 points)
     if (room.ecoPointsEarned >= 25) {
-      const existingVoucher = (this.data.ecoVouchers || []).find(v => v.roomNumber === roomNumber && v.rewardTitle.includes('Dining'));
+      const existingVoucher = this.data.ecoVouchers.find(v => v.roomNumber === roomNumber);
       if (!existingVoucher) {
         const newVoucher = {
           code: `VM26-ECO-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1254,7 +1197,6 @@ updateInventoryItem(id, updates) {
           expiryDate: '2026-08-25',
           isRedeemed: false
         };
-        this.data.ecoVouchers = this.data.ecoVouchers || [];
         this.data.ecoVouchers.unshift(newVoucher);
         this.notify('ecoVouchers', this.data.ecoVouchers);
       }
@@ -1262,100 +1204,8 @@ updateInventoryItem(id, updates) {
 
     this.saveDatabase();
     this.notify('rooms', this.data.rooms);
-
-    // Sync preference to backend
-    fetch('/api/rooms/preference', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        roomNumber: roomNumber,
-        servicePreference: servicePreference,
-        towelReuse: towelReuse,
-        linenDelayDays: room.linenDelayDays,
-        choiceConfirmedAt: room.choiceConfirmedAt,
-        isChoiceLocked: room.isChoiceLocked
-      })
-    }).catch(() => {});
-
+    this.notify('guestInteractions', this.data.guestInteractions);
     return { room, pointsAwarded: pointsForToday, isUnchanged };
-  }
-
-  claimRewardTier(roomNumber, tierKey) {
-    const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
-    if (!room) return false;
-
-    const tiers = {
-      'tier-dining': {
-        title: '15% Farm-to-Table Dining Voucher',
-        cost: 25,
-        desc: 'Valid at Ocean Reef Organic Bistro & Farm-to-Table Kitchen.',
-        prefix: 'VM26-ECO'
-      },
-      'tier-geopark': {
-        title: 'Langkawi UNESCO Geopark Mangrove Pass',
-        cost: 30,
-        desc: 'Zero-emission solar boat eco-safari guided expedition.',
-        prefix: 'VM26-TRP'
-      },
-      'tier-canopy': {
-        title: 'Rainforest Canopy Walk & Eco-Trek',
-        cost: 45,
-        desc: 'Guided rainforest eco-trek and native mangrove sapling planting.',
-        prefix: 'VM26-SAF'
-      }
-    };
-
-    const tier = tiers[tierKey];
-    if (!tier) return false;
-    if ((room.ecoPointsEarned || 0) < tier.cost) return false;
-
-    room.claimedTiers = room.claimedTiers || [];
-    if (room.claimedTiers.includes(tierKey)) return true;
-
-    room.claimedTiers.push(tierKey);
-    // Milestone model: points are NOT deducted!
-
-    this.data.ecoVouchers = this.data.ecoVouchers || [];
-    const exists = this.data.ecoVouchers.some(v => String(v.roomNumber) === String(roomNumber) && v.rewardTitle === tier.title);
-    if (!exists) {
-      const newVoucher = {
-        code: `${tier.prefix}-${Math.floor(1000 + Math.random() * 9000)}`,
-        roomNumber: room.roomNumber,
-        guestName: room.guestName,
-        rewardTitle: tier.title,
-        description: tier.desc,
-        pointsCost: tier.cost,
-        issueDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        expiryDate: '2026-08-25',
-        isRedeemed: false
-      };
-      this.data.ecoVouchers.unshift(newVoucher);
-      this.notify('ecoVouchers', this.data.ecoVouchers);
-
-      // Log interaction
-      this.data.guestInteractions = this.data.guestInteractions || [];
-      this.data.guestInteractions.unshift({
-        id: `GIL-${Date.now().toString().slice(-4)}`,
-        roomNumber: roomNumber,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        action: 'VOUCHER_UNLOCKED',
-        details: `Milestone reached (${tier.cost} pts) -> Voucher ${newVoucher.code} unlocked (${tier.title})`,
-        pointsEarned: 0
-      });
-      this.notify('guestInteractions', this.data.guestInteractions);
-    }
-
-    this.saveDatabase();
-    this.notify('rooms', this.data.rooms);
-
-    // Call backend API
-    fetch('/api/vouchers/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roomNumber, tierKey })
-    }).catch(() => {});
-
-    return true;
   }
 
   redeemVoucher(code) {

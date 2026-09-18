@@ -29,46 +29,23 @@ class HotelDatabase extends ChangeNotifier {
               rooms[idx].cleaningStatus = item['cleaningStatus'] ?? rooms[idx].cleaningStatus;
               rooms[idx].ecoPointsEarned = item['ecoPointsEarned'] ?? rooms[idx].ecoPointsEarned;
               rooms[idx].pointsSpent = item['pointsSpent'] ?? rooms[idx].pointsSpent;
-              rooms[idx].choiceConfirmedAt = item['choiceConfirmedAt'] ?? rooms[idx].choiceConfirmedAt;
-              rooms[idx].isChoiceLocked = item['isChoiceLocked'] ?? rooms[idx].isChoiceLocked;
-              if (item['claimedTiers'] != null && item['claimedTiers'] is List) {
-                rooms[idx].claimedTiers = List<String>.from(item['claimedTiers']);
-              }
             }
           }
         }
         if (data['ecoVouchers'] != null && data['ecoVouchers'] is List) {
           final List vList = data['ecoVouchers'];
+          ecoVouchers.clear();
           for (final v in vList) {
-            final code = v['code']?.toString() ?? '';
-            if (code.isNotEmpty && !ecoVouchers.any((ex) => ex.code == code)) {
-              ecoVouchers.add(EcoVoucher(
-                code: code,
-                roomNumber: v['roomNumber']?.toString() ?? '',
-                guestName: v['guestName']?.toString() ?? '',
-                rewardTitle: v['rewardTitle']?.toString() ?? '',
-                description: v['description']?.toString() ?? '',
-                pointsCost: v['pointsCost'] ?? 0,
-                expiryDate: v['expiryDate']?.toString() ?? '',
-                isRedeemed: v['isRedeemed'] ?? false,
-              ));
-            }
-          }
-        }
-        if (data['guestInteractions'] != null && data['guestInteractions'] is List) {
-          final List iList = data['guestInteractions'];
-          for (final item in iList) {
-            final id = item['id']?.toString() ?? '';
-            if (id.isNotEmpty && !guestInteractions.any((gi) => gi.id == id)) {
-              guestInteractions.add(GuestInteraction(
-                id: id,
-                roomNumber: item['roomNumber']?.toString() ?? '',
-                timestamp: item['timestamp']?.toString() ?? '',
-                action: item['action']?.toString() ?? '',
-                details: item['details']?.toString() ?? '',
-                pointsEarned: item['pointsEarned'] ?? 0,
-              ));
-            }
+            ecoVouchers.add(EcoVoucher(
+              code: v['code'] ?? '',
+              roomNumber: v['roomNumber'] ?? '',
+              guestName: v['guestName'] ?? '',
+              rewardTitle: v['rewardTitle'] ?? '',
+              description: v['description'] ?? '',
+              pointsCost: v['pointsCost'] ?? 0,
+              expiryDate: v['expiryDate'] ?? '',
+              isRedeemed: v['isRedeemed'] ?? false,
+            ));
           }
         }
         isConnected = true;
@@ -247,43 +224,27 @@ class HotelDatabase extends ChangeNotifier {
     return true;
   }
 
-  // Rooms & Housekeeping (Module 4) - Full 10 Room Master Property Catalog
+  // Rooms & Housekeeping (Module 4)
   final List<RoomModel> rooms = [
     RoomModel(roomNumber: '101', floor: 1, type: 'Deluxe Ocean Suite', guestName: 'Tan Sri Jeffrey Cheah', status: 'Occupied', servicePreference: 'STANDARD', cleaningStatus: 'Active Clean List', qrToken: 'RM101-SEC-771'),
     RoomModel(roomNumber: '102', floor: 1, type: 'Deluxe Garden View', guestName: 'Elena Rostova', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 20, qrToken: 'RM102-SEC-892'),
-    RoomModel(roomNumber: '103', floor: 1, type: 'Deluxe Garden View', guestName: 'Kenji Sato', status: 'Occupied', servicePreference: 'STANDARD', towelReuse: true, cleaningStatus: 'Active Clean List', ecoPointsEarned: 5, qrToken: 'RM103-SEC-554'),
     RoomModel(roomNumber: '201', floor: 2, type: 'Premier Sunset Villa', guestName: 'Michael & Sarah Davies', status: 'Occupied', servicePreference: 'LINEN_DELAY', linenDelayDays: 3, towelReuse: true, cleaningStatus: 'Light Service Only', ecoPointsEarned: 10, qrToken: 'RM201-SEC-340'),
-    RoomModel(roomNumber: '202', floor: 2, type: 'Premier Sunset Villa', guestName: 'Dr. Farouk Abdullah', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 2, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 30, qrToken: 'RM202-SEC-512', claimedTiers: ['tier-geopark']),
-    RoomModel(roomNumber: '203', floor: 2, type: 'Premier Sunset Villa', guestName: 'Amina Al-Mansoor', status: 'Occupied', servicePreference: 'STANDARD', cleaningStatus: 'Active Clean List', ecoPointsEarned: 0, qrToken: 'RM203-SEC-918'),
+    RoomModel(roomNumber: '202', floor: 2, type: 'Premier Sunset Villa', guestName: 'Dr. Farouk Abdullah', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 2, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 30, qrToken: 'RM202-SEC-512'),
     RoomModel(roomNumber: '301', floor: 3, type: 'Presidential Eco Suite', guestName: 'Hans Zimmer & Family', status: 'Occupied', servicePreference: 'STANDARD', towelReuse: true, cleaningStatus: 'Active Clean List', ecoPointsEarned: 5, qrToken: 'RM301-SEC-901'),
     RoomModel(roomNumber: '302', floor: 3, type: 'Deluxe Ocean Suite', guestName: 'Vacant Ready', status: 'Vacant Ready', servicePreference: 'STANDARD', cleaningStatus: 'Inspection Passed', qrToken: 'RM302-SEC-110'),
-    RoomModel(roomNumber: '303', floor: 3, type: 'Executive Seaview Room', guestName: 'Chloe Dupont', status: 'Occupied', servicePreference: 'LINEN_DELAY', linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Light Service Only', ecoPointsEarned: 15, qrToken: 'RM303-SEC-337'),
-    RoomModel(roomNumber: '304', floor: 3, type: 'Executive Seaview Room', guestName: 'Simon Wong', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 25, qrToken: 'RM304-SEC-426', choiceConfirmedAt: '2026-08-13 08:30:00', isChoiceLocked: false, claimedTiers: ['tier-dining']),
+    RoomModel(roomNumber: '304', floor: 3, type: 'Executive Seaview Room', guestName: 'Simon Wong', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 25, qrToken: 'RM304-SEC-426'),
   ];
 
   // Track if room 304 submitted today
   final Map<String, bool> submittedToday = {'304': true};
 
-  // Base points before today's submission - aligned across Python, JS, and Dart
-  final Map<String, int> baseHistoricalPoints = {
-    '101': 0, '102': 0, '103': 0,
-    '201': 0, '202': 10, '203': 0,
-    '301': 0, '302': 0, '303': 0,
-    '304': 5,
-  };
+  // Base points before today's submission
+  final Map<String, int> baseHistoricalPoints = {'304': 5};
 
   // Eco Vouchers (Module 4)
   final List<EcoVoucher> ecoVouchers = [
     EcoVoucher(code: 'VM26-ECO-7821', roomNumber: '304', guestName: 'Simon Wong', rewardTitle: '15% Sustainable Dining Voucher', description: 'Valid at Ocean Reef Organic Bistro', pointsCost: 25, expiryDate: '2026-08-20'),
     EcoVoucher(code: 'VM26-TRP-4409', roomNumber: '202', guestName: 'Dr. Farouk Abdullah', rewardTitle: 'Langkawi Geopark Mangrove Pass', description: 'Zero-emission solar boat expedition', pointsCost: 30, expiryDate: '2026-08-25'),
-  ];
-
-  // Guest Interaction Log (FR_12) - Shared ledger across Web & Mobile
-  final List<GuestInteraction> guestInteractions = [
-    GuestInteraction(id: 'GIL-001', roomNumber: '304', timestamp: '2026-08-13 08:30:00', action: 'PWA_SERVICE_SELECTION', details: 'Selected Opt-Out Daily Cleaning + Towel Reuse', pointsEarned: 20),
-    GuestInteraction(id: 'GIL-002', roomNumber: '202', timestamp: '2026-08-12 16:30:15', action: 'VOUCHER_GENERATED', details: 'Milestone reached (30 pts) -> Voucher VM26-TRP-4409 generated', pointsEarned: 0),
-    GuestInteraction(id: 'GIL-003', roomNumber: '102', timestamp: '2026-08-12 18:20:44', action: 'PWA_SERVICE_SELECTION', details: 'Selected Opt-Out Daily Cleaning + Towel Reuse', pointsEarned: 20),
-    GuestInteraction(id: 'GIL-004', roomNumber: '201', timestamp: '2026-08-12 19:10:02', action: 'PWA_SERVICE_SELECTION', details: 'Selected Linen Delay (3 days) + Towel Reuse', pointsEarned: 15),
   ];
 
   // Defect Category Catalog (Module 5) — read-only here.
@@ -461,7 +422,7 @@ class HotelDatabase extends ChangeNotifier {
         room.cleaningStatus = 'Active Clean List';
       }
 
-      // Recompute points based on historical baseline + selected green options
+      // Recompute today's total points without spamming
       int todayPoints = 0;
       if (pref == 'OPT_OUT_CLEANING') todayPoints += 15;
       if (pref == 'LINEN_DELAY') {
@@ -469,71 +430,31 @@ class HotelDatabase extends ChangeNotifier {
       }
       if (towel) todayPoints += 5;
 
-      final base = baseHistoricalPoints[roomNumber] ?? 0;
-      room.ecoPointsEarned = max(0, base + todayPoints);
+      final base = baseHistoricalPoints[roomNumber] ?? 5;
+      final net = (base + todayPoints) - room.pointsSpent;
+      room.ecoPointsEarned = max(0, net);
 
-      notifyListeners();
-    }
-  }
-
-  void confirmGuestSelection(String roomNumber) {
-    final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
-    if (idx != -1) {
-      final room = rooms[idx];
-      final now = DateTime.now();
-      room.choiceConfirmedAt = now.toIso8601String();
-      room.isChoiceLocked = true;
-      submittedToday[roomNumber] = true;
-
-      // Deduplicated interaction logging (check 60-second window)
-      final nowStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-      final hasRecent = guestInteractions.any((gi) =>
-          gi.roomNumber == roomNumber &&
-          gi.action == 'PWA_SERVICE_SELECTION' &&
-          (now.difference(DateTime.tryParse(gi.timestamp) ?? now).inSeconds.abs() < 60));
-
-      if (!hasRecent) {
-        int todayPoints = 0;
-        if (room.servicePreference == 'OPT_OUT_CLEANING') todayPoints += 15;
-        if (room.servicePreference == 'LINEN_DELAY') todayPoints += (room.linenDelayDays >= 3 ? 12 : 10);
-        if (room.towelReuse) todayPoints += 5;
-
-        final logId = 'GIL-${now.millisecondsSinceEpoch.toString().substring(7)}';
-        guestInteractions.insert(0, GuestInteraction(
-          id: logId,
-          roomNumber: roomNumber,
-          timestamp: nowStr,
-          action: 'PWA_SERVICE_SELECTION',
-          details: 'Selected ${room.servicePreference.replaceAll('_', ' ')} (towel: ${room.towelReuse ? 'yes' : 'no'}, linen: ${room.linenDelayDays}d)',
-          pointsEarned: todayPoints,
-        ));
+      // Check Voucher Milestone (Unlock voucher at >= 25 points)
+      if (room.ecoPointsEarned >= 25) {
+        final exists = ecoVouchers.any((v) => v.roomNumber == roomNumber);
+        if (!exists) {
+          ecoVouchers.insert(0, EcoVoucher(
+            code: 'VM26-ECO-${Random().nextInt(9000) + 1000}',
+            roomNumber: roomNumber,
+            guestName: room.guestName,
+            rewardTitle: '15% Sustainable Dining Voucher',
+            description: 'Valid across all sustainable outlets for VM2026.',
+            pointsCost: 25,
+            expiryDate: '2026-08-25',
+          ));
+        }
       }
-
-      notifyListeners();
-
-      _asyncPost('/api/rooms/preference', {
-        'roomNumber': roomNumber,
-        'servicePreference': room.servicePreference,
-        'towelReuse': room.towelReuse,
-        'linenDelayDays': room.linenDelayDays,
-        'choiceConfirmedAt': room.choiceConfirmedAt,
-        'isChoiceLocked': true,
-      });
-    }
-  }
-
-  void unlockForAdjustment(String roomNumber) {
-    final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
-    if (idx != -1) {
-      rooms[idx].isChoiceLocked = false;
       notifyListeners();
       _asyncPost('/api/rooms/preference', {
         'roomNumber': roomNumber,
-        'servicePreference': rooms[idx].servicePreference,
-        'towelReuse': rooms[idx].towelReuse,
-        'linenDelayDays': rooms[idx].linenDelayDays,
-        'choiceConfirmedAt': rooms[idx].choiceConfirmedAt,
-        'isChoiceLocked': false,
+        'servicePreference': pref,
+        'towelReuse': towel,
+        'linenDelayDays': linenDays,
       });
     }
   }
@@ -568,48 +489,22 @@ class HotelDatabase extends ChangeNotifier {
     if (tier == null) return false;
     final cost = tier['cost'] as int;
 
-    // Check if points reach milestone threshold
     if (room.ecoPointsEarned < cost) return false;
 
-    // Prevent duplicate claiming of the same tier for this room
-    if (room.claimedTiers.contains(tierKey)) return false;
+    room.ecoPointsEarned -= cost;
+    room.pointsSpent += cost;
 
-    // MILESTONE REWARD: Do NOT deduct points! Points balance is cumulative.
-    room.claimedTiers.add(tierKey);
-
-    // Create unique voucher if not already existing
-    final existingVoucher = ecoVouchers.any((v) =>
-        v.roomNumber == roomNumber &&
-        (v.code.startsWith(tier['prefix'] as String) || v.rewardTitle == tier['title']));
-
-    if (!existingVoucher) {
-      final code = '${tier['prefix']}-${Random().nextInt(9000) + 1000}';
-      final voucher = EcoVoucher(
-        code: code,
-        roomNumber: room.roomNumber,
-        guestName: room.guestName,
-        rewardTitle: tier['title'] as String,
-        description: tier['desc'] as String,
-        pointsCost: cost,
-        expiryDate: '2026-08-25',
-      );
-      ecoVouchers.insert(0, voucher);
-
-      // Log interaction
-      final now = DateTime.now();
-      final nowStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-      guestInteractions.insert(0, GuestInteraction(
-        id: 'GIL-${now.millisecondsSinceEpoch.toString().substring(7)}',
-        roomNumber: roomNumber,
-        timestamp: nowStr,
-        action: 'VOUCHER_UNLOCKED',
-        details: 'Unlocked ${tier['title']} milestone reward ($cost pts reached)',
-        pointsEarned: 0,
-      ));
-    }
-
+    final voucher = EcoVoucher(
+      code: '${tier['prefix']}-${Random().nextInt(9000) + 1000}',
+      roomNumber: room.roomNumber,
+      guestName: room.guestName,
+      rewardTitle: tier['title'] as String,
+      description: tier['desc'] as String,
+      pointsCost: cost,
+      expiryDate: '2026-08-25',
+    );
+    ecoVouchers.insert(0, voucher);
     notifyListeners();
-
     _asyncPost('/api/vouchers/claim', {
       'roomNumber': roomNumber,
       'tierKey': tierKey,
@@ -634,19 +529,6 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       rooms[idx].cleaningStatus = 'Active Clean List (Overridden)';
       rooms[idx].servicePreference = 'OVERRIDDEN';
-      rooms[idx].isChoiceLocked = false;
-
-      final now = DateTime.now();
-      final nowStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-      guestInteractions.insert(0, GuestInteraction(
-        id: 'GIL-${now.millisecondsSinceEpoch.toString().substring(7)}',
-        roomNumber: roomNumber,
-        timestamp: nowStr,
-        action: 'SUPERVISOR_OVERRIDE',
-        details: 'Cleaning reinstated: $reason',
-        pointsEarned: 0,
-      ));
-
       notifyListeners();
       _asyncPost('/api/rooms/override', {
         'roomNumber': roomNumber,
