@@ -3954,12 +3954,15 @@ class FacilitiesScreen extends StatelessWidget {
                       color: Color(0xFFE11D48),
                     ),
                     SizedBox(width: 6),
-                    Text(
-                      'Utility Anomaly Spikes Detected',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Color(0xFFE11D48),
+                    Expanded(
+                      child: Text(
+                        'Utility Anomaly Spikes Detected',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Color(0xFFE11D48),
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -4063,7 +4066,10 @@ class FacilitiesScreen extends StatelessWidget {
                       color: Color(0xFF71717A),
                     ),
                   ),
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 2,
                     children: [
                       Text(
                         '${meter.lastReading} ${meter.unit}',
@@ -4075,7 +4081,6 @@ class FacilitiesScreen extends StatelessWidget {
                               : const Color(0xFF18181B),
                         ),
                       ),
-                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 4,
@@ -4508,102 +4513,107 @@ class FacilitiesScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
-          child: Container(
-            width: 480,
+          child: ConstrainedBox(
             constraints: BoxConstraints(
+              maxWidth: 480,
               maxHeight: MediaQuery.of(context).size.height * 0.88,
             ),
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.speed, size: 20, color: Color(0xFF0F172A)),
-                        SizedBox(width: 8),
-                        Text(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.speed, size: 20, color: Color(0xFF0F172A)),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
                           'Log Physical Sub-Meter',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: meterId,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Sub-Meter Zone',
-                            prefixIcon: Icon(Icons.tune_outlined, size: 18),
-                          ),
-                          isExpanded: true,
-                          items: db.utilityMeters.map((m) => DropdownMenuItem(
-                            value: m.meterId,
-                            child: Text(
-                              '${m.meterId} • ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})',
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: meterId,
+                            decoration: const InputDecoration(
+                              labelText: 'Select Sub-Meter Zone',
+                              prefixIcon: Icon(Icons.tune_outlined, size: 18),
                             ),
-                          )).toList(),
-                          onChanged: (val) => setDialogState(() => meterId = val!),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: readingCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Observed Gauge Reading',
-                            hintText: 'Enter numerical reading from physical dial',
-                            prefixIcon: Icon(Icons.numbers_outlined, size: 18),
+                            isExpanded: true,
+                            items: db.utilityMeters.map((m) => DropdownMenuItem(
+                              value: m.meterId,
+                              child: Text(
+                                '${m.meterId} • ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})',
+                                style: const TextStyle(fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )).toList(),
+                            onChanged: (val) => setDialogState(() => meterId = val!),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: readingCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Observed Gauge Reading',
+                              hintText: 'Enter numerical reading from physical dial',
+                              prefixIcon: Icon(Icons.numbers_outlined, size: 18),
+                            ),
                           ),
-                          child: const Text(
-                            'Notice: If reading exceeds baseline by ≥15%, the zone will be automatically flagged as an Anomaly. File a Report Facility Defect to dispatch a technician if maintenance is required.',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: const Text(
+                              'Notice: If reading exceeds baseline by ≥15%, the zone will be automatically flagged as an Anomaly. File a Report Facility Defect to dispatch a technician if maintenance is required.',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(90, 40)),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(120, 40),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancel'),
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
                       onPressed: () {
                         final r = double.tryParse(readingCtrl.text);
                         if (r != null && r > 0) {
@@ -4627,11 +4637,13 @@ class FacilitiesScreen extends StatelessWidget {
                           );
                         }
                       },
-                      child: const Text('Save Reading'),
-                    ),
-                  ],
-                ),
-              ],
+                          child: const Text('Save Reading'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -4659,230 +4671,241 @@ class FacilitiesScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
-          child: Container(
-            width: 480,
+          child: ConstrainedBox(
             constraints: BoxConstraints(
+              maxWidth: 480,
               maxHeight: MediaQuery.of(context).size.height * 0.88,
             ),
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.report_problem_outlined, size: 20, color: Color(0xFFE11D48)),
-                        SizedBox(width: 8),
-                        Text(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.report_problem_outlined, size: 20, color: Color(0xFFE11D48)),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
                           'Report Facility Defect',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextField(
-                          controller: zoneCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Affected Room / Operational Zone',
-                            hintText: 'e.g. Room 201, Chiller Plant, Kitchen',
-                            prefixIcon: Icon(Icons.location_on_outlined, size: 18),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            'Room 101', 'Room 201', 'Room 304', 'Kitchen', 'Central Chiller', 'Commercial Laundry'
-                          ].map((z) => ActionChip(
-                            visualDensity: VisualDensity.compact,
-                            label: Text(z, style: const TextStyle(fontSize: 10.5)),
-                            backgroundColor: const Color(0xFFF8FAFC),
-                            side: const BorderSide(color: Color(0xFFE2E8F0)),
-                            onPressed: () => setDialogState(() => zoneCtrl.text = z),
-                          )).toList(),
-                        ),
-                        const SizedBox(height: 14),
-                        DropdownButtonFormField<String>(
-                          initialValue: selectedCategoryId,
-                          decoration: const InputDecoration(
-                            labelText: 'Defect Category',
-                            prefixIcon: Icon(Icons.category_outlined, size: 18),
-                          ),
-                          isExpanded: true,
-                          items: db.defectCategories.map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(
-                              c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
-                              style: const TextStyle(fontSize: 12.5),
-                              overflow: TextOverflow.ellipsis,
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: zoneCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Affected Room / Operational Zone',
+                              hintText: 'e.g. Room 201, Chiller Plant, Kitchen',
+                              prefixIcon: Icon(Icons.location_on_outlined, size: 18),
                             ),
-                          )).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setDialogState(() {
-                                selectedCategoryId = val;
-                                final cat = db.defectCategories.firstWhere((c) => c.id == val);
-                                resourceType = cat.resourceType;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        DropdownButtonFormField<String>(
-                          initialValue: severity,
-                          decoration: const InputDecoration(
-                            labelText: 'Severity Level',
-                            prefixIcon: Icon(Icons.warning_amber_outlined, size: 18),
                           ),
-                          isExpanded: true,
-                          items: const [
-                            DropdownMenuItem(value: 'High', child: Text('High Severity (Rapid Continuous Loss)', style: TextStyle(fontSize: 12.5))),
-                            DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip / Hum)', style: TextStyle(fontSize: 12.5))),
-                            DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic / Slow)', style: TextStyle(fontSize: 12.5))),
-                          ],
-                          onChanged: (val) => setDialogState(() => severity = val ?? 'High'),
-                        ),
-                        const SizedBox(height: 14),
-                        DropdownButtonFormField<String>(
-                          initialValue: resourceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Affected Resource',
-                            prefixIcon: Icon(Icons.bolt_outlined, size: 18),
-                          ),
-                          isExpanded: true,
-                          items: const [
-                            DropdownMenuItem(value: 'Water', child: Text('Water Resource (L/day)', style: TextStyle(fontSize: 12.5))),
-                            DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource (kWh/day)', style: TextStyle(fontSize: 12.5))),
-                          ],
-                          onChanged: (val) => setDialogState(() => resourceType = val ?? 'Water'),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: descCtrl,
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'Defect Description & Diagnostic Notes',
-                            hintText: 'Describe leak rate, noise, physical damage, or symptoms...',
-                            alignLabelWithHint: true,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: Row(
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
                             children: [
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  visualDensity: VisualDensity.compact,
-                                  foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF0F172A),
-                                  side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFCBD5E1)),
-                                ),
-                                onPressed: () async {
-                                  final picker = ImagePicker();
-                                  final XFile? file = await picker.pickImage(
-                                    source: ImageSource.gallery,
-                                    maxWidth: 1000,
-                                    imageQuality: 70,
-                                  );
-                                  if (file != null) {
-                                    final bytes = await file.readAsBytes();
-                                    final b64 = base64Encode(bytes);
-                                    setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
-                                  }
-                                },
-                                icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt_outlined, size: 16),
-                                label: Text(
-                                  pickedPhotoDataUrl != null ? 'Photo Evidence Attached' : 'Attach Photo Evidence',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              if (pickedPhotoDataUrl != null) ...[
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
-                                  tooltip: 'Remove photo',
-                                  onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
-                                ),
-                              ],
-                            ],
+                              'Room 101', 'Room 201', 'Room 304', 'Kitchen', 'Central Chiller', 'Commercial Laundry'
+                            ].map((z) => ActionChip(
+                              visualDensity: VisualDensity.compact,
+                              label: Text(z, style: const TextStyle(fontSize: 10.5)),
+                              backgroundColor: const Color(0xFFF8FAFC),
+                              side: const BorderSide(color: Color(0xFFE2E8F0)),
+                              onPressed: () => setDialogState(() => zoneCtrl.text = z),
+                            )).toList(),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedCategoryId,
+                            decoration: const InputDecoration(
+                              labelText: 'Defect Category',
+                              prefixIcon: Icon(Icons.category_outlined, size: 18),
+                            ),
+                            isExpanded: true,
+                            items: db.defectCategories.map((c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(
+                                c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
+                                style: const TextStyle(fontSize: 12.5),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedCategoryId = val;
+                                  final cat = db.defectCategories.firstWhere((c) => c.id == val);
+                                  resourceType = cat.resourceType;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<String>(
+                            initialValue: severity,
+                            decoration: const InputDecoration(
+                              labelText: 'Severity Level',
+                              prefixIcon: Icon(Icons.warning_amber_outlined, size: 18),
+                            ),
+                            isExpanded: true,
+                            items: const [
+                              DropdownMenuItem(value: 'High', child: Text('High Severity (Rapid Continuous Loss)', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip / Hum)', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic / Slow)', style: TextStyle(fontSize: 12.5))),
+                            ],
+                            onChanged: (val) => setDialogState(() => severity = val ?? 'High'),
+                          ),
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<String>(
+                            initialValue: resourceType,
+                            decoration: const InputDecoration(
+                              labelText: 'Affected Resource',
+                              prefixIcon: Icon(Icons.bolt_outlined, size: 18),
+                            ),
+                            isExpanded: true,
+                            items: const [
+                              DropdownMenuItem(value: 'Water', child: Text('Water Resource (L/day)', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource (kWh/day)', style: TextStyle(fontSize: 12.5))),
+                            ],
+                            onChanged: (val) => setDialogState(() => resourceType = val ?? 'Water'),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: descCtrl,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Defect Description & Diagnostic Notes',
+                              hintText: 'Describe leak rate, noise, physical damage, or symptoms...',
+                              alignLabelWithHint: true,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      visualDensity: VisualDensity.compact,
+                                      foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                      side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFCBD5E1)),
+                                    ),
+                                    onPressed: () async {
+                                      final picker = ImagePicker();
+                                      final XFile? file = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                        maxWidth: 1000,
+                                        imageQuality: 70,
+                                      );
+                                      if (file != null) {
+                                        final bytes = await file.readAsBytes();
+                                        final b64 = base64Encode(bytes);
+                                        setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
+                                      }
+                                    },
+                                    icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt_outlined, size: 16),
+                                    label: Text(
+                                      pickedPhotoDataUrl != null ? 'Photo Attached' : 'Attach Photo Evidence',
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                                if (pickedPhotoDataUrl != null) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                                    tooltip: 'Remove photo',
+                                    onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(minimumSize: const Size(90, 40)),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE11D48),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(140, 40),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancel'),
+                        ),
                       ),
-                      onPressed: () {
-                        if (zoneCtrl.text.trim().isNotEmpty) {
-                          final cat = db.defectCategories.firstWhere(
-                            (c) => c.id == selectedCategoryId,
-                            orElse: () => db.defectCategories.first,
-                          );
-                          db.reportDefect(
-                            zoneCtrl.text.trim(),
-                            cat.label,
-                            severity,
-                            resourceType,
-                            descCtrl.text.trim().isEmpty ? 'Reported by ground team.' : descCtrl.text.trim(),
-                            photoDataUrl: pickedPhotoDataUrl,
-                          );
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: Color(0xFF0F172A),
-                              content: Text('Defect ticket dispatched to Engineering queue!'),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please specify the affected room or zone.')),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.send_outlined, size: 16),
-                      label: const Text('Dispatch Ticket'),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE11D48),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 40),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: () {
+                            if (zoneCtrl.text.trim().isNotEmpty) {
+                              final cat = db.defectCategories.firstWhere(
+                                (c) => c.id == selectedCategoryId,
+                                orElse: () => db.defectCategories.first,
+                              );
+                              db.reportDefect(
+                                zoneCtrl.text.trim(),
+                                cat.label,
+                                severity,
+                                resourceType,
+                                descCtrl.text.trim().isEmpty ? 'Reported by ground team.' : descCtrl.text.trim(),
+                                photoDataUrl: pickedPhotoDataUrl,
+                              );
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: Color(0xFF0F172A),
+                                  content: Text('Defect ticket dispatched to Engineering queue!'),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please specify the affected room or zone.')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.send_outlined, size: 16),
+                          label: const Text('Dispatch Ticket', overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
