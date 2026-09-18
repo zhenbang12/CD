@@ -133,6 +133,12 @@ class App {
             ${system.theme === 'dark' ? '☀️' : '🌙'}
           </button>
 
+          <!-- Reset Database Button (Available for everyone) -->
+          <button id="btn-global-reset-db" class="btn btn-xs btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 11.5px;" title="Reset database to clean initial seed data">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset
+          </button>
+
           <!-- Streamlined User Profile & Logout -->
           <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px;">
             <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
@@ -206,6 +212,18 @@ class App {
         this.applyInitialTheme();
         themeBtn.innerHTML = nextTheme === 'light' ? '🌙' : '☀️';
         window.showGlobalToast?.(`Theme updated!`, 'info');
+      };
+    }
+
+    const resetBtn = document.getElementById('btn-global-reset-db');
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        if (confirm('Reset database to clean initial demonstration dataset? All modified baselines, logs, and tickets will be restored to default.')) {
+          db.resetDatabase();
+          this.loadActiveModule();
+          this.updateAlertBadges();
+          window.showGlobalToast?.('Database successfully reset to initial VM2026 seed state!', 'success');
+        }
       };
     }
 
@@ -543,12 +561,6 @@ class App {
               </div>
             </div>
           `).join('')}
-        </div>
-
-        <!-- Footer -->
-        <div class="alerts-flyout-footer">
-          <span>Enterprise Bus • Oracle SQL & IoT Telemetry</span>
-          <span>Grand Bay Eco-Resort</span>
         </div>
       </div>
     `;
