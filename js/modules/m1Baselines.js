@@ -51,9 +51,12 @@ export class Module1Baselines {
             <h1 class="view-title">Executive Sustainability Analytics</h1>
             <p class="view-subtitle">Calibrated targets and consumption standards.</p>
           </div>
-          <div class="header-actions">
+          <div class="header-actions" style="display: flex; gap: 8px;">
+            <button class="btn btn-sm btn-outline" id="btn-open-add-baseline-modal">
+              + Add Baseline
+            </button>
             <button class="btn btn-sm btn-primary" id="btn-open-baseline-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               Update Baselines
             </button>
           </div>
@@ -81,6 +84,7 @@ export class Module1Baselines {
                       <th>Value</th>
                       <th>Category</th>
                       <th>Last Calibrated</th>
+                      <th style="width: 80px;">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -91,12 +95,59 @@ export class Module1Baselines {
                         <td><span class="font-bold text-primary">${b.value}</span> <small class="text-muted">${b.unit}</small></td>
                         <td><span class="badge badge-secondary">${b.category}</span></td>
                         <td><small class="text-muted">${b.updatedAt}</small></td>
+                        <td>
+                          <button class="btn btn-sm btn-outline btn-delete-baseline" data-id="${b.id}" style="color: var(--danger); border-color: var(--danger); padding: 2px 8px; font-size: 11px;">Delete</button>
+                        </td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Baseline Add Modal Form -->
+        <div class="modal-backdrop" id="baseline-add-modal" style="display: none;">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3 class="modal-title">Add New Operational Baseline</h3>
+              <button class="modal-close" id="btn-close-add-modal">&times;</button>
+            </div>
+            <form id="form-add-baseline">
+              <div class="form-group">
+                <label class="form-label">Baseline Key</label>
+                <input type="text" class="form-input" id="add-baseline-key" placeholder="e.g. pool_water_daily" required />
+                <small class="form-help">Unique system identifier (no spaces).</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Standard Name</label>
+                <input type="text" class="form-input" id="add-baseline-name" placeholder="e.g. Pool Maintenance" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Category</label>
+                <select class="form-input" id="add-baseline-category" required>
+                  <option value="Water">Water</option>
+                  <option value="Energy">Energy</option>
+                  <option value="Food & Beverage">Food & Beverage</option>
+                  <option value="Facilities">Facilities</option>
+                </select>
+              </div>
+              <div class="form-group" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label class="form-label">Value</label>
+                  <input type="number" step="any" min="0.01" class="form-input" id="add-baseline-val" placeholder="0.00" required />
+                </div>
+                <div style="flex: 1;">
+                  <label class="form-label">Unit</label>
+                  <input type="text" class="form-input" id="add-baseline-unit" placeholder="e.g. L, kWh, kg" required />
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-add">Cancel</button>
+                <button type="submit" class="btn btn-sm btn-primary">Add Baseline</button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -116,7 +167,7 @@ export class Module1Baselines {
               </div>
               <div class="form-group">
                 <label class="form-label">New Baseline Value</label>
-                <input type="number" step="0.01" min="0.01" class="form-input" id="modal-baseline-val" placeholder="Enter numeric value..." required />
+                <input type="number" step="any" min="0.01" class="form-input" id="modal-baseline-val" placeholder="Enter numeric value..." required />
                 <small class="form-help">Must be a positive numeric value.</small>
               </div>
               <div class="form-group">
@@ -172,11 +223,11 @@ export class Module1Baselines {
         const reason = this.container.querySelector('#modal-baseline-reason').value;
 
         if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
-          alert('Baseline value must be a positive numeric number.');
+          window.showGlobalToast('Baseline value must be a positive numeric number.', 'error');
           return;
         }
         if (!date) {
-          alert('Effective date is required.');
+          window.showGlobalToast('Effective date is required.', 'error');
           return;
         }
 
@@ -185,9 +236,77 @@ export class Module1Baselines {
           modal.style.display = 'none';
           window.showGlobalToast?.('Operational baseline updated and audit record created.', 'success');
         } else {
-          alert('Baseline update was not saved. No changes were made.');
+          window.showGlobalToast('Baseline update was not saved. No changes were made.', 'error');
         }
       };
     }
+
+    // --- ADD MODAL LOGIC ---
+    const addModal = this.container.querySelector('#baseline-add-modal');
+    const btnOpenAdd = this.container.querySelector('#btn-open-add-baseline-modal');
+    const btnCloseAdd = this.container.querySelector('#btn-close-add-modal');
+    const btnCancelAdd = this.container.querySelector('#btn-cancel-add');
+    const formAdd = this.container.querySelector('#form-add-baseline');
+
+    if (btnOpenAdd) btnOpenAdd.onclick = () => { addModal.style.display = 'flex'; };
+    if (btnCloseAdd) btnCloseAdd.onclick = () => { addModal.style.display = 'none'; };
+    if (btnCancelAdd) btnCancelAdd.onclick = () => { addModal.style.display = 'none'; };
+
+    if (formAdd) {
+      formAdd.onsubmit = (e) => {
+        e.preventDefault();
+        const key = this.container.querySelector('#add-baseline-key').value.trim();
+        const name = this.container.querySelector('#add-baseline-name').value.trim();
+        const category = this.container.querySelector('#add-baseline-category').value;
+        const val = this.container.querySelector('#add-baseline-val').value;
+        const unit = this.container.querySelector('#add-baseline-unit').value.trim();
+
+        // Validation
+        if (!key || key.includes(' ')) {
+          window.showGlobalToast('Key must be provided and cannot contain spaces.', 'error');
+          return;
+        }
+        
+        const existingBaselines = db.getBaselines();
+        if (existingBaselines.some(b => b.key === key)) {
+          window.showGlobalToast('A baseline with this key already exists.', 'error');
+          return;
+        }
+
+        if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
+          window.showGlobalToast('Baseline value must be a positive numeric number.', 'error');
+          return;
+        }
+
+        db.addBaseline({
+          key,
+          name,
+          category,
+          value: parseFloat(val),
+          unit,
+          updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          updatedBy: db.getSystem()?.activeUser?.name || 'System'
+        });
+
+        addModal.style.display = 'none';
+        window.showGlobalToast('New baseline added successfully.', 'success');
+        this.render();
+      };
+    }
+
+    // --- DELETE LOGIC ---
+    this.container.querySelectorAll('.btn-delete-baseline').forEach(btn => {
+      btn.onclick = () => {
+        if (confirm('Are you sure you want to completely delete this operational baseline? This may affect compliance calculations.')) {
+          const success = db.deleteBaseline(btn.dataset.id);
+          if (success) {
+            window.showGlobalToast('Baseline deleted successfully.', 'success');
+            this.render();
+          } else {
+            window.showGlobalToast('Failed to delete baseline.', 'error');
+          }
+        }
+      };
+    });
   }
 }

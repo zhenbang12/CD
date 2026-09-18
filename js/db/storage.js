@@ -60,7 +60,7 @@ class StorageEngine {
     }
 
     // Force sync new items from INITIAL_DATA without overwriting existing data (Idempotent)
-    const mergeArrays = ['users', 'utilityMeters', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'baselines', 'complianceLogs'];
+    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'complianceLogs'];
     mergeArrays.forEach(key => {
       if (INITIAL_DATA[key]) {
         if (!this.data[key]) this.data[key] = [];
@@ -77,15 +77,105 @@ class StorageEngine {
       }
     });
 
+    // utilityMeters & baselines are seed-config-defined collections — their
+    // zone list, meter definitions, and baseline catalog live in code
+    // (initialData.js), not created by users at runtime. Unlike the additive
+    // merge above, fully reconcile these two against INITIAL_DATA on every
+    // load: this picks up zones added or removed in code (in the correct
+    // order) instead of only ever appending, while still preserving any
+    // value a person actually changed at runtime —
+    //   - utilityMeters: keep the live lastReading / lastReadingTime /
+    //     status / baselineDaily (baselineDaily may have been pushed here by
+    //     updateBaseline() below); zone, type, departmentId, icon always
+    //     follow the current seed definition.
+    //   - baselines: keep the live value / updatedBy / updatedAt if a person
+    //     used "Update Operational Baseline"; everything else follows the
+    //     current seed.
+    if (INITIAL_DATA.utilityMeters) {
+      const existingMeters = new Map((this.data.utilityMeters || []).map(m => [m.meterId, m]));
+      this.data.utilityMeters = INITIAL_DATA.utilityMeters.map(seedMeter => {
+        const existing = existingMeters.get(seedMeter.meterId);
+        if (!existing) return JSON.parse(JSON.stringify(seedMeter));
+        return {
+          ...seedMeter,
+          baselineDaily: existing.baselineDaily,
+          lastReading: existing.lastReading,
+          lastReadingTime: existing.lastReadingTime,
+          status: existing.status
+        };
+      });
+    }
+
+    if (INITIAL_DATA.baselines) {
+      // Match by the stable "key" (e.g. "floor1_water"), NOT "id" (BL-01...).
+      // "id" is just positional ordering and is expected to shift whenever a
+      // baseline is reordered, renamed, added, or removed in the seed — e.g.
+      // when the Operational Resource Baselines list is re-sequenced to match
+      // the Log Zone Meter Reading order. If reconciliation matched by "id"
+      // instead, a value cached under an old "id" could resurface attached to
+      // a completely different zone/resource after the seed changes, which
+      // silently produces a baseline value that no longer matches its meter's
+      // baselineDaily (i.e. Operational Baselines drifting out of sync with
+      // Log Zone Meter Reading). "key" is the semantically stable identifier
+      // for a given zone+resource pairing, so matching on it keeps a person's
+      // real edit attached to the correct baseline, and correctly treats a
+      // renamed/retired key (e.g. old "facilities_workshop_water") as gone
+      // rather than bleeding its stale value into whatever baseline now
+      // happens to occupy that old id slot.
+      const existingBaselines = new Map((this.data.baselines || []).map(b => [b.key, b]));
+      this.data.baselines = INITIAL_DATA.baselines.map(seedBaseline => {
+        const existing = existingBaselines.get(seedBaseline.key);
+        if (!existing) return JSON.parse(JSON.stringify(seedBaseline));
+        return {
+          ...seedBaseline,
+          value: existing.value,
+          updatedBy: existing.updatedBy,
+          updatedAt: existing.updatedAt
+        };
+      });
+    }
+
+    // Reconcile technician availability/workload against the actual repair
+    // tickets on every load. This is a deliberate recompute-from-source-of-truth
+    // step: technicians[].status / activeTickets are a derived cache, and if a
+    // browser's saved localStorage snapshot ever drifted out of sync with
+    // repairTickets (e.g. from an older build), this guarantees the two are
+    // always consistent again the moment the app loads, without needing a
+    // manual data reset.
+    this.syncTechnicianStatuses();
+
     this.saveDatabase();
+  }
+
+  // Recomputes each technician's status/activeTickets directly from the
+  // current repairTickets list, so the "Maintenance Technicians Workload"
+  // panel can never show a technician as Busy/Available in a way that
+  // contradicts who a ticket is actually assignedTechnician to.
+  syncTechnicianStatuses() {
+    const technicians = this.data.technicians || [];
+    const tickets = this.data.repairTickets || [];
+
+    technicians.forEach(tech => {
+      const activeAssigned = tickets.filter(
+        t => t.assignedTechnician === tech.name && t.status !== 'Completed'
+      );
+      tech.activeTickets = activeAssigned.length;
+      tech.status = activeAssigned.length > 0
+        ? `Busy (${activeAssigned[0].zone})`
+        : 'Available';
+    });
   }
 
   // Persist current state
   saveDatabase(dataToSave = this.data) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      this.lastDatabaseError = null;
+      return true;
     } catch (e) {
       console.error('LocalStorage save error', e);
+      this.lastDatabaseError = e;
+      return false;
     }
   }
 
@@ -489,18 +579,83 @@ class StorageEngine {
   }
 
   // --- MODULE 1: Baselines & Audit Logs ---
-  getBaselines() {
+    getBaselines() {
     return this.data.baselines;
   }
 
-  updateBaseline(id, newValue, effectiveDate, reason = 'Operational adjustment') {
+  addBaseline(baselineObj) {
+    // Generate a unique ID
+    baselineObj.id = `BASE-${Date.now().toString().slice(-4)}`;
+    this.data.baselines.push(baselineObj);
+    
+    this.recordAuditLog({
+      action: 'ADD_OPERATIONAL_BASELINE',
+      targetKey: baselineObj.key,
+      previousValue: 'N/A',
+      newValue: `${baselineObj.value} ${baselineObj.unit}`,
+      reason: 'New baseline configured'
+    });
+    
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return { success: true, id: baselineObj.id };
+  }
+
+  deleteBaseline(id) {
+    const index = this.data.baselines.findIndex(b => b.id === id);
+    if (index === -1) return false;
+    
+    const item = this.data.baselines[index];
+    this.data.baselines.splice(index, 1);
+    
+    this.recordAuditLog({
+      action: 'DELETE_OPERATIONAL_BASELINE',
+      targetKey: item.key,
+      previousValue: `${item.value} ${item.unit}`,
+      newValue: 'DELETED',
+      reason: 'Baseline removed from system'
+    });
+    
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return true;
+  }
+
+  updateBaseline(id, newValue, reason = 'Operational adjustment') {
     const item = this.data.baselines.find(b => b.id === id);
-    if (!item) return false;
+    if (!item) return { success: false, error: 'Baseline not found.' };
+
+    const parsedValue = parseFloat(newValue);
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      return { success: false, error: 'Baseline value must be a positive number.' };
+    }
 
     const previousValue = `${item.value} ${item.unit}`;
-    item.value = parseFloat(newValue);
+    item.value = parsedValue;
     item.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
     item.updatedBy = this.data.system.activeUser.name;
+    if (effectiveDate) {
+      item.effectiveDate = effectiveDate;
+    }
+
+    // Write through to the linked physical zone meter (if any) so the
+    // Operational Resource Baselines table and the Zone Telemetry board
+    // never disagree about a zone's baseline — they are the same value.
+    let linkedMeter = null;
+    if (item.meterId) {
+      linkedMeter = this.data.utilityMeters.find(m => m.meterId === item.meterId);
+      if (linkedMeter) {
+        linkedMeter.baselineDaily = parsedValue;
+        const hasReading = typeof linkedMeter.lastReading === 'number';
+        const isAnomaly = hasReading && linkedMeter.lastReading > linkedMeter.baselineDaily;
+        if (isAnomaly) {
+          const dev = ((linkedMeter.lastReading - linkedMeter.baselineDaily) / linkedMeter.baselineDaily) * 100;
+          linkedMeter.status = `Anomaly Flagged (+${dev.toFixed(1)}%)`;
+        } else if (hasReading) {
+          linkedMeter.status = 'Normal';
+        }
+      }
+    }
 
     // Record Immutable Audit Log
     this.recordAuditLog({
@@ -508,84 +663,29 @@ class StorageEngine {
       targetKey: item.key,
       previousValue: previousValue,
       newValue: `${item.value} ${item.unit}`,
-      effectiveDate: effectiveDate,
-      reason: reason
+      reason: effectiveDate ? `${reason} (Effective ${effectiveDate})` : reason
     });
 
     this.saveDatabase();
     this.notify('baselines', this.data.baselines);
-    return true;
+    if (linkedMeter) {
+      this.notify('utilityMeters', this.data.utilityMeters);
+    }
+    return { success: true, baseline: item };
   }
 
-  addBaseline(baselineData) {
-    if (!this.data.baselines) this.data.baselines = [];
-    
-    // Auto-generate ID if missing
-    const newId = baselineData.id || `BL-${Date.now().toString().slice(-4)}`;
-    
-    const newBaseline = {
-      ...baselineData,
-      id: newId,
-      updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      updatedBy: this.data.system.activeUser?.name || 'System'
-    };
-    
-    this.data.baselines.push(newBaseline);
-    
-    // Record Immutable Audit Log
-    this.recordAuditLog({
-      action: 'ADD_OPERATIONAL_BASELINE',
-      targetKey: newBaseline.key,
-      previousValue: 'N/A',
-      newValue: `${newBaseline.value} ${newBaseline.unit}`,
-      effectiveDate: newBaseline.updatedAt.split(' ')[0],
-      reason: baselineData.reason || 'New baseline created'
-    });
-
-    this.saveDatabase();
-    this.notify('baselines', this.data.baselines);
-    return true;
-  }
-
-  deleteBaseline(id, reason = 'Operational adjustment') {
-    if (!this.data.baselines) return false;
-    const itemIndex = this.data.baselines.findIndex(b => b.id === id);
-    if (itemIndex === -1) return false;
-
-    const item = this.data.baselines[itemIndex];
-    this.data.baselines.splice(itemIndex, 1);
-
-    // Record Immutable Audit Log
-    this.recordAuditLog({
-      action: 'DELETE_OPERATIONAL_BASELINE',
-      targetKey: item.key,
-      previousValue: `${item.value} ${item.unit}`,
-      newValue: 'DELETED',
-      effectiveDate: new Date().toISOString().split('T')[0],
-      reason: reason
-    });
-
-    this.saveDatabase();
-    this.notify('baselines', this.data.baselines);
-    return true;
-  }
-
-  recordAuditLog(log) {
-    if (!this.data.auditLogs) this.data.auditLogs = [];
-    
-    // Auto-generate a transaction ref if not provided (e.g. TXN-12345A)
-    const randomChar = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    const txn = log.transactionRef || `TXN-${randomNum}${randomChar}`;
-
-    const user = this.data.system.activeUser || {};
+  recordAuditLog({ action, targetKey, previousValue, newValue, reason }) {
+    const user = this.data.system.activeUser;
     const newLog = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
-      transactionRef: txn,
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
       userId: user.id || 'USR-ANON',
       userName: user.name || 'System User',
-      ...log
+      action,
+      targetKey,
+      previousValue,
+      newValue,
+      reason
     };
     this.data.auditLogs.unshift(newLog);
     this.saveDatabase();
@@ -784,7 +884,58 @@ class StorageEngine {
     return true;
   }
 
-  // --- MODULE 5: Utility Meters, Anomalies & Repair Tickets ---
+  // --- MODULE 5: Defect Category Catalog (Web-managed only) ---
+  addDefectCategory({ label, resourceType, hint }) {
+    if (!label || !label.trim()) return null;
+    if (!this.data.defectCategories) this.data.defectCategories = [];
+
+    const trimmedLabel = label.trim();
+    const existing = this.data.defectCategories.find(c => c.label.toLowerCase() === trimmedLabel.toLowerCase());
+    if (existing) return existing;
+
+    const slug = trimmedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const newCategory = {
+      id: `cat-${slug || 'custom'}-${Date.now().toString().slice(-4)}`,
+      label: trimmedLabel,
+      resourceType: resourceType || 'Water',
+      hint: hint ? hint.trim() : '',
+      custom: true
+    };
+
+    this.data.defectCategories.push(newCategory);
+    this.saveDatabase();
+    this.notify('defectCategories', this.data.defectCategories);
+    return newCategory;
+  }
+
+  removeDefectCategory(categoryId) {
+    const idx = this.data.defectCategories.findIndex(c => c.id === categoryId);
+    if (idx === -1) return false;
+    // Default seed categories are protected from deletion
+    if (!this.data.defectCategories[idx].custom) return false;
+    this.data.defectCategories.splice(idx, 1);
+    this.saveDatabase();
+    this.notify('defectCategories', this.data.defectCategories);
+    return true;
+  }
+
+  // --- MODULE 5: Ticket Number Sequence Generator (format: TK-YYYY-MM-DD-001) ---
+  generateTicketNumber() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!this.data.ticketSequence || this.data.ticketSequence.date !== todayStr) {
+      this.data.ticketSequence = { date: todayStr, count: 0 };
+    }
+    this.data.ticketSequence.count += 1;
+    const seq = String(this.data.ticketSequence.count).padStart(3, '0');
+    return `TK-${todayStr}-${seq}`;
+  }
+
+  // --- MODULE 5: Utility Meters & Anomaly Flagging ---
+  // NOTE: A meter reading that exceeds baseline only flags the zone as an
+  // Anomaly on the telemetry board — it no longer auto-dispatches a repair
+  // ticket. Repair tickets are only created from an explicit
+  // "Report Facility Defect" submission (see reportFacilityDefect below),
+  // so staff decide whether a flagged anomaly actually needs a work order.
   logZoneMeterReading(meterId, currentReading) {
     const meter = this.data.utilityMeters.find(m => m.meterId === meterId);
     if (!meter) return null;
@@ -794,71 +945,45 @@ class StorageEngine {
     meter.lastReadingTime = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
     const deviationPct = ((readingVal - meter.baselineDaily) / meter.baselineDaily) * 100;
-    const isAnomaly = deviationPct >= 15.0;
+    // Any reading strictly above baseline is an Anomaly — no minimum spike % required.
+    const isAnomaly = readingVal > meter.baselineDaily;
 
-    let newTicket = null;
     if (isAnomaly) {
       meter.status = `Anomaly Flagged (+${deviationPct.toFixed(1)}%)`;
-
-      // Estimate Resource Loss
-      const lossVolume = Math.round(readingVal - meter.baselineDaily);
-      const lossUnit = meter.type === 'Water' ? 'Liters/day' : 'kWh/day';
-
-      // Auto-generate High Priority Repair Ticket
-      const assignedTech = this.getAvailableTechnician();
-      newTicket = {
-        id: `TCK-${Date.now().toString().slice(-4)}`,
-        ticketNumber: `TK-${new Date().toISOString().split('T')[0]}-${Math.floor(10 + Math.random() * 90)}`,
-        source: 'Automated Utility Anomaly Engine',
-        zone: meter.zone,
-        defectCategory: `${meter.type} Surge Leak / Anomaly`,
-        description: `Meter ${meter.meterId} exceeded baseline by ${deviationPct.toFixed(1)}% (${readingVal} vs ${meter.baselineDaily} ${meter.unit}).`,
-        severity: 'High',
-        estimatedLossRate: `${lossVolume} ${lossUnit}`,
-        estimatedDailyLossNum: lossVolume,
-        resourceType: meter.type,
-        priority: 'High',
-        queuePosition: this.data.repairTickets.filter(t => t.status !== 'Completed').length + 1,
-        assignedTechnician: assignedTech ? assignedTech.name : 'Waiting (Queue Position 1)',
-        status: assignedTech ? 'Assigned' : 'Waiting',
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        notes: 'Automatically dispatched via Module 5 Anomaly Detection Logic.'
-      };
-
-      if (assignedTech) {
-        assignedTech.activeTickets += 1;
-        assignedTech.status = `Busy (${meter.zone})`;
-      }
-
-      this.data.repairTickets.unshift(newTicket);
-      this.notify('repairTickets', this.data.repairTickets);
-      this.notify('technicians', this.data.technicians);
     } else {
       meter.status = 'Normal';
     }
 
     this.saveDatabase();
     this.notify('utilityMeters', this.data.utilityMeters);
-    return { meter, isAnomaly, deviationPct, newTicket };
+    return { meter, isAnomaly, deviationPct, newTicket: null };
   }
 
-  reportFacilityDefect({ roomOrZone, category, description, severity, resourceType, photoAttached }) {
+  reportFacilityDefect({ roomOrZone, category, description, severity, resourceType, photoDataUrl }) {
     // Calculate estimated loss volume based on category
     let estimatedDailyLossNum = 0;
     let estimatedLossRate = '0 / day';
+    const lc = category.toLowerCase();
 
-    if (category.toLowerCase().includes('toilet') || category.toLowerCase().includes('flush')) {
+    if (lc.includes('toilet') || lc.includes('flush') || lc.includes('cistern')) {
       estimatedDailyLossNum = severity === 'High' ? 320 : 180;
       estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
-    } else if (category.toLowerCase().includes('faucet') || category.toLowerCase().includes('tap') || category.toLowerCase().includes('pipe')) {
+    } else if (lc.includes('faucet') || lc.includes('tap') || lc.includes('pipe') || lc.includes('basin')) {
       estimatedDailyLossNum = severity === 'High' ? 120 : 45;
       estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
-    } else if (category.toLowerCase().includes('hvac') || category.toLowerCase().includes('aircon') || category.toLowerCase().includes('chiller')) {
+    } else if (lc.includes('shower') || lc.includes('valve')) {
+      estimatedDailyLossNum = severity === 'High' ? 120 : 55;
+      estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
+    } else if (lc.includes('hvac') || lc.includes('aircon') || lc.includes('chiller') || lc.includes('thermostat')) {
+      estimatedDailyLossNum = severity === 'High' ? 35 : 18;
+      estimatedLossRate = `${estimatedDailyLossNum} kWh / day`;
+    } else if (lc.includes('cold room') || lc.includes('gasket') || lc.includes('compressor') || lc.includes('freezer')) {
       estimatedDailyLossNum = severity === 'High' ? 35 : 18;
       estimatedLossRate = `${estimatedDailyLossNum} kWh / day`;
     } else {
-      estimatedDailyLossNum = 15;
-      estimatedLossRate = `${estimatedDailyLossNum} units / day`;
+      // Generic / custom category fallback, keyed off the selected resource type
+      estimatedDailyLossNum = severity === 'High' ? 40 : 15;
+      estimatedLossRate = resourceType === 'Electricity' ? `${estimatedDailyLossNum} kWh / day` : `${estimatedDailyLossNum} Liters / day`;
     }
 
     const priority = severity === 'High' || estimatedDailyLossNum >= 100 ? 'High' : 'Normal';
@@ -866,8 +991,7 @@ class StorageEngine {
 
     const newTicket = {
       id: `TCK-${Date.now().toString().slice(-4)}`,
-      ticketNumber: `TK-${new Date().toISOString().split('T')[0]}-${Math.floor(10 + Math.random() * 90)}`,
-      source: 'Housekeeping Turnover Defect Report',
+      ticketNumber: this.generateTicketNumber(),
       zone: roomOrZone,
       defectCategory: category,
       description: description,
@@ -880,16 +1004,13 @@ class StorageEngine {
       assignedTechnician: assignedTech ? assignedTech.name : 'Waiting (Queue Position 1)',
       status: assignedTech ? 'Assigned' : 'Waiting',
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      photoAttached: !!photoAttached,
+      photoAttached: !!photoDataUrl,
+      photoDataUrl: photoDataUrl || null,
       notes: 'Reported by Housekeeping ground team during room inspection.'
     };
 
-    if (assignedTech) {
-      assignedTech.activeTickets += 1;
-      assignedTech.status = `Busy (${roomOrZone})`;
-    }
-
     this.data.repairTickets.unshift(newTicket);
+    this.syncTechnicianStatuses();
     this.saveDatabase();
     this.notify('repairTickets', this.data.repairTickets);
     this.notify('technicians', this.data.technicians);
@@ -911,15 +1032,9 @@ class StorageEngine {
 
     if (newStatus === 'Completed') {
       ticket.completedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
-      const tech = this.data.technicians.find(t => t.name === ticket.assignedTechnician);
-      if (tech) {
-        tech.activeTickets = Math.max(0, tech.activeTickets - 1);
-        if (tech.activeTickets === 0) {
-          tech.status = 'Available';
-        }
-      }
     }
 
+    this.syncTechnicianStatuses();
     this.saveDatabase();
     this.notify('repairTickets', this.data.repairTickets);
     this.notify('technicians', this.data.technicians);
@@ -927,4 +1042,7 @@ class StorageEngine {
   }
 }
 
-export const db = new StorageEngine();
+if (!window.__ECO_DB_INSTANCE__) {
+  window.__ECO_DB_INSTANCE__ = new StorageEngine();
+}
+export const db = window.__ECO_DB_INSTANCE__;

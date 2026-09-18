@@ -15,37 +15,49 @@ export class ComplianceEngine {
    * - Unresolved High-Priority Defect Penalty (10% weight)
    */
   static calculateLiveScore(reportingPeriod = 'all', scope = 'all') {
-    const baselines = db.getBaselines();
+    const baselinesList = db.getBaselines();
     const rooms = db.get('rooms');
     const utilityMeters = db.get('utilityMeters');
     const plateWaste = db.get('plateWasteLogs');
     const foodWaste = db.get('foodWasteLogs');
     const repairTickets = db.get('repairTickets');
 
-    // 1. Water Score Calculation
+    // Helper to extract baseline values dynamically
+    function getBaselineValue(key, fallback) {
+      const b = baselinesList.find(x => x.id === key);
+      return b ? b.value : fallback;
+    }
+
+    // Dynamic Occupancy
+    const occupiedRooms = rooms.filter(r => r.status === 'occupied').length || 150;
+    const estimatedCovers = occupiedRooms * 2.5; // Average 2.5 dining covers per occupied room
+
+    // 1. Water Score Calculation (Dynamic Baselines)
     const waterMeters = utilityMeters.filter(m => m.type === 'Water' && m.lastReading !== undefined);
-    let totalWaterBaseline = 0;
+    const targetRoomWater = getBaselineValue('water_per_room', 350); // Liters per room
+    const totalWaterBaseline = occupiedRooms * targetRoomWater;
+    
     let totalWaterActual = 0;
     waterMeters.forEach(m => {
-      totalWaterBaseline += m.baselineDaily;
       totalWaterActual += m.lastReading;
     });
 
-    // 2. Electricity Score Calculation
+    // 2. Electricity Score Calculation (Dynamic Baselines)
     const eleMeters = utilityMeters.filter(m => m.type === 'Electricity' && m.lastReading !== undefined);
-    let totalEleBaseline = 0;
+    const targetRoomEnergy = getBaselineValue('power_per_room', 45); // kWh per room
+    const totalEleBaseline = occupiedRooms * targetRoomEnergy;
+    
     let totalEleActual = 0;
     eleMeters.forEach(m => {
-      totalEleBaseline += m.baselineDaily;
       totalEleActual += m.lastReading;
     });
 
-    // 3. F&B Waste Score
+    // 3. F&B Waste Score (Dynamic Baselines)
     const totalFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || 0), 0) +
       plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
 
-    // Baseline: 45kg max daily allowable waste across 300+ guests
-    const foodBaselineDaily = 45;
+    const foodWastePerCoverLimit = getBaselineValue('buffet_food_waste', 0.15); // kg per cover
+    const foodBaselineDaily = estimatedCovers * foodWastePerCoverLimit;
 
     // UC_106 A2: No usable data for a required metric
     const hasWaterData = waterMeters.length > 0;
@@ -71,7 +83,8 @@ export class ComplianceEngine {
     const eleEfficiency = totalEleBaseline > 0 ? (totalEleBaseline / totalEleActual) : 1.0;
     let eleScore = Math.min(100, Math.max(35, eleEfficiency * 85));
 
-    const foodScore = Math.min(100, Math.max(45, 100 - (totalFoodWasteKg * 0.6)));
+    const foodEfficiency = foodBaselineDaily > 0 ? (foodBaselineDaily / (totalFoodWasteKg || 1)) : 1.0;
+    const foodScore = Math.min(100, Math.max(35, foodEfficiency * 90));
 
     // 4. Maintenance / Unresolved Ticket Penalty
     const activeHighTickets = repairTickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length;

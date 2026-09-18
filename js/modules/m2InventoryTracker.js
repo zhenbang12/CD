@@ -482,25 +482,38 @@ export class Module2Inventory {
     if (cancelStockBtn) cancelStockBtn.onclick = () => { stockModal.style.display = 'none'; };
 
     if (stockForm) {
-      stockForm.onsubmit = (e) => {
-        e.preventDefault();
-        const newItem = {
-          name: this.container.querySelector('#stock-name').value,
-          category: this.container.querySelector('#stock-category').value,
-          quantity: this.container.querySelector('#stock-qty').value,
-          unit: this.container.querySelector('#stock-unit').value,
-          batchNumber: this.container.querySelector('#stock-batch').value,
-          storageLocation: this.container.querySelector('#stock-location').value,
-          deliveryDate: this.container.querySelector('#stock-delivery-date').value,
-          expiryDate: this.container.querySelector('#stock-expiry-date').value,
-          costPerKg: 16.00
-        };
+  stockForm.onsubmit = (e) => {
+    e.preventDefault();
 
-        db.addInventoryItem(newItem);
-        stockModal.style.display = 'none';
-        window.showGlobalToast?.(`Stock "${newItem.name}" saved!`, 'success');
-      };
+    // Validate that the expiry date is not earlier than the delivery date
+    const deliveryDate = this.container.querySelector('#stock-delivery-date').value;
+    const expiryDate = this.container.querySelector('#stock-expiry-date').value;
+
+    if (new Date(expiryDate) < new Date(deliveryDate)) {
+      window.showGlobalToast?.(
+        'Expiry date cannot be earlier than the delivery date.',
+        'error'
+      );
+      return;
     }
+
+    const newItem = {
+      name: this.container.querySelector('#stock-name').value,
+      category: this.container.querySelector('#stock-category').value,
+      quantity: this.container.querySelector('#stock-qty').value,
+      unit: this.container.querySelector('#stock-unit').value,
+      batchNumber: this.container.querySelector('#stock-batch').value,
+      storageLocation: this.container.querySelector('#stock-location').value,
+      deliveryDate: deliveryDate,
+      expiryDate: expiryDate,
+      costPerKg: 16.00
+    };
+
+    db.addInventoryItem(newItem);
+    stockModal.style.display = 'none';
+    window.showGlobalToast?.(`Stock "${newItem.name}" saved!`, 'success');
+  };
+}
 
     // Waste Modal Handlers
     const wasteModal = this.container.querySelector('#waste-modal');

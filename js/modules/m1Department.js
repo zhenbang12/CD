@@ -186,13 +186,13 @@ export class Module1Department {
     const compliance = ComplianceEngine.calculateLiveScore();
     
     if (!compliance.dataComplete) {
-      alert("PDF export failed. Please try again later. Data incomplete. A compliance grade cannot be calculated.");
+      window.showGlobalToast('PDF export failed. Please try again later. Data incomplete. A compliance grade cannot be calculated.', 'error');
       return;
     }
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
-      alert("PDF export failed. Please try again later.");
+      window.showGlobalToast('PDF export failed. Please try again later.', 'error');
       return;
     }
     
