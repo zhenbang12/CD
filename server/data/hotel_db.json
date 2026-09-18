@@ -894,12 +894,12 @@
       "type": "Deluxe Ocean Suite",
       "guestName": "Tan Sri Jeffrey Cheah",
       "status": "Occupied",
-      "servicePreference": "OPT_OUT_CLEANING",
+      "servicePreference": "STANDARD",
       "optOutDays": 0,
       "linenDelayDays": 0,
-      "towelReuse": true,
-      "cleaningStatus": "Skipped (Opt-Out)",
-      "ecoPointsEarned": 30,
+      "towelReuse": false,
+      "cleaningStatus": "Active Clean List",
+      "ecoPointsEarned": 0,
       "qrToken": "RM101-SEC-771"
     },
     {
@@ -922,11 +922,11 @@
       "type": "Deluxe Garden View",
       "guestName": "Kenji Sato",
       "status": "Occupied",
-      "servicePreference": "OVERRIDDEN",
+      "servicePreference": "STANDARD",
       "optOutDays": 0,
       "linenDelayDays": 0,
       "towelReuse": true,
-      "cleaningStatus": "Active Clean List (Supervisor Override)",
+      "cleaningStatus": "Active Clean List",
       "ecoPointsEarned": 5,
       "qrToken": "RM103-SEC-554"
     },
@@ -1022,10 +1022,10 @@
       "status": "Occupied",
       "servicePreference": "OPT_OUT_CLEANING",
       "optOutDays": 1,
-      "linenDelayDays": 0,
+      "linenDelayDays": 2,
       "towelReuse": true,
       "cleaningStatus": "Skipped (Opt-Out)",
-      "ecoPointsEarned": 30,
+      "ecoPointsEarned": 25,
       "qrToken": "RM304-SEC-426"
     }
   ],
