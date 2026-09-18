@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'models/models.dart';
 import 'services/hotel_database.dart';
@@ -1243,7 +1244,31 @@ class FacilitiesScreen extends StatelessWidget {
         const SizedBox(height: 14),
 
         // Repair Tickets
-        const Text('DISPATCHED REPAIR WORK ORDERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('DISPATCHED REPAIR WORK ORDERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+            if (db.repairTickets.isNotEmpty)
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: const Color(0xFFE11D48), padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete all tickets?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                      content: Text('This will delete all ${db.repairTickets.length} repair ticket(s). This cannot be undone.', style: const TextStyle(fontSize: 12)),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete All', style: TextStyle(color: Color(0xFFE11D48)))),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) db.clearAllRepairTickets();
+                },
+                child: const Text('Clear All Tickets', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
         const SizedBox(height: 6),
         ...db.repairTickets.map((ticket) {
           final isCompleted = ticket.status == 'Completed';
@@ -1414,6 +1439,7 @@ class FacilitiesScreen extends StatelessWidget {
 
   void _showMeterReadingDialog(BuildContext context, {String? initialMeterId}) {
     final readingCtrl = TextEditingController();
+    final meterFormKey = GlobalKey<FormState>();
     String meterId = initialMeterId ?? db.utilityMeters.first.meterId;
 
     showDialog(
@@ -1421,38 +1447,59 @@ class FacilitiesScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Log Physical Sub-Meter', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                isExpanded: true,
-                value: meterId,
-                items: db.utilityMeters.map((m) => DropdownMenuItem(value: m.meterId, child: Text('${m.meterId} - ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})', style: const TextStyle(fontSize: 12)))).toList(),
-                onChanged: (val) => setDialogState(() => meterId = val!),
-              ),
-              const SizedBox(height: 8),
-              TextField(controller: readingCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading Value')),
-              const SizedBox(height: 4),
-              Text(
-                'If reading exceeds baseline (by any amount), the zone is immediately flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-              ),
-            ],
+          content: Form(
+            key: meterFormKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<String>(
+                  isExpanded: true,
+                  value: meterId,
+                  items: db.utilityMeters.map((m) => DropdownMenuItem(value: m.meterId, child: Text('${m.meterId} - ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})', style: const TextStyle(fontSize: 12)))).toList(),
+                  onChanged: (val) => setDialogState(() => meterId = val!),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: readingCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  // Only digits and a single decimal point can be typed —
+                  // blocks letters, spaces, and special characters outright.
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                  decoration: const InputDecoration(labelText: 'Meter Reading Value'),
+                  validator: (value) {
+                    final v = value?.trim() ?? '';
+                    if (v.isEmpty) {
+                      return 'Meter reading is required';
+                    }
+                    final r = double.tryParse(v);
+                    if (r == null || r <= 0) {
+                      return 'Enter a valid positive number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'If reading exceeds baseline (by any amount), the zone is immediately flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
               onPressed: () {
-                final r = double.tryParse(readingCtrl.text);
-                if (r != null && r > 0) {
-                  final isAnomaly = db.logMeterReading(meterId, r);
-                  Navigator.pop(ctx);
-                  if (isAnomaly) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (exceeds baseline)! Report a Facility Defect if it needs a repair ticket.')));
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reading logged within normal baseline.')));
-                  }
+                if (!meterFormKey.currentState!.validate()) return;
+                final r = double.parse(readingCtrl.text.trim());
+                final isAnomaly = db.logMeterReading(meterId, r);
+                Navigator.pop(ctx);
+                if (isAnomaly) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (exceeds baseline)! Report a Facility Defect if it needs a repair ticket.')));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reading logged within normal baseline.')));
                 }
               },
               child: const Text('Submit'),
@@ -1466,6 +1513,21 @@ class FacilitiesScreen extends StatelessWidget {
   void _showReportDefectDialog(BuildContext context) {
     final zoneCtrl = TextEditingController(text: 'Room 201');
     final descCtrl = TextEditingController();
+    // Valid "Affected Room / Zone" values are either a guest room in the
+    // 101-110, 201-210, or 301-310 ranges, OR one of the named facility
+    // zones that already exist on the Zone Utility Sub-Meters board (e.g.
+    // "Central Chiller Plant", "Main Culinary Kitchen"). Blanks and
+    // special characters are rejected by the validator below.
+    final validRoomPattern = RegExp(r'^Room (10[1-9]|110|20[1-9]|210|30[1-9]|310)$');
+    final knownFacilityZones = db.utilityMeters.map((m) => m.zone.trim().toLowerCase()).toSet();
+    bool isValidRoomOrZone(String value) {
+      final v = value.trim();
+      if (v.isEmpty) return false;
+      if (validRoomPattern.hasMatch(v)) return true;
+      if (!RegExp(r'^[A-Za-z0-9 &]+$').hasMatch(v)) return false;
+      return knownFacilityZones.contains(v.toLowerCase());
+    }
+    final defectFormKey = GlobalKey<FormState>();
     // Category list is sourced from the same catalog as the Web Admin Dashboard.
     // Ground staff can pick a category here, but new categories can only be
     // added from the web dashboard.
@@ -1480,101 +1542,136 @@ class FacilitiesScreen extends StatelessWidget {
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Report Facility Defect', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(controller: zoneCtrl, decoration: const InputDecoration(labelText: 'Affected Room / Zone')),
-                const SizedBox(height: 8),
-                const Text('Defect Category', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<DefectCategory>(
-                  isExpanded: true,
-                  value: selectedCategory,
-                  items: db.defectCategories.map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(
-                      c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
-                      style: const TextStyle(fontSize: 12),
+            child: Form(
+              key: defectFormKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: zoneCtrl,
+                    // Any character can be typed here — invalid characters
+                    // are caught by the validator below (on submit / as the
+                    // user interacts with the form) rather than being
+                    // silently blocked as keystrokes.
+                    inputFormatters: [LengthLimitingTextInputFormatter(40)],
+                    decoration: const InputDecoration(
+                      labelText: 'Affected Room / Zone',
+                      helperText: 'Room 101–110/201–210/301–310, or a named facility zone (e.g. "Central Chiller Plant")',
+                      helperMaxLines: 2,
                     ),
-                  )).toList(),
-                  onChanged: (val) => setDialogState(() {
-                    selectedCategory = val!;
-                    resourceType = selectedCategory.resourceType;
-                  }),
-                ),
-                const SizedBox(height: 4),
-                const SizedBox(height: 10),
-                const Text('Severity Level', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: severity,
-                  items: const [
-                    DropdownMenuItem(value: 'High', child: Text('High Severity (Continuous Rapid Loss)', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip/Noise)', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic/Slow)', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) => setDialogState(() => severity = val!),
-                ),
-                const SizedBox(height: 10),
-                const Text('Resource Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: resourceType,
-                  items: const [
-                    DropdownMenuItem(value: 'Water', child: Text('Water Resource', style: TextStyle(fontSize: 12))),
-                    DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource', style: TextStyle(fontSize: 12))),
-                  ],
-                  onChanged: (val) => setDialogState(() => resourceType = val!),
-                ),
-                const SizedBox(height: 8),
-                TextField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'Defect Description & Notes')),
-                const SizedBox(height: 10),
-                const Text('Photo Evidence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
-                const SizedBox(height: 4),
-                // Tap-to-attach pattern matching the Kitchen (M3) Plate Waste dialog:
-                // a single pill button that flips to a green "Verified" checkmark
-                // once a real photo has been picked & compressed, instead of an
-                // inline thumbnail preview.
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF18181B),
-                        side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFD4D4D8)),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Room / Zone is required';
+                      }
+                      if (!isValidRoomOrZone(value)) {
+                        return 'Must be Room 101–110/201–210/301–310, or a valid facility zone. No special characters allowed.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Defect Category', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
+                  DropdownButton<DefectCategory>(
+                    isExpanded: true,
+                    value: selectedCategory,
+                    items: db.defectCategories.map((c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(
+                        c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
+                        style: const TextStyle(fontSize: 12),
                       ),
-                      onPressed: () async {
-                        final picker = ImagePicker();
-                        // maxWidth/imageQuality downscale & compress the photo before
-                        // it's base64-encoded, so large camera photos don't bloat
-                        // the in-memory repair ticket data (mirrors the web
-                        // dashboard's canvas-based compression for the same field).
-                        final XFile? file = await picker.pickImage(
-                          source: ImageSource.gallery,
-                          maxWidth: 1000,
-                          imageQuality: 70,
-                        );
-                        if (file != null) {
-                          final bytes = await file.readAsBytes();
-                          final b64 = base64Encode(bytes);
-                          setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
-                        }
-                      },
-                      icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt, size: 14),
-                      label: Text(pickedPhotoDataUrl != null ? 'Photo Attached (Verified)' : 'Attach Photo Evidence', style: const TextStyle(fontSize: 11)),
-                    ),
-                    if (pickedPhotoDataUrl != null) ...[
-                      const SizedBox(width: 4),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.close, size: 16, color: Color(0xFF71717A)),
-                        tooltip: 'Remove photo',
-                        onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
-                      ),
+                    )).toList(),
+                    onChanged: (val) => setDialogState(() {
+                      selectedCategory = val!;
+                      resourceType = selectedCategory.resourceType;
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  const SizedBox(height: 10),
+                  const Text('Severity Level', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    value: severity,
+                    items: const [
+                      DropdownMenuItem(value: 'High', child: Text('High Severity (Continuous Rapid Loss)', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip/Noise)', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic/Slow)', style: TextStyle(fontSize: 12))),
                     ],
-                  ],
-                ),
-              ],
+                    onChanged: (val) => setDialogState(() => severity = val!),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text('Resource Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    value: resourceType,
+                    items: const [
+                      DropdownMenuItem(value: 'Water', child: Text('Water Resource', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource', style: TextStyle(fontSize: 12))),
+                    ],
+                    onChanged: (val) => setDialogState(() => resourceType = val!),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: 'Defect Description & Notes'),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Description is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  const Text('Photo Evidence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF71717A))),
+                  const SizedBox(height: 4),
+                  // Tap-to-attach pattern matching the Kitchen (M3) Plate Waste dialog:
+                  // a single pill button that flips to a green "Verified" checkmark
+                  // once a real photo has been picked & compressed, instead of an
+                  // inline thumbnail preview.
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF18181B),
+                          side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFD4D4D8)),
+                        ),
+                        onPressed: () async {
+                          final picker = ImagePicker();
+                          // maxWidth/imageQuality downscale & compress the photo before
+                          // it's base64-encoded, so large camera photos don't bloat
+                          // the in-memory repair ticket data (mirrors the web
+                          // dashboard's canvas-based compression for the same field).
+                          final XFile? file = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1000,
+                            imageQuality: 70,
+                          );
+                          if (file != null) {
+                            final bytes = await file.readAsBytes();
+                            final b64 = base64Encode(bytes);
+                            setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
+                          }
+                        },
+                        icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt, size: 14),
+                        label: Text(pickedPhotoDataUrl != null ? 'Photo Attached (Verified)' : 'Attach Photo Evidence', style: const TextStyle(fontSize: 11)),
+                      ),
+                      if (pickedPhotoDataUrl != null) ...[
+                        const SizedBox(width: 4),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close, size: 16, color: Color(0xFF71717A)),
+                          tooltip: 'Remove photo',
+                          onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -1582,8 +1679,11 @@ class FacilitiesScreen extends StatelessWidget {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE11D48), foregroundColor: Colors.white),
               onPressed: () {
-                if (zoneCtrl.text.isNotEmpty) {
-                  db.reportDefect(zoneCtrl.text, selectedCategory.label, severity, resourceType, descCtrl.text, photoDataUrl: pickedPhotoDataUrl);
+                // Runs both TextFormField validators above; blocks submission
+                // (and shows inline errors) until the zone is a valid room
+                // and the description is non-blank.
+                if (defectFormKey.currentState!.validate()) {
+                  db.reportDefect(zoneCtrl.text.trim(), selectedCategory.label, severity, resourceType, descCtrl.text.trim(), photoDataUrl: pickedPhotoDataUrl);
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Defect reported & ticket dispatched!')));
                 }
@@ -1808,40 +1908,18 @@ class ExecutiveScreen extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Environmental KPI Grid
-        Row(
-          children: [
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Food Saved', style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-                      Text('940 kg', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF059669))),
-                      Text('+18.4% YoY', style: TextStyle(fontSize: 9.5, color: Color(0xFF059669))),
-                    ],
-                  ),
-                ),
-              ),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('Food Saved', style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+                Text('940 kg', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF059669))),
+                Text('+18.4% YoY', style: TextStyle(fontSize: 9.5, color: Color(0xFF059669))),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Water Saved', style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-                      Text('122.0 kL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0284C7))),
-                      Text('+14.2% Conformance', style: TextStyle(fontSize: 9.5, color: Color(0xFF0284C7))),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -1903,7 +1981,7 @@ class ExecutiveScreen extends StatelessWidget {
             ),
             child: Text(
               hasAbnormal ? 'Abnormal Consumption Detected' : 'Within Baseline',
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: hasAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669)),
+              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: hasAbnormal ? const Color(0xFFE11D48) : const Color(0xFF0284C7)),
             ),
           ),
         ],
@@ -1914,9 +1992,20 @@ class ExecutiveScreen extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 6),
           child: Text('Consumption data unavailable for one or more resources — showing available analytics below.', style: TextStyle(fontSize: 10.5, color: Color(0xFFE11D48))),
         ),
-      _buildResourcePanel('Water Consumption', water),
-      const SizedBox(height: 8),
-      _buildResourcePanel('Electricity Consumption', electricity),
+      // Water & Electricity side by side, two columns in one row. Wrapped in
+      // IntrinsicHeight + stretch so both cards always match the height of
+      // whichever one is taller (e.g. when one has more anomaly zones listed),
+      // instead of each card only being as tall as its own content.
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _buildResourcePanel('Water Consumption', water)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildResourcePanel('Electricity Consumption', electricity)),
+          ],
+        ),
+      ),
       const SizedBox(height: 12),
     ];
   }
@@ -1948,7 +2037,12 @@ class ExecutiveScreen extends StatelessWidget {
     final anomalyZones = data['anomalyZones'] as List<UtilityMeter>;
     final barFraction = baselineTotal > 0 ? (currentTotal / baselineTotal).clamp(0.0, 1.0) : 0.0;
     final varianceSign = variancePct >= 0 ? '+' : '';
-    final statusColor = isAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669);
+    // Color reflects whether the AGGREGATE reading exceeds baseline (the
+    // variance sign) — not whether any individual sub-meter is flagged.
+    // Negative variance (under baseline) is blue even if the "Abnormal"
+    // badge is still showing because a specific zone is over its own
+    // baseline; positive/zero variance (at/over baseline) is red.
+    final statusColor = variancePct >= 0 ? const Color(0xFFE11D48) : const Color(0xFF0284C7);
 
     return Card(
       child: Padding(
@@ -1956,20 +2050,18 @@ class ExecutiveScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
-                ),
-              ],
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+              child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
             ),
             const SizedBox(height: 6),
-            Text('${currentTotal.toStringAsFixed(0)} $unit current', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isAbnormal ? statusColor : const Color(0xFF18181B))),
-            Text('Baseline: ${baselineTotal.toStringAsFixed(0)} $unit across $meterCount sub-meter${meterCount == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+            Text('${currentTotal.toStringAsFixed(0)} $unit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: isAbnormal ? statusColor : const Color(0xFF18181B))),
+            const Text('current', style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A))),
+            const SizedBox(height: 4),
+            Text('Baseline: ${baselineTotal.toStringAsFixed(0)} $unit ($meterCount sub-meter${meterCount == 1 ? '' : 's'})', style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A))),
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
@@ -1981,17 +2073,17 @@ class ExecutiveScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('Variance vs baseline: $varianceSign${variancePct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: isAbnormal ? statusColor : const Color(0xFF71717A))),
+            Text('Variance: $varianceSign${variancePct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isAbnormal ? statusColor : const Color(0xFF71717A))),
             if (isAbnormal) ...[
-              const Divider(height: 16),
-              Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: statusColor)),
+              const Divider(height: 14),
+              Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
               if (anomalyZones.isNotEmpty)
                 ...anomalyZones.map((z) => Padding(
                       padding: const EdgeInsets.only(top: 3),
-                      child: Text('${z.zone} (${z.meterId}) — ${z.lastReading.toStringAsFixed(0)} ${z.unit} vs ${z.baselineDaily.toStringAsFixed(0)} ${z.unit} baseline', style: const TextStyle(fontSize: 10, color: Color(0xFF71717A))),
+                      child: Text('${z.zone} — ${z.lastReading.toStringAsFixed(0)}/${z.baselineDaily.toStringAsFixed(0)} ${z.unit}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A))),
                     ))
               else
-                const Text('Aggregate usage exceeds the +15% baseline threshold.', style: TextStyle(fontSize: 10, color: Color(0xFF71717A))),
+                const Text('Aggregate usage exceeds the +15% baseline threshold.', style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A))),
             ],
           ],
         ),

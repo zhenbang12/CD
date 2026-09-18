@@ -213,12 +213,10 @@ export const INITIAL_DATA = {
   ],
 
   // Maintenance Technicians Pool
-  // NOTE: status/activeTickets are kept in sync with the seeded repairTickets
-  // list below — e.g. Faizal Rahim is "Busy" because he's actively assigned
-  // to ticket TK-2026-0812-01 (In Progress). Keep these consistent whenever
-  // seed tickets are added/removed/reassigned.
+  // NOTE: All technicians start Available since repairTickets is seeded
+  // empty — keep this consistent whenever seed tickets are added back.
   technicians: [
-    { id: "TECH-01", name: "Faizal Rahim", specialty: "Plumbing & Hydraulics", status: "Busy (Room 304 (Floor 3))", activeTickets: 1, phone: "+60 12-441 9021" },
+    { id: "TECH-01", name: "Faizal Rahim", specialty: "Plumbing & Hydraulics", status: "Available", activeTickets: 0, phone: "+60 12-441 9021" },
     { id: "TECH-02", name: "Ramesh Kumar", specialty: "HVAC & Electrical", status: "Available", activeTickets: 0, phone: "+60 17-883 1145" },
     { id: "TECH-03", name: "Chong Wei", specialty: "Smart Controls & Sensors", status: "Available", activeTickets: 0, phone: "+60 19-332 7780" },
     { id: "TECH-04", name: "Nurul Huda", specialty: "General Facility & Mechanical", status: "Available", activeTickets: 0, phone: "+60 13-902 4451" }
@@ -228,45 +226,7 @@ export const INITIAL_DATA = {
   ticketSequence: { date: null, count: 0 },
 
   // Module 5: Repair Tickets & Dispatch Queue
-  repairTickets: [
-    {
-      id: "TCK-8801",
-      ticketNumber: "TK-2026-0812-01",
-      zone: "Room 304 (Floor 3)",
-      defectCategory: "Bathroom Water Leak",
-      description: "Toilet flush valve continuously running water into bowl.",
-      severity: "High",
-      estimatedLossRate: "280 Liters / day",
-      estimatedDailyLossNum: 280,
-      resourceType: "Water",
-      priority: "High",
-      queuePosition: 1,
-      assignedTechnician: "Faizal Rahim",
-      status: "In Progress",
-      createdAt: "2026-08-12 11:20",
-      notes: "Inspected silent flapper seal leak; replacing silicone diaphragm.",
-      photoDataUrl: null
-    },
-    {
-      id: "TCK-8803",
-      ticketNumber: "TK-2026-0810-04",
-      zone: "Room 102 (Floor 1)",
-      defectCategory: "Dripping Basin Faucet",
-      description: "Hot water basin tap dripping ~40 drops/min.",
-      severity: "Normal",
-      estimatedLossRate: "35 Liters / day",
-      estimatedDailyLossNum: 35,
-      resourceType: "Water",
-      priority: "Normal",
-      queuePosition: 0,
-      assignedTechnician: "Faizal Rahim",
-      status: "Completed",
-      createdAt: "2026-08-10 14:00",
-      completedAt: "2026-08-10 16:30",
-      notes: "Replaced internal ceramic cartridge. Leak fully halted.",
-      photoDataUrl: null
-    }
-  ],
+  repairTickets: [],
 
   // System Immutable Audit Trail (Security & Baseline Modifications)
   auditLogs: [

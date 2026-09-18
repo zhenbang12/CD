@@ -113,35 +113,17 @@ class HotelDatabase extends ChangeNotifier {
   ];
 
   // Technicians (Module 5)
-  // NOTE: status/activeTickets are kept in sync with the seeded repairTickets
-  // list below — Faizal Rahim is "Busy" because he's actively assigned to
-  // ticket TK-2026-0812-01 (In Progress). Keep these consistent whenever seed
-  // tickets are added/removed/reassigned (mirrors js/data/initialData.js).
+  // NOTE: All technicians start Available since repairTickets is seeded
+  // empty below — keep this consistent whenever seed tickets are added back
+  // (mirrors js/data/initialData.js).
   final List<Technician> technicians = [
-    Technician(id: 'TECH-01', name: 'Faizal Rahim', specialty: 'Plumbing & Hydraulics', status: 'Busy (Room 304 (Floor 3))', activeTickets: 1, phone: '+60 12-441 9021'),
+    Technician(id: 'TECH-01', name: 'Faizal Rahim', specialty: 'Plumbing & Hydraulics', status: 'Available', activeTickets: 0, phone: '+60 12-441 9021'),
     Technician(id: 'TECH-02', name: 'Ramesh Kumar', specialty: 'HVAC & Electrical', status: 'Available', activeTickets: 0, phone: '+60 17-883 1145'),
     Technician(id: 'TECH-03', name: 'Chong Wei', specialty: 'Smart Controls & Sensors', status: 'Available', activeTickets: 0, phone: '+60 19-332 7780'),
   ];
 
   // Repair Tickets (Module 5)
-  final List<RepairTicket> repairTickets = [
-    RepairTicket(
-      id: 'TCK-8801',
-      ticketNumber: 'TK-2026-0812-01',
-      zone: 'Room 304 (Floor 3)',
-      defectCategory: 'Bathroom Toilet Water Leak',
-      description: 'Toilet flapper valve running water into bowl.',
-      severity: 'High',
-      estimatedLossRate: '280 Liters / day',
-      estimatedDailyLossNum: 280,
-      resourceType: 'Water',
-      priority: 'High',
-      assignedTechnician: 'Faizal Rahim',
-      status: 'In Progress',
-      createdAt: '2026-08-12 11:20',
-      notes: 'Replacing silicone diaphragm seal.',
-    ),
-  ];
+  final List<RepairTicket> repairTickets = [];
 
   // ================= MODULE 2 METHODS =================
   void addInventoryItem(InventoryItem item) {
@@ -299,28 +281,28 @@ class HotelDatabase extends ChangeNotifier {
   }
 
   void reportDefect(String zone, String category, String severity, String resourceType, String description, {String? photoDataUrl}) {
-    double lossNum = 0;
-    String lossStr = '0 / day';
-    final lc = category.toLowerCase();
+    // Estimated loss rate now comes directly from the selected Defect
+    // Category's "Estimated Loss Hint" (e.g. "~280 L/day", "~25 kWh/day"),
+    // so a ticket's estimated loss always matches what's shown next to the
+    // category in the dropdown — instead of a separate hardcoded
+    // keyword-matching table that could silently disagree with it. Mirrors
+    // js/db/storage.js on the Web Admin Dashboard.
+    final categoryRecord = defectCategories.where((c) => c.label == category).isEmpty
+        ? null
+        : defectCategories.firstWhere((c) => c.label == category);
+    final hintMatch = categoryRecord != null
+        ? RegExp(r'(\d+(?:\.\d+)?)\s*(L|Liters?|kWh)\s*/?\s*day', caseSensitive: false).firstMatch(categoryRecord.hint)
+        : null;
 
-    // Mirrors the estimation logic in the Web Admin Dashboard (js/db/storage.js)
-    // so both apps produce consistent repair ticket data.
-    if (lc.contains('toilet') || lc.contains('flush') || lc.contains('cistern')) {
-      lossNum = severity == 'High' ? 320 : 180;
-      lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('faucet') || lc.contains('tap') || lc.contains('pipe') || lc.contains('basin')) {
-      lossNum = severity == 'High' ? 120 : 45;
-      lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('shower') || lc.contains('valve')) {
-      lossNum = severity == 'High' ? 120 : 55;
-      lossStr = '${lossNum.round()} Liters / day';
-    } else if (lc.contains('hvac') || lc.contains('aircon') || lc.contains('chiller') || lc.contains('thermostat')) {
-      lossNum = severity == 'High' ? 35 : 18;
-      lossStr = '${lossNum.round()} kWh / day';
-    } else if (lc.contains('cold room') || lc.contains('gasket') || lc.contains('compressor') || lc.contains('freezer')) {
-      lossNum = severity == 'High' ? 35 : 18;
-      lossStr = '${lossNum.round()} kWh / day';
+    double lossNum;
+    String lossStr;
+    if (hintMatch != null) {
+      lossNum = double.parse(hintMatch.group(1)!);
+      final isElectric = hintMatch.group(2)!.toLowerCase().contains('kwh');
+      lossStr = isElectric ? '${lossNum.round()} kWh / day' : '${lossNum.round()} Liters / day';
     } else {
+      // No parseable hint on the category — fall back to a conservative
+      // resource-type default.
       lossNum = severity == 'High' ? 40 : 15;
       lossStr = resourceType == 'Electricity' ? '${lossNum.round()} kWh / day' : '${lossNum.round()} Liters / day';
     }
@@ -369,6 +351,18 @@ class HotelDatabase extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  // Wipes every repair ticket (any status) and resets technician
+  // availability accordingly. Mirrors db.clearAllRepairTickets() on the
+  // Web Admin Dashboard.
+  void clearAllRepairTickets() {
+    repairTickets.clear();
+    for (final tech in technicians) {
+      tech.activeTickets = 0;
+      tech.status = 'Available';
+    }
+    notifyListeners();
   }
 
   // ================= EXECUTIVE SCORE =================

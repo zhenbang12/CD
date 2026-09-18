@@ -960,28 +960,24 @@ class StorageEngine {
   }
 
   reportFacilityDefect({ roomOrZone, category, description, severity, resourceType, photoDataUrl }) {
-    // Calculate estimated loss volume based on category
-    let estimatedDailyLossNum = 0;
-    let estimatedLossRate = '0 / day';
-    const lc = category.toLowerCase();
+    // Estimated loss rate now comes directly from the selected Defect
+    // Category's "Estimated Loss Hint" (e.g. "~280 L/day", "~25 kWh/day"),
+    // so a ticket's estimated loss always matches what's shown next to the
+    // category in the dropdown / catalog — instead of a separate hardcoded
+    // keyword-matching table that could silently disagree with it.
+    const categoryRecord = (this.data.defectCategories || []).find(c => c.label === category);
+    const HINT_PATTERN = /(\d+(?:\.\d+)?)\s*(L|Liters?|kWh)\s*\/?\s*day/i;
+    const hintMatch = categoryRecord && categoryRecord.hint ? categoryRecord.hint.match(HINT_PATTERN) : null;
 
-    if (lc.includes('toilet') || lc.includes('flush') || lc.includes('cistern')) {
-      estimatedDailyLossNum = severity === 'High' ? 320 : 180;
-      estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
-    } else if (lc.includes('faucet') || lc.includes('tap') || lc.includes('pipe') || lc.includes('basin')) {
-      estimatedDailyLossNum = severity === 'High' ? 120 : 45;
-      estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
-    } else if (lc.includes('shower') || lc.includes('valve')) {
-      estimatedDailyLossNum = severity === 'High' ? 120 : 55;
-      estimatedLossRate = `${estimatedDailyLossNum} Liters / day`;
-    } else if (lc.includes('hvac') || lc.includes('aircon') || lc.includes('chiller') || lc.includes('thermostat')) {
-      estimatedDailyLossNum = severity === 'High' ? 35 : 18;
-      estimatedLossRate = `${estimatedDailyLossNum} kWh / day`;
-    } else if (lc.includes('cold room') || lc.includes('gasket') || lc.includes('compressor') || lc.includes('freezer')) {
-      estimatedDailyLossNum = severity === 'High' ? 35 : 18;
-      estimatedLossRate = `${estimatedDailyLossNum} kWh / day`;
+    let estimatedDailyLossNum;
+    let estimatedLossRate;
+    if (hintMatch) {
+      estimatedDailyLossNum = parseFloat(hintMatch[1]);
+      const isElectric = /kWh/i.test(hintMatch[2]);
+      estimatedLossRate = isElectric ? `${estimatedDailyLossNum} kWh / day` : `${estimatedDailyLossNum} Liters / day`;
     } else {
-      // Generic / custom category fallback, keyed off the selected resource type
+      // No parseable hint on the category (e.g. a custom category saved
+      // without one) — fall back to a conservative resource-type default.
       estimatedDailyLossNum = severity === 'High' ? 40 : 15;
       estimatedLossRate = resourceType === 'Electricity' ? `${estimatedDailyLossNum} kWh / day` : `${estimatedDailyLossNum} Liters / day`;
     }
@@ -1019,6 +1015,19 @@ class StorageEngine {
 
   getAvailableTechnician() {
     return this.data.technicians.find(t => t.status === 'Available') || this.data.technicians[0];
+  }
+
+  // Wipes every repair ticket (any status) and resets technician
+  // availability accordingly. This clears the LIVE data in this browser's
+  // localStorage — unlike editing the seed file, which only affects a
+  // fresh install with no saved data yet.
+  clearAllRepairTickets() {
+    this.data.repairTickets = [];
+    this.syncTechnicianStatuses();
+    this.saveDatabase();
+    this.notify('repairTickets', this.data.repairTickets);
+    this.notify('technicians', this.data.technicians);
+    return true;
   }
 
   updateTicketStatus(ticketId, newStatus, repairNotes = '') {
