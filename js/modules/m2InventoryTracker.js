@@ -74,7 +74,7 @@ export class Module2Inventory {
 
     if (this.searchQuery.trim() !== '') {
       const q = this.searchQuery.toLowerCase();
-      filteredInventory = filteredInventory.filter(i => 
+      filteredInventory = filteredInventory.filter(i =>
         i.name.toLowerCase().includes(q) ||
         i.id.toLowerCase().includes(q) ||
         i.batchNumber.toLowerCase().includes(q) ||
@@ -364,10 +364,34 @@ export class Module2Inventory {
               </div>
             </div>
             <div class="grid grid-2">
-              <div class="form-group">
-                <label class="form-label">Batch Identifier Number</label>
-                <input type="text" class="form-input" id="stock-batch" value="BCH-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-SK" required />
-              </div>
+             <div class="form-group">
+  <label class="form-label">Batch Identifier Number</label>
+
+  <div style="display: flex;">
+    <input
+      type="text"
+      class="form-input"
+      id="stock-batch-prefix"
+      value=""
+      readonly
+      style="border-radius: 6px 0 0 6px; background: #f4f4f5; width: 180px;"
+    />
+
+    <input
+      type="text"
+      class="form-input"
+      id="stock-batch-code"
+      placeholder="CK"
+      maxlength="2"
+      required
+      style="border-radius: 0 6px 6px 0; width: 70px; text-transform: uppercase;"
+    />
+  </div>
+
+  <small class="text-muted">
+    Enter 2-letter ingredient code, e.g. CK, SL, EG.
+  </small>
+</div>
               <div class="form-group">
                 <label class="form-label">Storage Location</label>
                 <input type="text" class="form-input" id="stock-location" placeholder="e.g., Walk-in Chiller B" required />
@@ -376,11 +400,17 @@ export class Module2Inventory {
             <div class="grid grid-2">
               <div class="form-group">
                 <label class="form-label">Delivery Date</label>
-                <input type="date" class="form-input" id="stock-delivery-date" value="2026-08-13" required />
+                <input type="date" class="form-input" id="stock-delivery-date" value="${new Date().toISOString().split('T')[0]}" required />
               </div>
               <div class="form-group">
                 <label class="form-label">Expiry Date</label>
-                <input type="date" class="form-input" id="stock-expiry-date" value="2026-08-18" required />
+                <input
+                   type="date"
+                   class="form-input"
+                   id="stock-expiry-date"
+                   value="${new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}"
+                  required
+                />
               </div>
             </div>
             <div class="modal-footer">
@@ -492,43 +522,112 @@ export class Module2Inventory {
     const cancelStockBtn = this.container.querySelector('#btn-cancel-stock');
     const stockForm = this.container.querySelector('#form-log-stock');
 
+    // Module 2 - Automatically update batch date and expiry date from delivery date
+    const deliveryDateInput = this.container.querySelector('#stock-delivery-date');
+    const expiryDateInput = this.container.querySelector('#stock-expiry-date');
+    const batchPrefixInput = this.container.querySelector('#stock-batch-prefix');
+    const batchCodeInput = this.container.querySelector('#stock-batch-code');
+
+    const updateDatesFromDelivery = () => {
+      const deliveryDate = deliveryDateInput?.value;
+
+      if (!deliveryDate) return;
+
+      // Update batch identifier date using the delivery date
+      if (batchPrefixInput) {
+        batchPrefixInput.value = `BCH-${deliveryDate.replace(/-/g, '')}-`;
+      }
+
+      // Automatically set expiry date to 5 days after delivery date
+      if (expiryDateInput) {
+        const date = new Date(deliveryDate + 'T00:00:00');
+        date.setDate(date.getDate() + 5);
+
+        expiryDateInput.value = date.toISOString().split('T')[0];
+      }
+    };
+
+    if (deliveryDateInput) {
+      // Update batch and expiry dates when delivery date changes
+      deliveryDateInput.addEventListener('change', updateDatesFromDelivery);
+
+      // Set initial batch and expiry dates when form loads
+      updateDatesFromDelivery();
+    }
+
+    if (batchCodeInput) {
+      // Allow only letters and limit ingredient code to 2 characters
+      batchCodeInput.addEventListener('input', () => {
+        batchCodeInput.value = batchCodeInput.value
+          .replace(/[^a-zA-Z]/g, '')
+          .toUpperCase()
+          .slice(0, 2);
+      });
+    }
     if (openStockBtn) openStockBtn.onclick = () => { stockModal.style.display = 'flex'; };
     if (closeStockBtn) closeStockBtn.onclick = () => { stockModal.style.display = 'none'; };
     if (cancelStockBtn) cancelStockBtn.onclick = () => { stockModal.style.display = 'none'; };
 
     if (stockForm) {
-  stockForm.onsubmit = (e) => {
-    e.preventDefault();
+      stockForm.onsubmit = (e) => {
+        e.preventDefault();
 
-    // Validate that the expiry date is not earlier than the delivery date
-    const deliveryDate = this.container.querySelector('#stock-delivery-date').value;
-    const expiryDate = this.container.querySelector('#stock-expiry-date').value;
+        // Get delivery and expiry dates
+        const deliveryDate =
+          this.container.querySelector('#stock-delivery-date').value;
 
-    if (new Date(expiryDate) < new Date(deliveryDate)) {
-      window.showGlobalToast?.(
-        'Expiry date cannot be earlier than the delivery date.',
-        'error'
-      );
-      return;
+        const expiryDate =
+          this.container.querySelector('#stock-expiry-date').value;
+
+        // Get the 2-letter ingredient code entered by the user
+        const batchCode =
+          this.container.querySelector('#stock-batch-code').value
+            .trim()
+            .toUpperCase();
+
+        // Validate batch code
+        if (batchCode.length !== 2) {
+          window.showGlobalToast?.(
+            'Please enter exactly 2 letters for the ingredient code.',
+            'error'
+          );
+          return;
+        }
+
+        // Validate expiry date
+        if (new Date(expiryDate) < new Date(deliveryDate)) {
+          window.showGlobalToast?.(
+            'Expiry date cannot be earlier than the delivery date.',
+            'error'
+          );
+          return;
+        }
+
+        // Automatically generate the complete batch identifier
+        const batchNumber =
+          `BCH-${deliveryDate.replace(/-/g, '')}-${batchCode}`;
+
+        const newItem = {
+          name: this.container.querySelector('#stock-name').value,
+          category: this.container.querySelector('#stock-category').value,
+          quantity: this.container.querySelector('#stock-qty').value,
+          unit: this.container.querySelector('#stock-unit').value,
+          batchNumber: batchNumber,
+          storageLocation: this.container.querySelector('#stock-location').value,
+          deliveryDate: deliveryDate,
+          expiryDate: expiryDate,
+          costPerKg: 16.00
+        };
+
+        db.addInventoryItem(newItem);
+        stockModal.style.display = 'none';
+
+        window.showGlobalToast?.(
+          `Stock "${newItem.name}" saved!`,
+          'success'
+        );
+      };
     }
-
-    const newItem = {
-      name: this.container.querySelector('#stock-name').value,
-      category: this.container.querySelector('#stock-category').value,
-      quantity: this.container.querySelector('#stock-qty').value,
-      unit: this.container.querySelector('#stock-unit').value,
-      batchNumber: this.container.querySelector('#stock-batch').value,
-      storageLocation: this.container.querySelector('#stock-location').value,
-      deliveryDate: deliveryDate,
-      expiryDate: expiryDate,
-      costPerKg: 16.00
-    };
-
-    db.addInventoryItem(newItem);
-    stockModal.style.display = 'none';
-    window.showGlobalToast?.(`Stock "${newItem.name}" saved!`, 'success');
-  };
-}
 
     // Waste Modal Handlers
     const wasteModal = this.container.querySelector('#waste-modal');
