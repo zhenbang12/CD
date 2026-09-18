@@ -23,16 +23,16 @@ export class Module1Baselines {
     const subNavTpl = `
       <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
         <button class="tab-btn sidebar-nav-btn" data-target="m1-dashboard">
-          <span>📊</span> Sustainability Dashboard
+          <span>&#128200;</span> Sustainability Dashboard
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-department">
-          <span>🏢</span> Department Breakdown
+          <span>&#127970;</span> Department Breakdown
         </button>
         <button class="tab-btn sidebar-nav-btn active" data-target="m1-baselines">
-          <span>🎯</span> Operational Baselines
+          <span>&#128207;</span> Operational Baselines
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
-          <span>🛡️</span> System Audit Log
+          <span>&#128269;</span> System Audit Log
         </button>
       </div>
     `;

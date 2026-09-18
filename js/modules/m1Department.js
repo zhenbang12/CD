@@ -4,7 +4,7 @@ import { ComplianceEngine } from '../engines/complianceEngine.js';
 export class Module1Department {
   constructor(container) {
     this.container = container;
-    this.selectedDepartment = 'kitchen';
+    this.selectedDepartment = '';
     this.unsubs = [];
     this.init();
   }
@@ -54,16 +54,16 @@ export class Module1Department {
     const subNavTpl = `
       <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
         <button class="tab-btn sidebar-nav-btn" data-target="m1-dashboard">
-          <span>📊</span> Sustainability Dashboard
+          <span>&#128200;</span> Sustainability Dashboard
         </button>
         <button class="tab-btn sidebar-nav-btn active" data-target="m1-department">
-          <span>🏢</span> Department Breakdown
+          <span>&#127970;</span> Department Breakdown
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-baselines">
-          <span>🎯</span> Operational Baselines
+          <span>&#128207;</span> Operational Baselines
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
-          <span>🛡️</span> System Audit Log
+          <span>&#128269;</span> System Audit Log
         </button>
       </div>
     `;
@@ -96,38 +96,40 @@ export class Module1Department {
           ${!isAuthorized ? `
             <p class="text-muted">Operations Director or Executive access is required.</p>
           ` : `
-            <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px;">
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                ${[
-                  { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
-                  { id: 'housekeeping', name: 'Housekeeping', icon: '🧹' },
-                  { id: 'laundry', name: 'Laundry', icon: '🧺' },
-                  { id: 'facilities', name: 'Facilities', icon: '⚡' },
-                  { id: 'front-office', name: 'Front Office', icon: '🏨' }
-                ].map(dept => `
-                  <button class="btn btn-sm dept-btn ${this.selectedDepartment === dept.id ? 'btn-primary' : 'btn-outline'}" data-dept="${dept.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-weight: 500;">
-                    <span>${dept.icon}</span> ${dept.name}
+            <div style="padding: 20px;">
+              ${!this.selectedDepartment ? (() => {
+                const departments = [
+                  { id: 'kitchen', name: 'Kitchen', icon: '&#127859;' },
+                  { id: 'housekeeping', name: 'Housekeeping', icon: '&#129529;' },
+                  { id: 'laundry', name: 'Laundry', icon: '&#129530;' },
+                  { id: 'facilities', name: 'Facilities', icon: '&#128736;' },
+                  { id: 'front-office', name: 'Front Office', icon: '&#128188;' }
+                ];
+                return `
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                    ${departments.map(dept => `
+                      <div class="card dept-card" data-id="${dept.id}" style="padding: 40px 15px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-card); text-align: center; border-radius: var(--radius-lg); box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s;">
+                        <div style="font-size: 40px; margin-bottom: 15px;">${dept.icon}</div>
+                        <h4 style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-main);">${dept.name}</h4>
+                      </div>
+                    `).join('')}
+                  </div>
+                `;
+              })() : `
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+                  <button class="btn btn-sm btn-outline" id="btn-back-departments">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Back to Departments
                   </button>
-                `).join('')}
-              </div>
-              <div>
-                <select class="form-input form-input-sm" id="department-selector" style="min-width: 180px;">
-                  <option value="">Select a department...</option>
-                  <option value="kitchen" ${this.selectedDepartment === 'kitchen' ? 'selected' : ''}>Kitchen</option>
-                  <option value="housekeeping" ${this.selectedDepartment === 'housekeeping' ? 'selected' : ''}>Housekeeping</option>
-                  <option value="laundry" ${this.selectedDepartment === 'laundry' ? 'selected' : ''}>Laundry</option>
-                  <option value="facilities" ${this.selectedDepartment === 'facilities' ? 'selected' : ''}>Facilities</option>
-                  <option value="front-office" ${this.selectedDepartment === 'front-office' ? 'selected' : ''}>Front Office</option>
-                </select>
-              </div>
+                  <h3 style="margin: 0; font-size: 18px; text-transform: capitalize;">${this.selectedDepartment.replace('-', ' ')} Department</h3>
+                </div>
+                
+                ${!departmentPerformance?.hasData
+                  ? `<p class="text-danger">${departmentPerformance.message}</p>`
+                  : this.renderDepartmentBreakdown(departmentPerformance)
+                }
+              `}
             </div>
-          
-            ${!this.selectedDepartment
-              ? '<p class="text-muted">Select a department to review.</p>'
-              : !departmentPerformance?.hasData
-                ? `<p class="text-danger">${departmentPerformance.message}</p>`
-                : this.renderDepartmentBreakdown(departmentPerformance)
-            }
           `}
         </div>
       </div>
@@ -344,21 +346,6 @@ export class Module1Department {
       };
     });
 
-    const deptSelect = this.container.querySelector('#department-selector');
-    if (deptSelect) {
-      deptSelect.onchange = (e) => {
-        this.selectedDepartment = e.target.value;
-        this.render();
-      };
-    }
-
-    this.container.querySelectorAll('.dept-btn').forEach(btn => {
-      btn.onclick = () => {
-        this.selectedDepartment = btn.dataset.dept;
-        this.render();
-      };
-    });
-
     this.container.querySelectorAll('.dept-card').forEach(card => {
       card.onclick = () => {
         this.selectedDepartment = card.dataset.id;
@@ -366,12 +353,12 @@ export class Module1Department {
       };
       card.onmouseover = () => {
         card.style.transform = 'translateY(-4px)';
-        card.style.boxShadow = '0 8px 12px rgba(0,0,0,0.3)';
+        card.style.boxShadow = '0 10px 15px rgba(0,0,0,0.1)';
         card.style.borderColor = 'var(--primary)';
       };
       card.onmouseout = () => {
         card.style.transform = 'translateY(0)';
-        card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)';
+        card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
         card.style.borderColor = 'var(--border-color)';
       };
     });
