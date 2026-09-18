@@ -38,6 +38,7 @@ dependencies:
   # Used to pick a photo from the gallery for Report Facility Defect's
   # "Upload Photo Evidence" field (Module 5), matching the web dashboard.
   image_picker: ^1.1.2
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

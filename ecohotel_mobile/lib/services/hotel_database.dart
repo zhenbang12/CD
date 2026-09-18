@@ -1,8 +1,70 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
 class HotelDatabase extends ChangeNotifier {
+  String apiBaseUrl;
+  bool isConnected = false;
+
+  HotelDatabase({this.apiBaseUrl = 'http://localhost:8000'}) {
+    syncFromBackend();
+  }
+
+  Future<void> syncFromBackend() async {
+    try {
+      final res = await http.get(Uri.parse('$apiBaseUrl/api/db')).timeout(const Duration(seconds: 3));
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(res.body);
+        if (data['rooms'] != null && data['rooms'] is List) {
+          final List roomList = data['rooms'];
+          for (final item in roomList) {
+            final roomNumber = item['roomNumber']?.toString();
+            final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
+            if (idx != -1) {
+              rooms[idx].servicePreference = item['servicePreference'] ?? rooms[idx].servicePreference;
+              rooms[idx].towelReuse = item['towelReuse'] ?? rooms[idx].towelReuse;
+              rooms[idx].linenDelayDays = item['linenDelayDays'] ?? rooms[idx].linenDelayDays;
+              rooms[idx].cleaningStatus = item['cleaningStatus'] ?? rooms[idx].cleaningStatus;
+              rooms[idx].ecoPointsEarned = item['ecoPointsEarned'] ?? rooms[idx].ecoPointsEarned;
+              rooms[idx].pointsSpent = item['pointsSpent'] ?? rooms[idx].pointsSpent;
+            }
+          }
+        }
+        if (data['ecoVouchers'] != null && data['ecoVouchers'] is List) {
+          final List vList = data['ecoVouchers'];
+          ecoVouchers.clear();
+          for (final v in vList) {
+            ecoVouchers.add(EcoVoucher(
+              code: v['code'] ?? '',
+              roomNumber: v['roomNumber'] ?? '',
+              guestName: v['guestName'] ?? '',
+              rewardTitle: v['rewardTitle'] ?? '',
+              description: v['description'] ?? '',
+              pointsCost: v['pointsCost'] ?? 0,
+              expiryDate: v['expiryDate'] ?? '',
+              isRedeemed: v['isRedeemed'] ?? false,
+            ));
+          }
+        }
+        isConnected = true;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Backend offline or unreachable, smoothly fallback to in-memory state
+      isConnected = false;
+    }
+  }
+
+  void _asyncPost(String endpoint, Map<String, dynamic> payload) {
+    http.post(
+      Uri.parse('$apiBaseUrl$endpoint'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    ).catchError((_) => http.Response('', 500));
+  }
+
   // Inventory (Module 2)
   final List<InventoryItem> inventory = [
     InventoryItem(id: 'ING-001', name: 'Fresh Farm Poultry (Chicken)', category: 'Meat & Poultry', quantity: 65.0, unit: 'kg', batchNumber: 'BCH-20260810-CK', deliveryDate: '2026-08-10', expiryDate: '2026-08-14', storageLocation: 'Walk-in Chiller A', costPerKg: 16.50),
@@ -343,13 +405,14 @@ class HotelDatabase extends ChangeNotifier {
     }
   }
 
-  // ================= MODULE 4 METHODS (FIXED: RADIO STATE + NON-ACCUMULATIVE) =================
-  void setGuestSelection(String roomNumber, String pref, bool towel) {
+  // ================= MODULE 4 METHODS (FIXED: RADIO STATE + NON-ACCUMULATIVE + REWARD CLAIM) =================
+  void setGuestSelection(String roomNumber, String pref, bool towel, {int linenDays = 0}) {
     final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
     if (idx != -1) {
       final room = rooms[idx];
       room.servicePreference = pref;
       room.towelReuse = towel;
+      room.linenDelayDays = linenDays;
 
       if (pref == 'OPT_OUT_CLEANING') {
         room.cleaningStatus = 'Skipped (Opt-Out)';
@@ -362,11 +425,14 @@ class HotelDatabase extends ChangeNotifier {
       // Recompute today's total points without spamming
       int todayPoints = 0;
       if (pref == 'OPT_OUT_CLEANING') todayPoints += 15;
-      if (pref == 'LINEN_DELAY') todayPoints += 10;
+      if (pref == 'LINEN_DELAY') {
+        todayPoints += (linenDays >= 3 ? 12 : 10);
+      }
       if (towel) todayPoints += 5;
 
       final base = baseHistoricalPoints[roomNumber] ?? 5;
-      room.ecoPointsEarned = base + todayPoints;
+      final net = (base + todayPoints) - room.pointsSpent;
+      room.ecoPointsEarned = max(0, net);
 
       // Check Voucher Milestone (Unlock voucher at >= 25 points)
       if (room.ecoPointsEarned >= 25) {
@@ -384,6 +450,77 @@ class HotelDatabase extends ChangeNotifier {
         }
       }
       notifyListeners();
+      _asyncPost('/api/rooms/preference', {
+        'roomNumber': roomNumber,
+        'servicePreference': pref,
+        'towelReuse': towel,
+        'linenDelayDays': linenDays,
+      });
+    }
+  }
+
+  bool claimRewardTier(String roomNumber, String tierKey) {
+    final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
+    if (idx == -1) return false;
+    final room = rooms[idx];
+
+    final tiers = {
+      'tier-dining': {
+        'title': '15% Farm-to-Table Dining Voucher',
+        'cost': 25,
+        'desc': 'Valid at Ocean Reef Organic Bistro & Farm-to-Table Kitchen.',
+        'prefix': 'VM26-ECO'
+      },
+      'tier-geopark': {
+        'title': 'Langkawi UNESCO Geopark Mangrove Pass',
+        'cost': 30,
+        'desc': 'Zero-emission solar boat eco-safari guided expedition.',
+        'prefix': 'VM26-TRP'
+      },
+      'tier-canopy': {
+        'title': 'Rainforest Canopy Walk & Eco-Trek',
+        'cost': 45,
+        'desc': 'Guided rainforest eco-trek and native mangrove sapling planting.',
+        'prefix': 'VM26-SAF'
+      }
+    };
+
+    final tier = tiers[tierKey];
+    if (tier == null) return false;
+    final cost = tier['cost'] as int;
+
+    if (room.ecoPointsEarned < cost) return false;
+
+    room.ecoPointsEarned -= cost;
+    room.pointsSpent += cost;
+
+    final voucher = EcoVoucher(
+      code: '${tier['prefix']}-${Random().nextInt(9000) + 1000}',
+      roomNumber: room.roomNumber,
+      guestName: room.guestName,
+      rewardTitle: tier['title'] as String,
+      description: tier['desc'] as String,
+      pointsCost: cost,
+      expiryDate: '2026-08-25',
+    );
+    ecoVouchers.insert(0, voucher);
+    notifyListeners();
+    _asyncPost('/api/vouchers/claim', {
+      'roomNumber': roomNumber,
+      'tierKey': tierKey,
+    });
+    return true;
+  }
+
+  void updateRoomCleaningStatus(String roomNumber, String newStatus) {
+    final idx = rooms.indexWhere((r) => r.roomNumber == roomNumber);
+    if (idx != -1) {
+      rooms[idx].cleaningStatus = newStatus;
+      notifyListeners();
+      _asyncPost('/api/rooms/status', {
+        'roomNumber': roomNumber,
+        'cleaningStatus': newStatus,
+      });
     }
   }
 
@@ -393,6 +530,10 @@ class HotelDatabase extends ChangeNotifier {
       rooms[idx].cleaningStatus = 'Active Clean List (Overridden)';
       rooms[idx].servicePreference = 'OVERRIDDEN';
       notifyListeners();
+      _asyncPost('/api/rooms/override', {
+        'roomNumber': roomNumber,
+        'reason': reason,
+      });
     }
   }
 
@@ -401,6 +542,9 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       ecoVouchers[idx].isRedeemed = true;
       notifyListeners();
+      _asyncPost('/api/vouchers/redeem', {
+        'code': code,
+      });
     }
   }
 
@@ -447,6 +591,10 @@ class HotelDatabase extends ChangeNotifier {
     meter.status = isAnomaly ? 'Anomaly Flagged (+${dev.toStringAsFixed(1)}%)' : 'Normal';
 
     notifyListeners();
+    _asyncPost('/api/meters/reading', {
+      'meterId': meterId,
+      'reading': reading,
+    });
     return isAnomaly;
   }
 
@@ -479,7 +627,7 @@ class HotelDatabase extends ChangeNotifier {
 
     final priority = severity == 'High' || lossNum >= 100 ? 'High' : 'Normal';
     final tech = technicians.firstWhere((t) => t.status == 'Available', orElse: () => technicians.first);
-    repairTickets.insert(0, RepairTicket(
+    final ticket = RepairTicket(
       id: 'TCK-${Random().nextInt(9000) + 1000}',
       ticketNumber: _generateTicketNumber(),
       zone: zone,
@@ -496,9 +644,25 @@ class HotelDatabase extends ChangeNotifier {
       notes: 'Reported by Housekeeping ground team during room inspection.',
       photoAttached: photoDataUrl != null,
       photoDataUrl: photoDataUrl,
-    ));
+    );
+    repairTickets.insert(0, ticket);
     tech.activeTickets += 1;
     notifyListeners();
+    _asyncPost('/api/defects', {
+      'id': ticket.id,
+      'ticketNumber': ticket.ticketNumber,
+      'zone': zone,
+      'defectCategory': category,
+      'description': description,
+      'severity': severity,
+      'estimatedLossRate': lossStr,
+      'resourceType': resourceType,
+      'priority': priority,
+      'assignedTechnician': tech.name,
+      'status': 'Assigned',
+      'createdAt': ticket.createdAt,
+      'photoAttached': ticket.photoAttached,
+    });
   }
 
   void updateTicketStatus(String id, String newStatus, String notes) {

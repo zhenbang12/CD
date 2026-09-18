@@ -4603,23 +4603,48 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Column(
               children: [
-                _buildStatColumn(
-                  'Total Rooms',
-                  '${widget.db.rooms.length}',
-                  const Color(0xFF18181B),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatColumn(
+                      'Total Rooms',
+                      '${widget.db.rooms.length}',
+                      const Color(0xFF18181B),
+                    ),
+                    _buildStatColumn(
+                      'Active Queue',
+                      '$activeCount',
+                      const Color(0xFF0284C7),
+                    ),
+                    _buildStatColumn(
+                      'Opted-Out (Skipped)',
+                      '$skippedCount',
+                      const Color(0xFF059669),
+                    ),
+                  ],
                 ),
-                _buildStatColumn(
-                  'Active Queue',
-                  '$activeCount',
-                  const Color(0xFF0284C7),
-                ),
-                _buildStatColumn(
-                  'Opted-Out (Skipped)',
-                  '$skippedCount',
-                  const Color(0xFF059669),
+                Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🌱', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Shift Impact: ~${skippedCount * 180}L water & ${(skippedCount * 2.4).toStringAsFixed(1)} kWh saved by guest opt-outs.',
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF065F46)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -4641,10 +4666,101 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
         ),
         const SizedBox(height: 12),
 
+        // Corridor Navigation Route Strip (Horizontal Door Cards)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '🗺️ Corridor Hallway Route (${_selectedFloor == 0 ? "All Floors" : "Floor $_selectedFloor"})',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A)),
+            ),
+            Text('${filtered.length} Doors in Route', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 105,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: filtered.length,
+            separatorBuilder: (_, index) => const SizedBox(width: 8),
+            itemBuilder: (ctx, idx) {
+              final r = filtered[idx];
+              final isSkip = r.cleaningStatus.contains('Skipped');
+              final isLight = r.cleaningStatus.contains('Light');
+              final isOverridden = r.cleaningStatus.contains('Overridden');
+              final isProgress = r.cleaningStatus.contains('In Progress');
+              final isCompleted = r.cleaningStatus.contains('Completed');
+
+              final borderColor = isOverridden
+                  ? const Color(0xFFE11D48)
+                  : isSkip
+                      ? const Color(0xFF059669)
+                      : isLight
+                          ? const Color(0xFFF59E0B)
+                          : isProgress
+                              ? const Color(0xFF8B5CF6)
+                              : const Color(0xFF0284C7);
+
+              return Container(
+                width: 155,
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: isSkip ? const Color(0xFFECFDF5) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: borderColor.withValues(alpha: 0.8), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('🚪 Room ${r.roomNumber}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5)),
+                        Text('F${r.floor}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A))),
+                      ],
+                    ),
+                    Text(
+                      r.guestName,
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: borderColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        isSkip ? '🌿 Bypassed (-180L)' : isLight ? 'Light Svc' : isProgress ? '⚡ In Progress' : isCompleted ? '✓ Completed' : r.cleaningStatus,
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: borderColor),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+
         // Room Schedule List
         ...filtered.map((room) {
           final isSkipped = room.cleaningStatus.contains('Skipped');
           final isLight = room.cleaningStatus.contains('Light');
+          final isProgress = room.cleaningStatus.contains('In Progress');
+          final isCompleted = room.cleaningStatus.contains('Completed');
 
           return Card(
             child: ListTile(
@@ -4706,6 +4822,10 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                           ? const Color(0xFFECFDF5)
                           : isLight
                           ? const Color(0xFFF0F9FF)
+                          : isProgress
+                          ? const Color(0xFFF5F3FF)
+                          : isCompleted
+                          ? const Color(0xFFECFDF5)
                           : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -4718,6 +4838,10 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                             ? const Color(0xFF059669)
                             : isLight
                             ? const Color(0xFF0284C7)
+                            : isProgress
+                            ? const Color(0xFF7C3AED)
+                            : isCompleted
+                            ? const Color(0xFF059669)
                             : const Color(0xFF71717A),
                       ),
                     ),
@@ -4737,6 +4861,27 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                             color: Color(0xFFE11D48),
                             fontWeight: FontWeight.w600,
                             decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (!isCompleted)
+                    GestureDetector(
+                      onTap: () {
+                        if (isProgress) {
+                          widget.db.updateRoomCleaningStatus(room.roomNumber, 'Completed');
+                        } else {
+                          widget.db.updateRoomCleaningStatus(room.roomNumber, 'In Progress');
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          isProgress ? '✓ Finish Clean' : '▶ Start Clean',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isProgress ? const Color(0xFF059669) : const Color(0xFF0284C7),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -5860,6 +6005,125 @@ class GuestExperienceView extends StatefulWidget {
 class _GuestExperienceViewState extends State<GuestExperienceView> {
   int _guestTab = 0; // 0: Green Stay, 1: Rewards & Vouchers, 2: My Green Impact
 
+  void _showVoucherPassDialog(BuildContext context, EcoVoucher v) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.all(20),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                  ),
+                  child: const Text(
+                    '🌿 VM2026 DIGITAL PASS',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+                  ),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.close, size: 20, color: Color(0xFF94A3B8)),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              v.rewardTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              v.description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            // High-fidelity Scannable QR Pass Box
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.qr_code_2, size: 110, color: Color(0xFF1E293B)),
+                  const SizedBox(height: 8),
+                  Text(
+                    v.code,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Guest: ${v.guestName} • Room ${v.roomNumber}',
+                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                  ),
+                  Text(
+                    'Expires: ${v.expiryDate} • Cost: ${v.pointsCost} Pts',
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (!v.isRedeemed)
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF059669),
+                  minimumSize: const Size(double.infinity, 42),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Redeem at Counter / Concierge'),
+                onPressed: () {
+                  widget.db.redeemVoucher(v.code);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Voucher ${v.code} marked as redeemed!')),
+                  );
+                },
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '✓ Already Redeemed at Counter',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final room = widget.db.rooms.firstWhere(
@@ -5894,7 +6158,7 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
               ),
               PopupMenuButton<String>(
                 initialValue: room.roomNumber,
-                onSelected: widget.onRoomChanged,
+                onSelected: (val) => widget.onRoomChanged(val),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -6012,7 +6276,14 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('ECO-REWARDS BALANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                    const Expanded(
+                      child: Text(
+                        'ECO-REWARDS BALANCE',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -6102,7 +6373,14 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Confirm Towel Reuse', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+                const Expanded(
+                  child: Text(
+                    'Confirm Towel Reuse',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -6175,14 +6453,18 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: isSelected ? const Color(0xFF059669) : const Color(0xFF0F172A),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: isSelected ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -6209,9 +6491,18 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'ACTIVE REWARD VOUCHERS',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'ACTIVE REWARD PASSES',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+            ),
+            Text(
+              '${vouchers.length} Unlocked',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
 
@@ -6223,10 +6514,10 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                 children: const [
                   Icon(Icons.card_giftcard, size: 36, color: Color(0xFF94A3B8)),
                   SizedBox(height: 8),
-                  Text('No Vouchers Earned Yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+                  Text('No Vouchers Claimed Yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
                   SizedBox(height: 4),
                   Text(
-                    'Opt out of room cleaning or delay linen to earn eco-points and unlock vouchers!',
+                    'Opt out of cleaning or delay linen to earn points, then claim passes below!',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
@@ -6236,116 +6527,241 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
           )
         else
           ...vouchers.map((v) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          v.rewardTitle,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF0F172A)),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: v.isRedeemed ? const Color(0xFFF1F5F9) : const Color(0xFFECFDF5),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: v.isRedeemed ? const Color(0xFFE2E8F0) : const Color(0xFF059669).withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          v.isRedeemed ? 'Redeemed' : 'Ready to Use',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: v.isRedeemed ? const Color(0xFF64748B) : const Color(0xFF059669),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(v.description, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                  const SizedBox(height: 10),
-                  // Code & Action bar
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showVoucherPassDialog(context, v),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.qr_code, size: 18, color: Color(0xFF64748B)),
-                            const SizedBox(width: 6),
-                            Text(
-                              v.code,
-                              style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0F172A)),
-                            ),
-                          ],
+                        Expanded(
+                          child: Text(
+                            v.rewardTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          ),
                         ),
-                        if (!v.isRedeemed)
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
-                              minimumSize: const Size(80, 30),
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: v.isRedeemed ? const Color(0xFFF1F5F9) : const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: v.isRedeemed ? const Color(0xFFE2E8F0) : const Color(0xFF059669).withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            v.isRedeemed ? 'Redeemed' : 'Ready to Use',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: v.isRedeemed ? const Color(0xFF64748B) : const Color(0xFF059669),
                             ),
-                            onPressed: () {
-                              widget.db.redeemVoucher(v.code);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Voucher ${v.code} marked as redeemed!')),
-                              );
-                            },
-                            child: const Text('Redeem', style: TextStyle(fontSize: 11)),
-                          )
-                        else
-                          const Text('Used at counter', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(v.description, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    const SizedBox(height: 10),
+                    // Code & Action bar
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.qr_code, size: 18, color: Color(0xFF64748B)),
+                              const SizedBox(width: 6),
+                              Text(
+                                v.code,
+                                style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0F172A)),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  minimumSize: const Size(60, 28),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                ),
+                                icon: const Icon(Icons.fullscreen, size: 15, color: Color(0xFF475569)),
+                                label: const Text('Pass', style: TextStyle(fontSize: 10.5, color: Color(0xFF475569))),
+                                onPressed: () => _showVoucherPassDialog(context, v),
+                              ),
+                              if (!v.isRedeemed) ...[
+                                const SizedBox(width: 6),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF059669),
+                                    minimumSize: const Size(70, 28),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                  onPressed: () {
+                                    widget.db.redeemVoucher(v.code);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Voucher ${v.code} marked as redeemed!')),
+                                    );
+                                  },
+                                  child: const Text('Redeem', style: TextStyle(fontSize: 10.5)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           )),
 
         const SizedBox(height: 18),
-        const Text(
-          'AVAILABLE RESORT PERKS',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        // Interactive VM2026 Rewards Catalog
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '🌿 VM2026 ECO-REWARDS CATALOG',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                'Balance: ${room.ecoPointsEarned} Pts',
+                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
 
-        _buildPerkPreviewCard('☕ Complimentary Rainforest Organic Coffee', '15 Points', 'Redeemable at Lobby Green Cafe'),
-        _buildPerkPreviewCard('🍽️ 15% Sustainable Dining Discount', '25 Points', 'Valid at Ocean Reef Organic Bistro'),
-        _buildPerkPreviewCard('💆 RM30 Botanical Spa Treatment Credit', '40 Points', 'Valid at Bamboo Wellness Sanctuary'),
-        _buildPerkPreviewCard('🌱 Adopt-a-Coral VM2026 Certificate', '50 Points', 'Includes personalized digital certificate'),
+        _buildCatalogTierCard(
+          room: room,
+          tierKey: 'tier-dining',
+          title: '15% Sustainable Dining Pass',
+          cost: 25,
+          subtitle: 'Ocean Reef Organic Bistro & Farm-to-Table Kitchen',
+          icon: Icons.restaurant,
+        ),
+        _buildCatalogTierCard(
+          room: room,
+          tierKey: 'tier-geopark',
+          title: 'Langkawi Geopark Mangrove Pass',
+          cost: 30,
+          subtitle: 'Zero-emission solar boat eco-safari guided expedition',
+          icon: Icons.kayaking,
+        ),
+        _buildCatalogTierCard(
+          room: room,
+          tierKey: 'tier-canopy',
+          title: 'Rainforest Canopy Walk & Eco-Trek',
+          cost: 45,
+          subtitle: 'Guided flora expedition & tree-planting credit',
+          icon: Icons.park,
+        ),
       ],
     );
   }
 
-  Widget _buildPerkPreviewCard(String title, String cost, String desc) {
+  Widget _buildCatalogTierCard({
+    required RoomModel room,
+    required String tierKey,
+    required String title,
+    required int cost,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final canClaim = room.ecoPointsEarned >= cost;
     return Card(
-      child: ListTile(
-        dense: true,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF0F172A))),
-        subtitle: Text(desc, style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(cost, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: canClaim ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: canClaim ? const Color(0xFF059669) : const Color(0xFF94A3B8), size: 22),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF0F172A))),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text('$cost Eco-Points', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: canClaim ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+                foregroundColor: canClaim ? Colors.white : const Color(0xFF94A3B8),
+                elevation: canClaim ? 1 : 0,
+                minimumSize: const Size(76, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+              onPressed: canClaim
+                  ? () {
+                      final success = widget.db.claimRewardTier(room.roomNumber, tierKey);
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF059669),
+                            content: Row(
+                              children: [
+                                const Icon(Icons.celebration, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('🎉 Claimed $title! Tap voucher to view QR pass.')),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+              child: Text(
+                canClaim ? 'Claim' : '${cost - room.ecoPointsEarned} short',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: canClaim ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

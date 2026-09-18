@@ -1,5 +1,5 @@
 import { db } from '../db/storage.js';
-import { ComplianceEngine } from '../engines/complianceEngine.js';
+import { ComplianceEngine } from '../engines/complianceEngine.js?v=3.01';
 
 export class Module1Dashboard {
   constructor(container) {
@@ -36,65 +36,78 @@ export class Module1Dashboard {
   }
 
   render() {
-    if (this.isDestroyed) return;
-    let compliance;
-    let complianceHistory;
+    let compliance = null;
+    let complianceHistory = [];
+    let filteredHistory = [];
+    let paginatedHistory = [];
+    let itemsPerPage = 6;
+    let totalPages = 1;
 
     try {
       const databaseError = db.getLastDatabaseError();
       if (databaseError) throw databaseError;
 
       compliance = ComplianceEngine.calculateLiveScore();
-      complianceHistory = db.get('complianceLogs');
+      complianceHistory = db.get('complianceLogs') || [];
+      
+      this.reportYear = this.reportYear || '2026';
+      
+      if (this.reportYear === 'all') {
+        filteredHistory = complianceHistory;
+      } else {
+        filteredHistory = complianceHistory.filter(h => h.month.includes(this.reportYear));
+      }
+
+      if (this.reportPeriod === 'q1') {
+        filteredHistory = filteredHistory.filter(h => ['Jan', 'Feb', 'Mar'].some(m => h.month.includes(m)));
+      } else if (this.reportPeriod === 'q2') {
+        filteredHistory = filteredHistory.filter(h => ['Apr', 'May', 'Jun'].some(m => h.month.includes(m)));
+      } else if (this.reportPeriod === 'q3') {
+        filteredHistory = filteredHistory.filter(h => ['Jul', 'Aug', 'Sep'].some(m => h.month.includes(m)));
+      } else if (this.reportPeriod === 'q4') {
+        filteredHistory = filteredHistory.filter(h => ['Oct', 'Nov', 'Dec'].some(m => h.month.includes(m)));
+      } else if (this.reportPeriod === 'mtd') {
+        filteredHistory = filteredHistory.filter(h => h.month.includes('MTD'));
+      }
+      
+      this.currentPage = this.currentPage || 1;
+      itemsPerPage = 6;
+      totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
+      if (this.currentPage > totalPages) this.currentPage = totalPages;
+      paginatedHistory = filteredHistory.slice((this.currentPage - 1) * itemsPerPage, this.currentPage * itemsPerPage);
+
     } catch (error) {
+      console.error(error);
       this.renderDashboardError(error);
       return;
     }
 
-    let filteredHistory = complianceHistory;
-
-  if (this.reportYear && this.reportYear !== 'all-years') {
-    filteredHistory = filteredHistory.filter(c => c.month.includes(this.reportYear));
-  }
-  
-  if (this.reportPeriod === 'q1') {
-    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Jan') || c.month.startsWith('Feb') || c.month.startsWith('Mar'));
-  } else if (this.reportPeriod === 'q2') {
-    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Apr') || c.month.startsWith('May') || c.month.startsWith('Jun'));
-  } else if (this.reportPeriod === 'q3') {
-    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Jul') || c.month.startsWith('Aug') || c.month.startsWith('Sep'));
-  } else if (this.reportPeriod === 'q4') {
-    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Oct') || c.month.startsWith('Nov') || c.month.startsWith('Dec'));
-  } else if (this.reportPeriod === 'mtd') {
-      filteredHistory = filteredHistory.filter(c => c.month.includes('(MTD)'));
-    }
-
     const subNavTpl = `
-      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 8px;">
+      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
         <button class="tab-btn sidebar-nav-btn active" data-target="m1-dashboard">
-          <span>📊</span> Sustainability Dashboard
+          <span>&#128200;</span> Sustainability Dashboard
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-department">
-          <span>🏢</span> Department Breakdown
+          <span>&#127970;</span> Department Breakdown
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-baselines">
-          <span>🎯</span> Operational Baselines
+          <span>&#128207;</span> Operational Baselines
         </button>
         <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
-          <span>🛡️</span> System Audit Log
+          <span>&#128269;</span> System Audit Log
         </button>
       </div>
     `;
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
-        <div class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="view-header">
           <div>
             <h1 class="view-title">Executive Analytics</h1>
           </div>
-          <div>
+          <div class="header-actions">
             <button class="btn btn-sm btn-primary" id="btn-export-global-pdf">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Export Executive Report
             </button>
           </div>
@@ -107,34 +120,35 @@ export class Module1Dashboard {
           <div class="card kpi-card">
             <span class="kpi-label">Sustainability Score</span>
             ${compliance.dataComplete ? `
-              <div class="kpi-value-lg text-primary">${compliance.score}<span style="font-size: 14px; color: var(--text-muted); font-weight: 400;">/100</span></div>
-              <span class="kpi-trend positive">Grade ${compliance.grade} (${compliance.label})</span>
+              <div class="kpi-value-lg" style="color: ${compliance.score >= 90 ? '#22d3ee' : compliance.score >= 80 ? '#fbbf24' : compliance.score >= 70 ? '#94a3b8' : '#ef4444'};">${compliance.score}<span style="font-size: 14px; opacity: 0.8; font-weight: 400;">/100</span></div>
+              <span class="kpi-trend positive">Grade ${compliance.grade}</span>
             ` : `
-              <div class="kpi-value-lg text-warning">—</div>
+              <div class="kpi-value-lg text-warning">&#9888;</div>
               <span class="kpi-trend negative">Data incomplete</span>
             `}
           </div>
 
           <div class="card kpi-card">
             <span class="kpi-label">Food Waste</span>
-            <div class="kpi-value-lg text-primary">${compliance.metrics.foodWasteCurrentKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <div class="kpi-value-lg" style="color: #f97316;">${compliance.metrics.foodWasteCurrentKg.toFixed(1)} <span class="kpi-unit" style="color: #f97316; opacity: 0.8;">kg</span></div>
             <span class="kpi-trend neutral">Current period aggregation</span>
           </div>
 
           <div class="card kpi-card">
             <span class="kpi-label">Water Usage</span>
-            <div class="kpi-value-lg">${(compliance.metrics.waterUseCurrentL / 1000).toFixed(1)} <span class="kpi-unit">kL</span></div>
+            <div class="kpi-value-lg" style="color: #38bdf8;">${(compliance.metrics.waterUseCurrentL / 1000).toFixed(1)} <span class="kpi-unit" style="color: #38bdf8; opacity: 0.8;">kL</span></div>
             <span class="kpi-trend neutral">Hotel-wide consumption</span>
           </div>
 
           <div class="card kpi-card">
             <span class="kpi-label">Electricity Usage</span>
-            <div class="kpi-value-lg">${compliance.metrics.energyUseCurrentKwh.toFixed(1)} <span class="kpi-unit">kWh</span></div>
+            <div class="kpi-value-lg" style="color: #c084fc;">${compliance.metrics.energyUseCurrentKwh.toFixed(1)} <span class="kpi-unit" style="color: #c084fc; opacity: 0.8;">kWh</span></div>
             <span class="kpi-trend neutral">Hotel-wide consumption</span>
           </div>
         </div>
 
-        <div class="grid grid-2">
+        <div style="display: flex; flex-direction: column; gap: 24px; margin-top: 24px;">
+          <!-- Graph is now FIRST (Top) -->
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">Historical Trajectory</h3>
@@ -149,15 +163,33 @@ export class Module1Dashboard {
               ${this.renderSVGChart(complianceHistory, this.chartMetric)}
             </div>
           </div>
-
+          
+          <!-- Compliance Audit Log is now SECOND (Bottom) -->
           <div class="card">
-            <div class="card-header">
+            <div class="card-header" style="display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 12px; margin-bottom: 0;">
               <h3 class="card-title">Compliance Audit Log</h3>
-              <div class="tab-pills">
-                <button class="tab-btn ${this.reportPeriod === 'all' ? 'active' : ''}" data-period="all">All</button>
-                <button class="tab-btn ${this.reportPeriod === 'q1' ? 'active' : ''}" data-period="q1">Q1</button>
-                <button class="tab-btn ${this.reportPeriod === 'q2' ? 'active' : ''}" data-period="q2">Q2</button>
-                <button class="tab-btn ${this.reportPeriod === 'mtd' ? 'active' : ''}" data-period="mtd">MTD</button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="tab-pills">
+                  <div style="position: relative; display: flex;">
+                    <button class="tab-btn active" id="year-dropdown-btn" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer;">
+                      <span>${this.reportYear === 'all' ? 'All Years' : this.reportYear}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div id="year-dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; min-width: 120px; padding: 6px; flex-direction: column; gap: 4px;">
+                      <div class="dropdown-item" data-value="all" style="padding: 6px 12px; cursor: pointer; border-radius: 6px; font-size: 13px; color: ${this.reportYear === 'all' ? 'var(--primary)' : 'var(--text-main)'}; background: ${this.reportYear === 'all' ? 'var(--bg-card-subtle)' : 'transparent'}; font-weight: ${this.reportYear === 'all' ? '600' : '400'};">All Years</div>
+                      <div class="dropdown-item" data-value="2026" style="padding: 6px 12px; cursor: pointer; border-radius: 6px; font-size: 13px; color: ${this.reportYear === '2026' ? 'var(--primary)' : 'var(--text-main)'}; background: ${this.reportYear === '2026' ? 'var(--bg-card-subtle)' : 'transparent'}; font-weight: ${this.reportYear === '2026' ? '600' : '400'};">2026</div>
+                      <div class="dropdown-item" data-value="2025" style="padding: 6px 12px; cursor: pointer; border-radius: 6px; font-size: 13px; color: ${this.reportYear === '2025' ? 'var(--primary)' : 'var(--text-main)'}; background: ${this.reportYear === '2025' ? 'var(--bg-card-subtle)' : 'transparent'}; font-weight: ${this.reportYear === '2025' ? '600' : '400'};">2025</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pills">
+                  <button class="tab-btn ${this.reportPeriod === 'all' ? 'active' : ''}" data-period="all">All</button>
+                  <button class="tab-btn ${this.reportPeriod === 'q1' ? 'active' : ''}" data-period="q1">Q1</button>
+                  <button class="tab-btn ${this.reportPeriod === 'q2' ? 'active' : ''}" data-period="q2">Q2</button>
+                  <button class="tab-btn ${this.reportPeriod === 'q3' ? 'active' : ''}" data-period="q3">Q3</button>
+                  <button class="tab-btn ${this.reportPeriod === 'q4' ? 'active' : ''}" data-period="q4">Q4</button>
+                  <button class="tab-btn ${this.reportPeriod === 'mtd' ? 'active' : ''}" data-period="mtd">MTD</button>
+                </div>
               </div>
             </div>
             <div class="table-responsive">
@@ -173,22 +205,45 @@ export class Module1Dashboard {
                   </tr>
                 </thead>
                 <tbody>
-                  ${filteredHistory.map(row => `
+                  ${paginatedHistory.length === 0 ? `
+                    <tr>
+                      <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">&#128194;</div>
+                        <strong>No Data Available</strong><br/>
+                        <span style="font-size: 12px;">There are no compliance records matching this period.</span>
+                      </td>
+                    </tr>
+                  ` : paginatedHistory.map(row => `
                     <tr>
                       <td><strong>${row.month}</strong></td>
                       <td class="col-number"><strong class="text-primary">${row.foodSavedKg} kg</strong></td>
                       <td class="col-number">${(row.waterConservedL / 1000).toFixed(1)} kL</td>
                       <td class="col-number">${row.energySavedKwh} kWh</td>
-                      <td class="col-number"><strong style="color: var(--primary);">${row.vmScore}/100</strong></td>
-                      <td>
-                        <span class="status-dot-wrap">
-                          <span class="status-dot success"></span> Verified
-                        </span>
+                      <td class="col-number"><span class="badge" style="color: ${row.vmScore >= 90 ? '#22d3ee' : row.vmScore >= 80 ? '#fbbf24' : row.vmScore >= 70 ? '#94a3b8' : '#ef4444'}; background: ${row.vmScore >= 90 ? 'rgba(34, 211, 238, 0.1)' : row.vmScore >= 80 ? 'rgba(251, 191, 36, 0.1)' : row.vmScore >= 70 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; border: 1px solid ${row.vmScore >= 90 ? 'rgba(34, 211, 238, 0.2)' : row.vmScore >= 80 ? 'rgba(251, 191, 36, 0.2)' : row.vmScore >= 70 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(239, 68, 68, 0.2)'};">${row.vmScore}/100</span></td>
+                      <td style="color: ${row.vmScore >= 90 ? '#22d3ee' : row.vmScore >= 80 ? '#fbbf24' : row.vmScore >= 70 ? '#94a3b8' : '#ef4444'}; font-weight: 600;">
+                        ${row.vmScore >= 90 ? 'Certified' : row.vmScore >= 80 ? 'Good' : row.vmScore >= 70 ? 'Average' : 'Review'}
                       </td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
+              ${filteredHistory.length > itemsPerPage ? `
+                <div class="pagination-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border-color); background: var(--bg-card-subtle, #f8fafc); border-radius: 0 0 8px 8px;">
+                  <button class="btn btn-sm btn-outline" id="btn-prev-dash" ${this.currentPage <= 1 ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; ${this.currentPage <= 1 ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    Previous
+                  </button>
+                  <div style="font-size: 13px; font-weight: 600; color: var(--text-main, #334155); display: flex; gap: 6px; align-items: center;">
+                    <span style="background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 6px; min-width: 24px; text-align: center;">${this.currentPage}</span> 
+                    <span style="color: var(--text-muted, #94a3b8); font-weight: 500;">/</span> 
+                    <span style="color: var(--text-muted, #94a3b8);">${this.totalPages || Math.ceil(filteredHistory.length / itemsPerPage) || 1}</span>
+                  </div>
+                  <button class="btn btn-sm btn-outline" id="btn-next-dash" ${this.currentPage >= (this.totalPages || Math.ceil(filteredHistory.length / itemsPerPage) || 1) ? 'disabled' : ''} style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; ${this.currentPage >= (this.totalPages || Math.ceil(filteredHistory.length / itemsPerPage) || 1) ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
+                    Next
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                </div>
+              ` : ''}
             </div>
           </div>
         </div>
@@ -266,8 +321,7 @@ return `
   </svg>
 `;
 }
-
-attachEventListeners() {
+  attachEventListeners() {
     this.container.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
       btn.onclick = () => {
         const target = btn.dataset.target;
@@ -288,25 +342,61 @@ attachEventListeners() {
     });
 
     this.container.querySelectorAll('.tab-btn[data-period]').forEach(btn => {
-  btn.onclick = () => {
-    this.reportPeriod = btn.dataset.period;
-    this.render();
-  };
-});
+      btn.onclick = () => {
+        this.reportPeriod = btn.dataset.period;
+        this.currentPage = 1;
+        this.render();
+      };
+    });
 
-const yearSelect = this.container.querySelector('#filter-year');
-if (yearSelect) {
-  yearSelect.onchange = (e) => {
-    this.reportYear = e.target.value;
-    this.render();
-  };
-}
+    const yearBtn = this.container.querySelector('#year-dropdown-btn');
+    const yearMenu = this.container.querySelector('#year-dropdown-menu');
+    if (yearBtn && yearMenu) {
+      yearBtn.onclick = (e) => {
+        e.stopPropagation();
+        yearMenu.style.display = yearMenu.style.display === 'none' ? 'flex' : 'none';
+      };
+      
+      yearMenu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.onmouseenter = () => { if (item.dataset.value !== this.reportYear) item.style.background = 'var(--bg-card)'; };
+        item.onmouseleave = () => { if (item.dataset.value !== this.reportYear) item.style.background = 'transparent'; };
+        
+        item.onclick = () => {
+          this.reportYear = item.dataset.value;
+          this.currentPage = 1;
+          this.render();
+        };
+      });
 
-const exportBtn = this.container.querySelector('#btn-export-global-pdf');
-if (exportBtn) {
-  exportBtn.onclick = () => this.exportComplianceReportPDF();
-}
-}
+      // Global click listener to close dropdown if clicking outside
+      const outsideClickListener = (e) => {
+        if (this.isDestroyed) {
+          document.removeEventListener('click', outsideClickListener);
+          return;
+        }
+        if (yearMenu && yearBtn && !yearMenu.contains(e.target) && !yearBtn.contains(e.target)) {
+          yearMenu.style.display = 'none';
+        }
+      };
+      document.addEventListener('click', outsideClickListener);
+      
+      // Cleanup listener on destroy by adding to unsubs
+      if (this.unsubs) {
+        this.unsubs.push(() => document.removeEventListener('click', outsideClickListener));
+      }
+    }
+
+    const exportBtn = this.container.querySelector('#btn-export-global-pdf');
+    if (exportBtn) {
+      exportBtn.onclick = () => this.exportComplianceReportPDF();
+    }
+
+    const prevDash = this.container.querySelector('#btn-prev-dash');
+    if (prevDash) prevDash.onclick = () => { this.currentPage--; this.render(); };
+    
+    const nextDash = this.container.querySelector('#btn-next-dash');
+    if (nextDash) nextDash.onclick = () => { this.currentPage++; this.render(); };
+  }
 
   exportComplianceReportPDF() {
     const compliance = ComplianceEngine.calculateLiveScore();

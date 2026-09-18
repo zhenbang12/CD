@@ -1,0 +1,1516 @@
+{
+  "users": [
+    {
+      "id": "USR-100",
+      "username": "admin",
+      "password": "password123",
+      "name": "Sarah Chen",
+      "role": "Hotel Manager",
+      "department": "Executive Board",
+      "avatar": "SC"
+    },
+    {
+      "id": "USR-101",
+      "username": "exec",
+      "password": "password123",
+      "name": "Kar Hang",
+      "role": "Sustainability Executive",
+      "department": "Executive Board",
+      "avatar": "KH"
+    },
+    {
+      "id": "USR-102",
+      "username": "tech",
+      "password": "password123",
+      "name": "Zhen Bang",
+      "role": "Tech Lead",
+      "department": "IT",
+      "avatar": "ZB"
+    },
+    {
+      "id": "USR-103",
+      "username": "fac",
+      "password": "password123",
+      "name": "Wan Ching",
+      "role": "Facilities Manager",
+      "department": "Engineering",
+      "avatar": "WC"
+    },
+    {
+      "id": "USR-104",
+      "username": "chef",
+      "password": "password123",
+      "name": "Sze Ping",
+      "role": "Head Chef",
+      "department": "F&B",
+      "avatar": "SP"
+    },
+    {
+      "id": "USR-105",
+      "username": "guest",
+      "password": "password123",
+      "name": "Simon Wong",
+      "role": "Guest",
+      "department": "Guest",
+      "avatar": "SW"
+    }
+  ],
+  "system": {
+    "hotelName": "Grand Bay Eco-Resort & Spa (VM2026 Certified)",
+    "location": "Penang / Langkawi Corridor, Malaysia",
+    "currentDate": "2026-08-13",
+    "currentTime": "08:30:00 AM",
+    "isSimulating": false,
+    "simSpeed": 1,
+    "theme": "dark",
+    "activeRole": "executive",
+    "activeUser": {
+      "id": "USR-101",
+      "name": "Kar Hang",
+      "role": "Sustainability Executive",
+      "department": "Executive Board",
+      "avatar": "\ud83d\udc54"
+    }
+  },
+  "baselines": [
+    {
+      "id": "BL-01",
+      "key": "floor1_water",
+      "meterId": "MTR-W-F1",
+      "name": "Floor 1 Guest Wing Water Baseline",
+      "value": 1800,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-02",
+      "key": "floor1_power",
+      "meterId": "MTR-E-F1",
+      "name": "Floor 1 Guest Wing Electricity Baseline",
+      "value": 140,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-03",
+      "key": "floor2_water",
+      "meterId": "MTR-W-F2",
+      "name": "Floor 2 Guest Wing Water Baseline",
+      "value": 1750,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-04",
+      "key": "floor2_power",
+      "meterId": "MTR-E-F2",
+      "name": "Floor 2 Guest Wing Electricity Baseline",
+      "value": 145,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-05",
+      "key": "floor3_water",
+      "meterId": "MTR-W-F3",
+      "name": "Floor 3 Executive Wing Water Baseline",
+      "value": 1600,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-06",
+      "key": "floor3_power",
+      "meterId": "MTR-E-F3",
+      "name": "Floor 3 Executive Wing Electricity Baseline",
+      "value": 155,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-06 09:15"
+    },
+    {
+      "id": "BL-07",
+      "key": "kitchen_water",
+      "meterId": "MTR-W-KIT",
+      "name": "Main Culinary Kitchen Water Baseline",
+      "value": 4500,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-02 09:30"
+    },
+    {
+      "id": "BL-08",
+      "key": "kitchen_power",
+      "meterId": "MTR-E-KIT",
+      "name": "Main Culinary Kitchen Electricity Baseline",
+      "value": 380,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-02 09:30"
+    },
+    {
+      "id": "BL-09",
+      "key": "laundry_water",
+      "meterId": "MTR-W-LDY",
+      "name": "Commercial Eco-Laundry Water Baseline",
+      "value": 6200,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-10",
+      "key": "laundry_power",
+      "meterId": "MTR-E-LDY",
+      "name": "Commercial Eco-Laundry Electricity Baseline",
+      "value": 290,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-11",
+      "key": "chiller_plant_power",
+      "meterId": "MTR-E-HVAC",
+      "name": "Central Chiller Plant Electricity Baseline",
+      "value": 850,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-05 11:20"
+    },
+    {
+      "id": "BL-12",
+      "key": "chiller_plant_water",
+      "meterId": "MTR-W-FAC",
+      "name": "Central Chiller Plant Water Baseline",
+      "value": 500,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-13 08:00"
+    },
+    {
+      "id": "BL-13",
+      "key": "front_office_water",
+      "meterId": "MTR-W-FO",
+      "name": "Front Office & Lobby Water Baseline",
+      "value": 700,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-01 10:00"
+    },
+    {
+      "id": "BL-14",
+      "key": "front_office_power",
+      "meterId": "MTR-E-FO",
+      "name": "Front Office & Lobby Electricity Baseline",
+      "value": 120,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "System",
+      "updatedAt": "2026-07-15 10:00"
+    },
+    {
+      "id": "BL-15",
+      "key": "pool_water",
+      "meterId": "MTR-W-POOL",
+      "name": "Swimming Pool & Spa Water Baseline",
+      "value": 800,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "System",
+      "updatedAt": "2026-07-15 10:00"
+    },
+    {
+      "id": "BL-16",
+      "key": "pool_power",
+      "meterId": "MTR-E-POOL",
+      "name": "Swimming Pool & Spa Electricity Baseline",
+      "value": 95,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Wan Ching",
+      "updatedAt": "2026-08-06 09:00"
+    },
+    {
+      "id": "BL-17",
+      "key": "rooftop_water",
+      "meterId": "MTR-W-RTB",
+      "name": "Rooftop Restaurant & Bar Water Baseline",
+      "value": 950,
+      "unit": "L/day",
+      "category": "Water",
+      "updatedBy": "Sze Ping",
+      "updatedAt": "2026-08-06 09:00"
+    },
+    {
+      "id": "BL-18",
+      "key": "rooftop_power",
+      "meterId": "MTR-E-RTB",
+      "name": "Rooftop Restaurant & Bar Electricity Baseline",
+      "value": 210,
+      "unit": "kWh/day",
+      "category": "Electricity",
+      "updatedBy": "Sze Ping",
+      "updatedAt": "2026-08-06 09:00"
+    },
+    {
+      "id": "BL-19",
+      "key": "buffet_food_waste",
+      "meterId": null,
+      "name": "Max Allowed Food Waste per Diner",
+      "value": 0.12,
+      "unit": "kg/guest/service",
+      "category": "F&B",
+      "updatedBy": "Sze Ping",
+      "updatedAt": "2026-08-03 14:15"
+    }
+  ],
+  "complianceLogs": [
+    {
+      "month": "Oct 2025",
+      "foodSavedKg": 910,
+      "waterConservedL": 112000,
+      "energySavedKwh": 9800,
+      "co2AvoidedKg": 13500,
+      "costSavedMyr": 25100,
+      "vmScore": 68,
+      "status": "Needs Improvement"
+    },
+    {
+      "month": "Nov 2025",
+      "foodSavedKg": 980,
+      "waterConservedL": 118000,
+      "energySavedKwh": 10200,
+      "co2AvoidedKg": 14200,
+      "costSavedMyr": 27300,
+      "vmScore": 71,
+      "status": "Acceptable"
+    },
+    {
+      "month": "Dec 2025",
+      "foodSavedKg": 1050,
+      "waterConservedL": 125000,
+      "energySavedKwh": 10900,
+      "co2AvoidedKg": 15400,
+      "costSavedMyr": 29500,
+      "vmScore": 74,
+      "status": "Acceptable"
+    },
+    {
+      "month": "Jan 2026",
+      "foodSavedKg": 1120,
+      "waterConservedL": 134000,
+      "energySavedKwh": 11500,
+      "co2AvoidedKg": 16800,
+      "costSavedMyr": 31200,
+      "vmScore": 75,
+      "status": "Compliant"
+    },
+    {
+      "month": "Feb 2026",
+      "foodSavedKg": 1190,
+      "waterConservedL": 139000,
+      "energySavedKwh": 12100,
+      "co2AvoidedKg": 17600,
+      "costSavedMyr": 32800,
+      "vmScore": 76,
+      "status": "Compliant"
+    },
+    {
+      "month": "Mar 2026",
+      "foodSavedKg": 1240,
+      "waterConservedL": 145000,
+      "energySavedKwh": 12800,
+      "co2AvoidedKg": 18450,
+      "costSavedMyr": 34200,
+      "vmScore": 78,
+      "status": "Compliant"
+    },
+    {
+      "month": "Apr 2026",
+      "foodSavedKg": 1480,
+      "waterConservedL": 168000,
+      "energySavedKwh": 14200,
+      "co2AvoidedKg": 21300,
+      "costSavedMyr": 39800,
+      "vmScore": 84,
+      "status": "High Compliance"
+    },
+    {
+      "month": "May 2026",
+      "foodSavedKg": 1620,
+      "waterConservedL": 192000,
+      "energySavedKwh": 16500,
+      "co2AvoidedKg": 24100,
+      "costSavedMyr": 44600,
+      "vmScore": 89,
+      "status": "High Compliance"
+    },
+    {
+      "month": "Jun 2026",
+      "foodSavedKg": 1510,
+      "waterConservedL": 178000,
+      "energySavedKwh": 15300,
+      "co2AvoidedKg": 22600,
+      "costSavedMyr": 41200,
+      "vmScore": 86,
+      "status": "High Compliance"
+    },
+    {
+      "month": "Jul 2026",
+      "foodSavedKg": 1790,
+      "waterConservedL": 215000,
+      "energySavedKwh": 18900,
+      "co2AvoidedKg": 27800,
+      "costSavedMyr": 49500,
+      "vmScore": 93,
+      "status": "VM2026 Champion"
+    },
+    {
+      "month": "Aug 2026 (MTD)",
+      "foodSavedKg": 940,
+      "waterConservedL": 122000,
+      "energySavedKwh": 10400,
+      "co2AvoidedKg": 15200,
+      "costSavedMyr": 28400,
+      "vmScore": 92,
+      "status": "On Track"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "ING-001",
+      "name": "Fresh Farm Poultry (Chicken Breast)",
+      "category": "Meat & Poultry",
+      "quantity": 65,
+      "unit": "kg",
+      "batchNumber": "BCH-20260810-CK",
+      "deliveryDate": "2026-08-10",
+      "expiryDate": "2026-08-14",
+      "shelfLifeDays": 4,
+      "costPerKg": 16.5,
+      "storageLocation": "Walk-in Chiller A"
+    },
+    {
+      "id": "ING-002",
+      "name": "Atlantic Salmon Fillet",
+      "category": "Seafood",
+      "quantity": 28.5,
+      "unit": "kg",
+      "batchNumber": "BCH-20260811-SL",
+      "deliveryDate": "2026-08-11",
+      "expiryDate": "2026-08-13",
+      "shelfLifeDays": 2,
+      "costPerKg": 48,
+      "storageLocation": "Walk-in Chiller A"
+    },
+    {
+      "id": "ING-003",
+      "name": "Grade A Omega-3 Eggs",
+      "category": "Dairy & Eggs",
+      "quantity": 450,
+      "unit": "units",
+      "batchNumber": "BCH-20260808-EG",
+      "deliveryDate": "2026-08-08",
+      "expiryDate": "2026-08-18",
+      "shelfLifeDays": 10,
+      "costPerKg": 0.65,
+      "storageLocation": "Dry Storage Cold Zone"
+    },
+    {
+      "id": "ING-004",
+      "name": "Cameron Highland Hydroponic Lettuce",
+      "category": "Produce",
+      "quantity": 18,
+      "unit": "kg",
+      "batchNumber": "BCH-20260812-LT",
+      "deliveryDate": "2026-08-12",
+      "expiryDate": "2026-08-15",
+      "shelfLifeDays": 3,
+      "costPerKg": 9.2,
+      "storageLocation": "Vegetable Crisper B"
+    },
+    {
+      "id": "ING-005",
+      "name": "Fragrant Jasmine Rice (Siam Super)",
+      "category": "Grains & Dry",
+      "quantity": 220,
+      "unit": "kg",
+      "batchNumber": "BCH-20260720-RC",
+      "deliveryDate": "2026-07-20",
+      "expiryDate": "2026-12-31",
+      "shelfLifeDays": 164,
+      "costPerKg": 4.8,
+      "storageLocation": "Dry Bulk Store"
+    },
+    {
+      "id": "ING-006",
+      "name": "Organic Coconut Milk (Santan)",
+      "category": "Dairy & Oils",
+      "quantity": 35,
+      "unit": "L",
+      "batchNumber": "BCH-20260809-SM",
+      "deliveryDate": "2026-08-09",
+      "expiryDate": "2026-08-14",
+      "shelfLifeDays": 5,
+      "costPerKg": 8.5,
+      "storageLocation": "Walk-in Chiller B"
+    },
+    {
+      "id": "ING-007",
+      "name": "Australian Ribeye Beef Strips",
+      "category": "Meat & Poultry",
+      "quantity": 32,
+      "unit": "kg",
+      "batchNumber": "BCH-20260805-BF",
+      "deliveryDate": "2026-08-05",
+      "expiryDate": "2026-08-19",
+      "shelfLifeDays": 14,
+      "costPerKg": 62,
+      "storageLocation": "Deep Freezer -18C"
+    },
+    {
+      "id": "ING-008",
+      "name": "Fresh Tiger Prawns (Grade L)",
+      "category": "Seafood",
+      "quantity": 15,
+      "unit": "kg",
+      "batchNumber": "BCH-20260812-PW",
+      "deliveryDate": "2026-08-12",
+      "expiryDate": "2026-08-14",
+      "shelfLifeDays": 2,
+      "costPerKg": 52,
+      "storageLocation": "Walk-in Chiller A"
+    },
+    {
+      "id": "ING-009",
+      "name": "Organic Yellow Noodle (Mee)",
+      "category": "Grains & Dry",
+      "quantity": 40,
+      "unit": "kg",
+      "batchNumber": "BCH-20260811-ND",
+      "deliveryDate": "2026-08-11",
+      "expiryDate": "2026-08-16",
+      "shelfLifeDays": 5,
+      "costPerKg": 5.5,
+      "storageLocation": "Dry Pantry Zone 1"
+    },
+    {
+      "id": "ING-010",
+      "name": "Vine-Ripened Cameron Tomatoes",
+      "category": "Produce",
+      "quantity": 24,
+      "unit": "kg",
+      "batchNumber": "BCH-20260811-TM",
+      "deliveryDate": "2026-08-11",
+      "expiryDate": "2026-08-16",
+      "shelfLifeDays": 5,
+      "costPerKg": 7.8,
+      "storageLocation": "Vegetable Crisper B"
+    }
+  ],
+  "foodWasteLogs": [
+    {
+      "id": "WST-101",
+      "departmentId": "kitchen",
+      "date": "2026-08-12",
+      "mealPeriod": "Dinner Shift",
+      "item": "Cameron Highland Hydroponic Lettuce",
+      "type": "Spoilage",
+      "reason": "Expired / Wilted in Chiller B",
+      "quantity": 3.4,
+      "unit": "kg",
+      "costImpact": 31.28,
+      "loggedBy": "Sze Ping (Head Chef)"
+    },
+    {
+      "id": "WST-102",
+      "departmentId": "kitchen",
+      "date": "2026-08-12",
+      "mealPeriod": "Dinner Shift",
+      "item": "Fresh Farm Poultry",
+      "type": "Prep Waste",
+      "reason": "Bones & Trimmings",
+      "quantity": 5.8,
+      "unit": "kg",
+      "costImpact": 0,
+      "loggedBy": "Kitchen Prep Team"
+    },
+    {
+      "id": "WST-103",
+      "departmentId": "kitchen",
+      "date": "2026-08-11",
+      "mealPeriod": "Breakfast Shift",
+      "item": "Organic Coconut Milk",
+      "type": "Spoilage",
+      "reason": "Sour batch due to door left ajar",
+      "quantity": 4,
+      "unit": "L",
+      "costImpact": 34,
+      "loggedBy": "Sous Chef Ahmad"
+    },
+    {
+      "id": "WST-104",
+      "departmentId": "kitchen",
+      "date": "2026-08-11",
+      "mealPeriod": "Breakfast Shift",
+      "item": "Grade A Omega-3 Eggs",
+      "type": "Prep Waste",
+      "reason": "Eggshells sent to composter",
+      "quantity": 6.2,
+      "unit": "kg",
+      "costImpact": 0,
+      "loggedBy": "Prep Cook Mei"
+    },
+    {
+      "id": "WST-105",
+      "departmentId": "kitchen",
+      "date": "2026-08-10",
+      "mealPeriod": "Dinner Shift",
+      "item": "Atlantic Salmon Skin & Bones",
+      "type": "Prep Waste",
+      "reason": "Fish stock extraction",
+      "quantity": 4.5,
+      "unit": "kg",
+      "costImpact": 0,
+      "loggedBy": "Sous Chef Ahmad"
+    },
+    {
+      "id": "FW-111",
+      "department": "kitchen",
+      "departmentId": "kitchen",
+      "type": "Preparation Scrap",
+      "item": "Mixed Prep",
+      "weightKg": 12.4,
+      "quantity": 12.4,
+      "unit": "kg",
+      "loggedBy": "Sous Chef",
+      "timestamp": "2026-08-12 14:00",
+      "date": "2026-08-12"
+    },
+    {
+      "id": "FW-112",
+      "department": "kitchen",
+      "departmentId": "kitchen",
+      "type": "Spoilage",
+      "item": "Dairy",
+      "weightKg": 3.2,
+      "quantity": 3.2,
+      "unit": "kg",
+      "loggedBy": "Inventory Clerk",
+      "timestamp": "2026-08-12 16:30",
+      "date": "2026-08-12"
+    },
+    {
+      "id": "FW-113",
+      "department": "kitchen",
+      "departmentId": "kitchen",
+      "type": "Spoilage",
+      "item": "Buffet Leftover",
+      "weightKg": 8.5,
+      "quantity": 8.5,
+      "unit": "kg",
+      "loggedBy": "F&B Manager",
+      "timestamp": "2026-08-12 22:30",
+      "date": "2026-08-12"
+    }
+  ],
+  "reservationForecast": [
+    {
+      "date": "2026-08-13",
+      "shift": "Breakfast",
+      "expectedCheckIns": 142,
+      "totalInHouseGuests": 285,
+      "nationalities": {
+        "Malaysian": 45,
+        "Singaporean": 25,
+        "European": 18,
+        "MiddleEastern": 8,
+        "Others": 4
+      },
+      "dietaryProfiles": {
+        "Regular": 195,
+        "Halal": 250,
+        "VeganVegetarian": 28,
+        "GlutenFree": 12
+      }
+    },
+    {
+      "date": "2026-08-13",
+      "shift": "Dinner",
+      "expectedCheckIns": 88,
+      "totalInHouseGuests": 310,
+      "nationalities": {
+        "Malaysian": 40,
+        "Singaporean": 28,
+        "European": 20,
+        "MiddleEastern": 8,
+        "Others": 4
+      },
+      "dietaryProfiles": {
+        "Regular": 210,
+        "Halal": 275,
+        "VeganVegetarian": 32,
+        "GlutenFree": 15
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "shift": "Breakfast",
+      "expectedCheckIns": 65,
+      "totalInHouseGuests": 340,
+      "nationalities": {
+        "Malaysian": 38,
+        "Singaporean": 30,
+        "European": 22,
+        "MiddleEastern": 6,
+        "Others": 4
+      },
+      "dietaryProfiles": {
+        "Regular": 230,
+        "Halal": 290,
+        "VeganVegetarian": 35,
+        "GlutenFree": 18
+      }
+    },
+    {
+      "date": "2026-08-14",
+      "shift": "Dinner",
+      "expectedCheckIns": 50,
+      "totalInHouseGuests": 355,
+      "nationalities": {
+        "Malaysian": 35,
+        "Singaporean": 32,
+        "European": 24,
+        "MiddleEastern": 5,
+        "Others": 4
+      },
+      "dietaryProfiles": {
+        "Regular": 245,
+        "Halal": 300,
+        "VeganVegetarian": 40,
+        "GlutenFree": 20
+      }
+    }
+  ],
+  "dishes": [
+    {
+      "id": "DSH-01",
+      "name": "Traditional Nasi Lemak w/ Rendang",
+      "category": "Main / Asian",
+      "basePerGuestGrams": 160,
+      "ingredientRefs": [
+        "Jasmine Rice",
+        "Chicken",
+        "Coconut Milk"
+      ],
+      "historicalWasteRate": 0.04,
+      "wasteMultiplier": 0.96,
+      "costTier": "Medium"
+    },
+    {
+      "id": "DSH-02",
+      "name": "Grilled Herb Butter Atlantic Salmon",
+      "category": "Western Grill",
+      "basePerGuestGrams": 110,
+      "ingredientRefs": [
+        "Salmon Fillet",
+        "Butter",
+        "Herbs"
+      ],
+      "historicalWasteRate": 0.14,
+      "wasteMultiplier": 0.86,
+      "costTier": "High"
+    },
+    {
+      "id": "DSH-03",
+      "name": "Live Omelette & Scrambled Egg Station",
+      "category": "Live Station",
+      "basePerGuestGrams": 90,
+      "ingredientRefs": [
+        "Eggs",
+        "Dairy",
+        "Vegetables"
+      ],
+      "historicalWasteRate": 0.05,
+      "wasteMultiplier": 0.95,
+      "costTier": "Low"
+    },
+    {
+      "id": "DSH-04",
+      "name": "Wok-Tossed Tiger Prawn Mee Mamak",
+      "category": "Asian Noodle",
+      "basePerGuestGrams": 130,
+      "ingredientRefs": [
+        "Tiger Prawns",
+        "Yellow Noodle",
+        "Spices"
+      ],
+      "historicalWasteRate": 0.08,
+      "wasteMultiplier": 0.92,
+      "costTier": "High"
+    },
+    {
+      "id": "DSH-05",
+      "name": "Crispy Organic Garden Salad Bar",
+      "category": "Salad / Cold",
+      "basePerGuestGrams": 75,
+      "ingredientRefs": [
+        "Hydroponic Lettuce",
+        "Tomatoes",
+        "Dressing"
+      ],
+      "historicalWasteRate": 0.18,
+      "wasteMultiplier": 0.82,
+      "costTier": "Low"
+    },
+    {
+      "id": "DSH-06",
+      "name": "Slow-Roasted Australian Beef Striploin",
+      "category": "Carvery",
+      "basePerGuestGrams": 120,
+      "ingredientRefs": [
+        "Beef Strips",
+        "Rosemary Jus"
+      ],
+      "historicalWasteRate": 0.12,
+      "wasteMultiplier": 0.88,
+      "costTier": "High"
+    }
+  ],
+  "plateWasteLogs": [
+    {
+      "id": "PW-001",
+      "date": "2026-08-12",
+      "mealPeriod": "Dinner",
+      "dishId": "DSH-02",
+      "dishName": "Grilled Herb Butter Atlantic Salmon",
+      "discardedKg": 4.8,
+      "isAnomaly": false,
+      "note": "Slight over-batching during late dinner peak",
+      "loggedBy": "Chef Zhen Bang"
+    },
+    {
+      "id": "PW-002",
+      "date": "2026-08-12",
+      "mealPeriod": "Dinner",
+      "dishId": "DSH-05",
+      "dishName": "Crispy Organic Garden Salad Bar",
+      "discardedKg": 3.2,
+      "isAnomaly": false,
+      "note": "Guests preferred warm appetizers due to rain",
+      "loggedBy": "Prep Cook Mei"
+    },
+    {
+      "id": "PW-003",
+      "date": "2026-08-11",
+      "mealPeriod": "Dinner",
+      "dishId": "DSH-06",
+      "dishName": "Slow-Roasted Australian Beef Striploin",
+      "discardedKg": 6.5,
+      "isAnomaly": true,
+      "anomalyReason": "Kitchen tray dropped while restocking carvery",
+      "photoAttached": true,
+      "loggedBy": "Chef Zhen Bang"
+    },
+    {
+      "id": "PW-101",
+      "department": "housekeeping",
+      "departmentId": "housekeeping",
+      "roomNumber": "101",
+      "wasteKg": 0.8,
+      "discardedKg": 0.8,
+      "timestamp": "2026-08-12 09:30",
+      "date": "2026-08-12",
+      "mealPeriod": "Room Service"
+    },
+    {
+      "id": "PW-102",
+      "department": "housekeeping",
+      "departmentId": "housekeeping",
+      "roomNumber": "102",
+      "wasteKg": 1.2,
+      "discardedKg": 1.2,
+      "timestamp": "2026-08-12 09:45",
+      "date": "2026-08-12",
+      "mealPeriod": "Room Service"
+    },
+    {
+      "id": "PW-103",
+      "department": "housekeeping",
+      "departmentId": "housekeeping",
+      "roomNumber": "105",
+      "wasteKg": 0.5,
+      "discardedKg": 0.5,
+      "timestamp": "2026-08-12 10:00",
+      "date": "2026-08-12",
+      "mealPeriod": "Room Service"
+    },
+    {
+      "id": "PW-104",
+      "department": "housekeeping",
+      "departmentId": "housekeeping",
+      "roomNumber": "108",
+      "wasteKg": 2.1,
+      "discardedKg": 2.1,
+      "timestamp": "2026-08-12 10:15",
+      "date": "2026-08-12",
+      "mealPeriod": "Room Service"
+    },
+    {
+      "id": "PW-105",
+      "department": "housekeeping",
+      "departmentId": "housekeeping",
+      "roomNumber": "112",
+      "wasteKg": 0.4,
+      "discardedKg": 0.4,
+      "timestamp": "2026-08-12 10:30",
+      "date": "2026-08-12",
+      "mealPeriod": "Room Service"
+    }
+  ],
+  "rooms": [
+    {
+      "roomNumber": "101",
+      "floor": 1,
+      "type": "Deluxe Ocean Suite",
+      "guestName": "Tan Sri Jeffrey Cheah",
+      "status": "Occupied",
+      "servicePreference": "STANDARD",
+      "optOutDays": 0,
+      "linenDelayDays": 0,
+      "towelReuse": false,
+      "cleaningStatus": "Active Clean List",
+      "ecoPointsEarned": 0,
+      "qrToken": "RM101-SEC-771"
+    },
+    {
+      "roomNumber": "102",
+      "floor": 1,
+      "type": "Deluxe Garden View",
+      "guestName": "Elena Rostova",
+      "status": "Occupied",
+      "servicePreference": "OPT_OUT_CLEANING",
+      "optOutDays": 1,
+      "linenDelayDays": 2,
+      "towelReuse": true,
+      "cleaningStatus": "Skipped (Opt-Out)",
+      "ecoPointsEarned": 20,
+      "qrToken": "RM102-SEC-892"
+    },
+    {
+      "roomNumber": "103",
+      "floor": 1,
+      "type": "Deluxe Garden View",
+      "guestName": "Kenji Sato",
+      "status": "Occupied",
+      "servicePreference": "STANDARD",
+      "optOutDays": 0,
+      "linenDelayDays": 0,
+      "towelReuse": true,
+      "cleaningStatus": "Active Clean List",
+      "ecoPointsEarned": 5,
+      "qrToken": "RM103-SEC-554"
+    },
+    {
+      "roomNumber": "201",
+      "floor": 2,
+      "type": "Premier Sunset Villa",
+      "guestName": "Michael & Sarah Davies",
+      "status": "Occupied",
+      "servicePreference": "LINEN_DELAY",
+      "optOutDays": 0,
+      "linenDelayDays": 3,
+      "towelReuse": true,
+      "cleaningStatus": "Light Service Only",
+      "ecoPointsEarned": 10,
+      "qrToken": "RM201-SEC-340"
+    },
+    {
+      "roomNumber": "202",
+      "floor": 2,
+      "type": "Premier Sunset Villa",
+      "guestName": "Dr. Farouk Abdullah",
+      "status": "Occupied",
+      "servicePreference": "OPT_OUT_CLEANING",
+      "optOutDays": 2,
+      "linenDelayDays": 2,
+      "towelReuse": true,
+      "cleaningStatus": "Skipped (Opt-Out)",
+      "ecoPointsEarned": 30,
+      "qrToken": "RM202-SEC-512"
+    },
+    {
+      "roomNumber": "203",
+      "floor": 2,
+      "type": "Premier Sunset Villa",
+      "guestName": "Amina Al-Mansoor",
+      "status": "Occupied",
+      "servicePreference": "STANDARD",
+      "optOutDays": 0,
+      "linenDelayDays": 0,
+      "towelReuse": false,
+      "cleaningStatus": "Active Clean List",
+      "ecoPointsEarned": 0,
+      "qrToken": "RM203-SEC-918"
+    },
+    {
+      "roomNumber": "301",
+      "floor": 3,
+      "type": "Presidential Eco Suite",
+      "guestName": "Hans Zimmer & Family",
+      "status": "Occupied",
+      "servicePreference": "STANDARD",
+      "optOutDays": 0,
+      "linenDelayDays": 0,
+      "towelReuse": true,
+      "cleaningStatus": "Active Clean List",
+      "ecoPointsEarned": 5,
+      "qrToken": "RM301-SEC-901"
+    },
+    {
+      "roomNumber": "302",
+      "floor": 3,
+      "type": "Deluxe Ocean Suite",
+      "guestName": "Vacant Ready",
+      "status": "Vacant Ready",
+      "servicePreference": "STANDARD",
+      "optOutDays": 0,
+      "linenDelayDays": 0,
+      "towelReuse": false,
+      "cleaningStatus": "Inspection Passed",
+      "ecoPointsEarned": 0,
+      "qrToken": "RM302-SEC-110"
+    },
+    {
+      "roomNumber": "303",
+      "floor": 3,
+      "type": "Executive Seaview Room",
+      "guestName": "Chloe Dupont",
+      "status": "Occupied",
+      "servicePreference": "LINEN_DELAY",
+      "optOutDays": 0,
+      "linenDelayDays": 2,
+      "towelReuse": true,
+      "cleaningStatus": "Light Service Only",
+      "ecoPointsEarned": 15,
+      "qrToken": "RM303-SEC-337"
+    },
+    {
+      "roomNumber": "304",
+      "floor": 3,
+      "type": "Executive Seaview Room",
+      "guestName": "Simon Wong",
+      "status": "Occupied",
+      "servicePreference": "OPT_OUT_CLEANING",
+      "optOutDays": 1,
+      "linenDelayDays": 2,
+      "towelReuse": true,
+      "cleaningStatus": "Skipped (Opt-Out)",
+      "ecoPointsEarned": 25,
+      "qrToken": "RM304-SEC-426"
+    }
+  ],
+  "ecoVouchers": [
+    {
+      "code": "VM26-ECO-7821",
+      "roomNumber": "304",
+      "guestName": "Simon Wong",
+      "rewardTitle": "15% Sustainable Dining Voucher",
+      "description": "Valid at Ocean Reef Organic Bistro & Farm-to-Table Kitchen",
+      "pointsCost": 25,
+      "issueDate": "2026-08-13 07:15",
+      "expiryDate": "2026-08-20",
+      "isRedeemed": false
+    },
+    {
+      "code": "VM26-TRP-4409",
+      "roomNumber": "202",
+      "guestName": "Dr. Farouk Abdullah",
+      "rewardTitle": "Langkawi UNESCO Geopark Mangrove Pass",
+      "description": "Zero-emission solar boat eco-safari guided expedition",
+      "pointsCost": 30,
+      "issueDate": "2026-08-12 16:30",
+      "expiryDate": "2026-08-25",
+      "isRedeemed": false
+    }
+  ],
+  "guestInteractions": [
+    {
+      "id": "GIL-001",
+      "roomNumber": "304",
+      "timestamp": "2026-08-13 08:30:00",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected Opt-Out Daily Cleaning + Towel Reuse",
+      "pointsEarned": 20
+    },
+    {
+      "id": "GIL-002",
+      "roomNumber": "202",
+      "timestamp": "2026-08-12 16:30:15",
+      "action": "VOUCHER_GENERATED",
+      "details": "Milestone reached (30 pts) -> Voucher VM26-TRP-4409 generated",
+      "pointsEarned": 0
+    },
+    {
+      "id": "GIL-003",
+      "roomNumber": "102",
+      "timestamp": "2026-08-12 18:20:44",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected Opt-Out Daily Cleaning + Towel Reuse",
+      "pointsEarned": 20
+    },
+    {
+      "id": "GIL-004",
+      "roomNumber": "201",
+      "timestamp": "2026-08-12 19:10:02",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected Linen Delay (3 days) + Towel Reuse",
+      "pointsEarned": 15
+    }
+  ],
+  "utilityMeters": [
+    {
+      "meterId": "MTR-W-F1",
+      "departmentId": "housekeeping",
+      "zone": "Floor 1 Guest Wing",
+      "type": "Water",
+      "baselineDaily": 1800,
+      "unit": "L/day",
+      "lastReading": 1650,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-F1",
+      "departmentId": "housekeeping",
+      "zone": "Floor 1 Guest Wing",
+      "type": "Electricity",
+      "baselineDaily": 140,
+      "unit": "kWh/day",
+      "lastReading": 132,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-F2",
+      "departmentId": "housekeeping",
+      "zone": "Floor 2 Guest Wing",
+      "type": "Water",
+      "baselineDaily": 1750,
+      "unit": "L/day",
+      "lastReading": 1710,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-F2",
+      "departmentId": "housekeeping",
+      "zone": "Floor 2 Guest Wing",
+      "type": "Electricity",
+      "baselineDaily": 145,
+      "unit": "kWh/day",
+      "lastReading": 140,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-F3",
+      "departmentId": "housekeeping",
+      "zone": "Floor 3 Executive Wing",
+      "type": "Water",
+      "baselineDaily": 1600,
+      "unit": "L/day",
+      "lastReading": 2150,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Anomaly Flagged (+34.3%)",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-F3",
+      "departmentId": "housekeeping",
+      "zone": "Floor 3 Executive Wing",
+      "type": "Electricity",
+      "baselineDaily": 155,
+      "unit": "kWh/day",
+      "lastReading": 149,
+      "lastReadingTime": "2026-08-12 18:00",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-KIT",
+      "departmentId": "kitchen",
+      "zone": "Main Culinary Kitchen",
+      "type": "Water",
+      "baselineDaily": 4500,
+      "unit": "L/day",
+      "lastReading": 4320,
+      "lastReadingTime": "2026-08-12 21:00",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-KIT",
+      "departmentId": "kitchen",
+      "zone": "Main Culinary Kitchen",
+      "type": "Electricity",
+      "baselineDaily": 380,
+      "unit": "kWh/day",
+      "lastReading": 460,
+      "lastReadingTime": "2026-08-12 21:00",
+      "status": "Anomaly Flagged (+21.0%)",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-LDY",
+      "departmentId": "laundry",
+      "zone": "Commercial Eco-Laundry",
+      "type": "Water",
+      "baselineDaily": 6200,
+      "unit": "L/day",
+      "lastReading": 5890,
+      "lastReadingTime": "2026-08-12 20:30",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-LDY",
+      "departmentId": "laundry",
+      "zone": "Commercial Eco-Laundry",
+      "type": "Electricity",
+      "baselineDaily": 290,
+      "unit": "kWh/day",
+      "lastReading": 275,
+      "lastReadingTime": "2026-08-12 20:30",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-E-HVAC",
+      "departmentId": "facilities",
+      "zone": "Central Chiller Plant",
+      "type": "Electricity",
+      "baselineDaily": 850,
+      "unit": "kWh/day",
+      "lastReading": 820,
+      "lastReadingTime": "2026-08-12 22:00",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-FAC",
+      "departmentId": "facilities",
+      "zone": "Central Chiller Plant",
+      "type": "Water",
+      "baselineDaily": 500,
+      "unit": "L/day",
+      "lastReading": 620,
+      "lastReadingTime": "2026-08-13 08:00",
+      "status": "Anomaly Flagged (+24.0%)",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-W-FO",
+      "departmentId": "front-office",
+      "zone": "Front Office & Lobby",
+      "type": "Water",
+      "baselineDaily": 700,
+      "unit": "L/day",
+      "lastReading": 680,
+      "lastReadingTime": "2026-08-13 08:00",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-FO",
+      "departmentId": "front-office",
+      "zone": "Front Office & Lobby",
+      "type": "Electricity",
+      "baselineDaily": 120,
+      "unit": "kWh/day",
+      "lastReading": 148,
+      "lastReadingTime": "2026-08-13 08:00",
+      "status": "Anomaly Flagged (+23.3%)",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-POOL",
+      "departmentId": "facilities",
+      "zone": "Swimming Pool & Spa",
+      "type": "Water",
+      "baselineDaily": 800,
+      "unit": "L/day",
+      "lastReading": 760,
+      "lastReadingTime": "2026-08-13 07:30",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-POOL",
+      "departmentId": "facilities",
+      "zone": "Swimming Pool & Spa",
+      "type": "Electricity",
+      "baselineDaily": 95,
+      "unit": "kWh/day",
+      "lastReading": 90,
+      "lastReadingTime": "2026-08-13 07:30",
+      "status": "Normal",
+      "icon": "\u26a1"
+    },
+    {
+      "meterId": "MTR-W-RTB",
+      "departmentId": "kitchen",
+      "zone": "Rooftop Restaurant & Bar",
+      "type": "Water",
+      "baselineDaily": 950,
+      "unit": "L/day",
+      "lastReading": 905,
+      "lastReadingTime": "2026-08-13 07:45",
+      "status": "Normal",
+      "icon": "\ud83d\udca7"
+    },
+    {
+      "meterId": "MTR-E-RTB",
+      "departmentId": "kitchen",
+      "zone": "Rooftop Restaurant & Bar",
+      "type": "Electricity",
+      "baselineDaily": 210,
+      "unit": "kWh/day",
+      "lastReading": 246,
+      "lastReadingTime": "2026-08-13 07:45",
+      "status": "Anomaly Flagged (+17.1%)",
+      "icon": "\u26a1"
+    }
+  ],
+  "defectCategories": [
+    {
+      "id": "cat-toilet-flapper",
+      "label": "Bathroom Toilet Flapper Leak",
+      "hint": "~280 L/day",
+      "resourceType": "Water",
+      "custom": false
+    },
+    {
+      "id": "cat-basin-faucet",
+      "label": "Dripping Basin Faucet",
+      "hint": "~45 L/day",
+      "resourceType": "Water",
+      "custom": false
+    },
+    {
+      "id": "cat-hvac-thermostat",
+      "label": "HVAC / Aircon Thermostat Stuck",
+      "hint": "~25 kWh/day",
+      "resourceType": "Electricity",
+      "custom": false
+    },
+    {
+      "id": "cat-shower-valve",
+      "label": "Shower Valve Pressure Leak",
+      "hint": "~120 L/day",
+      "resourceType": "Water",
+      "custom": false
+    },
+    {
+      "id": "cat-coldroom-gasket",
+      "label": "Cold Room Door Gasket Seal",
+      "hint": "~35 kWh/day",
+      "resourceType": "Electricity",
+      "custom": false
+    }
+  ],
+  "technicians": [
+    {
+      "id": "TECH-01",
+      "name": "Faizal Rahim",
+      "specialty": "Plumbing & Hydraulics",
+      "status": "Available",
+      "activeTickets": 0,
+      "phone": "+60 12-441 9021"
+    },
+    {
+      "id": "TECH-02",
+      "name": "Ramesh Kumar",
+      "specialty": "HVAC & Electrical",
+      "status": "Available",
+      "activeTickets": 0,
+      "phone": "+60 17-883 1145"
+    },
+    {
+      "id": "TECH-03",
+      "name": "Chong Wei",
+      "specialty": "Smart Controls & Sensors",
+      "status": "Available",
+      "activeTickets": 0,
+      "phone": "+60 19-332 7780"
+    },
+    {
+      "id": "TECH-04",
+      "name": "Nurul Huda",
+      "specialty": "General Facility & Mechanical",
+      "status": "Available",
+      "activeTickets": 0,
+      "phone": "+60 13-902 4451"
+    }
+  ],
+  "ticketSequence": {
+    "date": null,
+    "count": 0
+  },
+  "repairTickets": [],
+  "userAudit": [
+    {
+      "id": "AUD-9001",
+      "timestamp": "2026-08-01 10:00:12",
+      "userId": "USR-102",
+      "userName": "Zhen Bang",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "water_per_room",
+      "previousValue": "200 L/room/day",
+      "newValue": "180 L/room/day",
+      "effectiveDate": "2026-08-01",
+      "reason": "Calibrated for new high-efficiency low-flow aerators installed across Tower A.",
+      "transactionRef": "TXN-90100A"
+    },
+    {
+      "id": "AUD-9002",
+      "timestamp": "2026-08-02 09:30:11",
+      "userId": "USR-103",
+      "userName": "Wan Ching",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "kitchen_power",
+      "previousValue": "420 kWh/day",
+      "newValue": "380 kWh/day",
+      "effectiveDate": "2026-08-02",
+      "reason": "Induction cooktop upgrade in main banquet kitchen completed.",
+      "transactionRef": "TXN-90150B"
+    },
+    {
+      "id": "AUD-9003",
+      "timestamp": "2026-08-03 14:15:32",
+      "userId": "USR-104",
+      "userName": "Sze Ping",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "buffet_food_waste",
+      "previousValue": "0.15 kg/guest",
+      "newValue": "0.12 kg/guest",
+      "effectiveDate": "2026-08-03",
+      "reason": "Stricter VM2026 culinary prep guidelines adopted.",
+      "transactionRef": "TXN-90200C"
+    },
+    {
+      "id": "AUD-9004",
+      "timestamp": "2026-08-01 10:15:12",
+      "userId": "USR-101",
+      "userName": "Kar Hang",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "water_per_room",
+      "previousValue": "185",
+      "newValue": "180",
+      "effectiveDate": "2026-08-01",
+      "reason": "Installed new aerator standard",
+      "transactionRef": "TXN-90231A"
+    },
+    {
+      "id": "AUD-9005",
+      "timestamp": "2026-08-02 09:30:14",
+      "userId": "USR-103",
+      "userName": "Wan Ching",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "kitchen_water",
+      "previousValue": "4800",
+      "newValue": "4500",
+      "effectiveDate": "2026-08-02",
+      "reason": "Quarterly efficiency review",
+      "transactionRef": "TXN-90235C"
+    },
+    {
+      "id": "AUD-9006",
+      "timestamp": "2026-08-03 14:15:14",
+      "userId": "USR-104",
+      "userName": "Sze Ping",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "buffet_food_waste",
+      "previousValue": "0.15",
+      "newValue": "0.12",
+      "effectiveDate": "2026-08-03",
+      "reason": "Buffet tray optimization initiative",
+      "transactionRef": "TXN-90288X"
+    },
+    {
+      "id": "AUD-9007",
+      "timestamp": "2026-08-05 11:20:43",
+      "userId": "USR-103",
+      "userName": "Wan Ching",
+      "action": "BASELINE_CALIBRATION",
+      "targetKey": "hvac_chiller_power",
+      "previousValue": "900",
+      "newValue": "850",
+      "effectiveDate": "2026-08-06",
+      "reason": "New chiller firmware update",
+      "transactionRef": "TXN-90312D"
+    },
+    {
+      "id": "AUD-9008",
+      "timestamp": "2026-08-10 16:45:23",
+      "userId": "USR-101",
+      "userName": "Kar Hang",
+      "action": "SYSTEM_REPORT_GEN",
+      "targetKey": "compliance_pdf",
+      "previousValue": "N/A",
+      "newValue": "Exported",
+      "effectiveDate": "2026-08-10",
+      "reason": "Weekly management reporting",
+      "transactionRef": "TXN-90401B"
+    },
+    {
+      "id": "AUD-9009",
+      "timestamp": "2026-08-11 08:20:32",
+      "userId": "USR-106",
+      "userName": "System Scheduler",
+      "action": "AUTO_ANOMALY_SCAN",
+      "targetKey": "utilityMeters",
+      "previousValue": "Scan Run",
+      "newValue": "3 Alerts Found",
+      "effectiveDate": "2026-08-11",
+      "reason": "Daily morning scan",
+      "transactionRef": "TXN-90455S"
+    },
+    {
+      "id": "AUD-9010",
+      "timestamp": "2026-08-12 13:10:52",
+      "userId": "USR-101",
+      "userName": "Kar Hang",
+      "action": "ROLE_PERMISSION_GRANT",
+      "targetKey": "USR-108",
+      "previousValue": "Staff",
+      "newValue": "Facilities Manager",
+      "effectiveDate": "2026-08-12",
+      "reason": "Promotion applied in HR system",
+      "transactionRef": "TXN-90512H"
+    }
+  ]
+}

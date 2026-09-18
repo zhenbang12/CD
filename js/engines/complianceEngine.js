@@ -58,7 +58,8 @@ export class ComplianceEngine {
     const totalFoodWasteKg = foodWaste.reduce((acc, cur) => acc + (cur.quantity || 0), 0) +
       plateWaste.reduce((acc, cur) => acc + (cur.discardedKg || 0), 0);
 
-    const foodWastePerCoverLimit = getBaselineValue('buffet_food_waste', 0.15); // kg per cover
+    // Dynamically aggregate ALL F&B baselines (Max allowed food waste per diner)
+    const foodWastePerCoverLimit = baselinesList.filter(b => b.category === 'F&B' || b.category === 'Food').reduce((acc, curr) => acc + curr.value, 0) || 0.15;
     const foodBaselineDaily = estimatedCovers * foodWastePerCoverLimit;
 
     // UC_106 A2: No usable data for a required metric

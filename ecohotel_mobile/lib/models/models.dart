@@ -139,6 +139,7 @@ class RoomModel {
   bool towelReuse;
   String cleaningStatus; // 'Active Clean List', 'Skipped (Opt-Out)', 'Light Service Only'
   int ecoPointsEarned;
+  int pointsSpent;
   final String qrToken;
 
   RoomModel({
@@ -153,6 +154,7 @@ class RoomModel {
     this.towelReuse = false,
     required this.cleaningStatus,
     this.ecoPointsEarned = 0,
+    this.pointsSpent = 0,
     required this.qrToken,
   });
 }
