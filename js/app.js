@@ -293,7 +293,6 @@ class App {
         if (profileModal) this.closeProfileModal();
       }
     });
-    });
   }
 
   startLiveClock() {
