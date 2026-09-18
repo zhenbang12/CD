@@ -369,7 +369,7 @@ class HotelDatabase extends ChangeNotifier {
 
   // Users & Staff Auth (Module 1 - Mirrors Oracle USERS table and login.html)
   final List<UserModel> users = [
-    UserModel(id: 'USR-100', username: 'admin', password: 'password123', name: 'Sarah Chen', role: 'Operations Director', department: 'Executive Board', avatar: 'SC'),
+    UserModel(id: 'USR-100', username: 'admin', password: 'password123', name: 'Sarah Chen', role: 'Hotel Manager', department: 'Executive Board', avatar: 'SC'),
     UserModel(id: 'USR-101', username: 'exec', password: 'password123', name: 'Kar Hang', role: 'Sustainability Executive', department: 'Executive Board', avatar: 'KH'),
     UserModel(id: 'USR-102', username: 'tech', password: 'password123', name: 'Zhen Bang', role: 'Tech Lead', department: 'IT', avatar: 'ZB'),
     UserModel(id: 'USR-103', username: 'fac', password: 'password123', name: 'Wan Ching', role: 'Facilities Manager', department: 'Engineering', avatar: 'WC'),
@@ -1062,8 +1062,49 @@ class HotelDatabase extends ChangeNotifier {
 
   // ================= EXECUTIVE SCORE =================
   int calculateScore() {
-    int base = 92;
-    final highTickets = repairTickets.where((t) => t.priority == 'High' && t.status != 'Completed').length;
-    return max(50, base - (highTickets * 4));
+    // Dynamic Occupancy
+    final occupiedRooms = rooms.where((r) => r.status.toLowerCase() == 'occupied').length;
+    final int finalOccupiedRooms = occupiedRooms > 0 ? occupiedRooms : 150;
+    final double estimatedCovers = finalOccupiedRooms * 2.5;
+
+    // 1. Water Score
+    final waterMeters = utilityMeters.where((m) => m.type == 'Water');
+    final double totalWaterBaseline = waterMeters.fold<double>(0.0, (sum, m) => sum + m.baselineDaily) > 0 
+        ? waterMeters.fold<double>(0.0, (sum, m) => sum + m.baselineDaily) 
+        : (finalOccupiedRooms * 350.0);
+    final double totalWaterActual = waterMeters.fold<double>(0.0, (sum, m) => sum + m.lastReading);
+
+    // 2. Electricity Score
+    final eleMeters = utilityMeters.where((m) => m.type == 'Electricity');
+    final double totalEleBaseline = eleMeters.fold<double>(0.0, (sum, m) => sum + m.baselineDaily) > 0 
+        ? eleMeters.fold<double>(0.0, (sum, m) => sum + m.baselineDaily) 
+        : (finalOccupiedRooms * 45.0);
+    final double totalEleActual = eleMeters.fold<double>(0.0, (sum, m) => sum + m.lastReading);
+
+    // 3. F&B Waste Score
+    final double totalFoodWasteKg = foodWasteLogs.fold<double>(0.0, (sum, log) => sum + log.quantity) +
+        plateWasteLogs.fold<double>(0.0, (sum, log) => sum + log.discardedKg);
+    
+    const double foodWastePerCoverLimit = 0.15;
+    final double foodBaselineDaily = estimatedCovers * foodWastePerCoverLimit;
+
+    // Calculate efficiencies
+    final double waterEfficiency = totalWaterBaseline > 0 ? (totalWaterActual > 0 ? totalWaterBaseline / totalWaterActual : 2.0) : 1.0;
+    final double waterScore = min(100.0, max(35.0, waterEfficiency * 88));
+
+    final double eleEfficiency = totalEleBaseline > 0 ? (totalEleActual > 0 ? totalEleBaseline / totalEleActual : 2.0) : 1.0;
+    final double eleScore = min(100.0, max(35.0, eleEfficiency * 85));
+
+    final double foodEfficiency = foodBaselineDaily > 0 ? (totalFoodWasteKg > 0 ? foodBaselineDaily / totalFoodWasteKg : 2.0) : 1.0;
+    final double foodScore = min(100.0, max(35.0, foodEfficiency * 90));
+
+    // 4. Maintenance Penalty
+    final activeHighTickets = repairTickets.where((t) => t.priority == 'High' && t.status != 'Completed').length;
+    final double ticketPenalty = activeHighTickets * 3.5;
+
+    // Weighted composite
+    final double compositeScore = (waterScore * 0.35) + (eleScore * 0.30) + (foodScore * 0.35) - ticketPenalty;
+    
+    return min(99, max(40, compositeScore.round()));
   }
 }
