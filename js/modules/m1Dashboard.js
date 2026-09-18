@@ -1,5 +1,5 @@
 import { db } from '../db/storage.js';
-import { ComplianceEngine } from '../engines/complianceEngine.js?v=3.01';
+import { ComplianceEngine } from '../engines/complianceEngine.js';
 
 export class Module1Dashboard {
   constructor(container) {

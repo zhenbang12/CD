@@ -200,24 +200,36 @@ class _MainStaffShellState extends State<MainStaffShell> {
         ),
         actions: [
           if (!isGuest) ...[
-            Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('VM Score: ', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF059669))),
-                  Text(
-                    '${_db.calculateScore()}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+            Builder(
+              builder: (context) {
+                final score = _db.calculateScore();
+                final scoreColor = score >= 90
+                    ? const Color(0xFF22D3EE)
+                    : score >= 80
+                        ? const Color(0xFFFBBF24)
+                        : score >= 70
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFFEF4444);
+                return Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: scoreColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('VM Score: ', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: scoreColor)),
+                      Text(
+                        '$score',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: scoreColor),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ] else ...[
             Container(
@@ -7258,6 +7270,32 @@ class ExecutiveScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = db.calculateScore();
 
+    // 1. Calculate dynamic F&B waste
+    final double totalFoodWasteKg = db.foodWasteLogs.fold<double>(0.0, (sum, log) => sum + log.quantity) +
+        db.plateWasteLogs.fold<double>(0.0, (sum, log) => sum + log.discardedKg);
+    final occupiedRooms = db.rooms.where((r) => r.status.toLowerCase() == 'occupied').length;
+    final int finalOccupiedRooms = occupiedRooms > 0 ? occupiedRooms : 150;
+    final double estimatedCovers = finalOccupiedRooms * 2.5;
+    const double foodWastePerCoverLimit = 0.15;
+    final double foodBaselineDaily = estimatedCovers * foodWastePerCoverLimit;
+    
+    // 2. Housekeeping stats
+    final totalRooms = db.rooms.length;
+    final optOutRooms = db.rooms.where((r) => r.servicePreference.contains('OPT_OUT')).length;
+    final optOutRate = totalRooms > 0 ? (optOutRooms / totalRooms * 100).toStringAsFixed(1) : '0.0';
+
+    // 3. Facilities stats
+    final activeRepairs = db.repairTickets.where((t) => t.status != 'Completed').length;
+    final highPriorityRepairs = db.repairTickets.where((t) => t.priority == 'High' && t.status != 'Completed').length;
+
+    // 4. Laundry stats
+    final laundryMeters = db.utilityMeters.where((m) => m.zone.contains('Laundry'));
+    final laundryAnomalies = laundryMeters.where((m) => m.isAnomaly).length;
+
+    // 5. Front Office stats
+    final foMeters = db.utilityMeters.where((m) => m.zone.contains('Front Office'));
+    final foAnomalies = foMeters.where((m) => m.isAnomaly).length;
+
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
@@ -7284,10 +7322,16 @@ class ExecutiveScreen extends StatelessWidget {
                   children: [
                     Text(
                       '$score',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF059669),
+                        color: score >= 90
+                            ? const Color(0xFF22D3EE)
+                            : score >= 80
+                                ? const Color(0xFFFBBF24)
+                                : score >= 70
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFFEF4444),
                       ),
                     ),
                     const Text(
@@ -7298,42 +7342,23 @@ class ExecutiveScreen extends StatelessWidget {
                 ),
                 Text(
                   score >= 90
-                      ? 'Grade: A+ (Platinum VM2026 Certified)'
-                      : 'Grade: A (Compliant)',
-                  style: const TextStyle(
+                      ? 'VM2026 Green Champion (Platinum)'
+                      : score >= 80
+                          ? 'High Sustainable Compliance (Gold)'
+                          : score >= 70
+                              ? 'Standard Compliance (Silver)'
+                              : 'Action Required (Audit Warning)',
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF059669),
+                    color: score >= 90
+                        ? const Color(0xFF22D3EE)
+                        : score >= 80
+                            ? const Color(0xFFFBBF24)
+                            : score >= 70
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFFEF4444),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Environmental KPI Grid
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Food Saved',
-                  style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A)),
-                ),
-                Text(
-                  '940 kg',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF059669),
-                  ),
-                ),
-                Text(
-                  '+18.4% YoY',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF059669)),
                 ),
               ],
             ),
@@ -7342,7 +7367,7 @@ class ExecutiveScreen extends StatelessWidget {
         const SizedBox(height: 12),
 
         // UC3: View Resource Consumption Analytics
-        ..._buildResourceConsumptionSection(),
+        ..._buildResourceConsumptionSection(totalFoodWasteKg, foodBaselineDaily),
 
         const Text(
           'DEPARTMENTAL COMPLIANCE OVERVIEW',
@@ -7354,31 +7379,40 @@ class ExecutiveScreen extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         _buildDeptTile(
-          'Culinary F&B Division',
+          'Kitchen',
           'Sze Ping & Zhen Bang',
-          '840 kg prep waste diverted',
-          'Target Met (A+)',
+          '${totalFoodWasteKg.toStringAsFixed(1)} kg waste / ${foodBaselineDaily.toStringAsFixed(1)} kg limit',
+          totalFoodWasteKg <= foodBaselineDaily ? 'Target Met (A+)' : 'Over Limit (Warning)',
         ),
         _buildDeptTile(
-          'Housekeeping Division',
+          'Housekeeping',
           'Simon (Lead Supervisor)',
-          '38% guest linen opt-out rate',
-          'Target Met (A+)',
+          '$optOutRate% guest cleaning opt-out rate',
+          double.parse(optOutRate) >= 10.0 ? 'Target Met (A+)' : 'Needs Improvement',
         ),
         _buildDeptTile(
-          'Facilities & Engineering',
+          'Laundry',
+          'Eco-Laundry Team',
+          '${laundryMeters.length} active meters tracking usage',
+          laundryAnomalies == 0 ? 'Normal (A)' : '$laundryAnomalies Anomalies Detected',
+        ),
+        _buildDeptTile(
+          'Facilities',
           'Wan Ching (Lead Tech)',
-          '2 active repairs in progress',
-          'Normal (A)',
+          '$activeRepairs active repairs ($highPriorityRepairs High Priority)',
+          highPriorityRepairs == 0 ? 'Normal (A)' : 'Critical Repairs Needed',
+        ),
+        _buildDeptTile(
+          'Front Office',
+          'Guest Services',
+          '${foMeters.length} active meters tracking usage',
+          foAnomalies == 0 ? 'Normal (A)' : '$foAnomalies Anomalies Detected',
         ),
       ],
     );
   }
 
-  // UC3: View Resource Consumption Analytics — current vs baseline usage,
-  // variance, consumption status, and abnormal-usage alerts for Water &
-  // Electricity, aggregated from the same utilityMeters data as the
-  // Facilities Utility Audit & Maintenance Log (mirrors js/engines/complianceEngine.js).
+  // UC3: View Resource Consumption Analytics
   Map<String, dynamic> _computeResourceAnalytics(String type) {
     final meters = db.utilityMeters.where((m) => m.type == type).toList();
     if (meters.isEmpty) {
@@ -7390,17 +7424,8 @@ class ExecutiveScreen extends StatelessWidget {
         ? ((currentTotal - baselineTotal) / baselineTotal) * 100
         : 0.0;
     final anomalyZones = meters.where((m) => m.isAnomaly).toList();
-    // Status follows the same sign as the displayed color: negative variance
-    // (under baseline, shown in blue) is always Normal, even if an
-    // individual sub-meter is flagged. Only at/over-baseline (positive
-    // variance, shown in red) usage can be Abnormal — either because it
-    // crosses the +15% aggregate threshold or a zone is over its own baseline.
     final isAbnormal =
         variancePct >= 0 && (variancePct >= 15 || anomalyZones.isNotEmpty);
-    // Whether to show the "Abnormal consumption detected" warning block is
-    // independent of the badge/color status above: it appears whenever the
-    // aggregate crosses +15%, OR a specific zone is over its own baseline —
-    // even if the aggregate itself is still under baseline (blue/Normal).
     final hasZoneWarning = variancePct >= 15 || anomalyZones.isNotEmpty;
     return {
       'hasData': true,
@@ -7415,15 +7440,34 @@ class ExecutiveScreen extends StatelessWidget {
     };
   }
 
-  List<Widget> _buildResourceConsumptionSection() {
+  Map<String, dynamic> _computeFoodAnalytics(double current, double baseline) {
+    final variancePct = baseline > 0
+        ? ((current - baseline) / baseline) * 100
+        : 0.0;
+    final isAbnormal = variancePct >= 15;
+    return {
+      'hasData': true,
+      'unit': 'kg',
+      'meterCount': 1,
+      'currentTotal': current,
+      'baselineTotal': baseline,
+      'variancePct': variancePct,
+      'status': isAbnormal ? 'Abnormal' : 'Normal',
+      'hasZoneWarning': isAbnormal,
+      'anomalyZones': <UtilityMeter>[],
+    };
+  }
+
+  List<Widget> _buildResourceConsumptionSection(double totalFood, double foodBase) {
     final water = _computeResourceAnalytics('Water');
     final electricity = _computeResourceAnalytics('Electricity');
+    final food = _computeFoodAnalytics(totalFood, foodBase);
     final hasMissingData =
         water['hasData'] != true || electricity['hasData'] != true;
     final hasAbnormal =
         (water['hasData'] == true && water['hasZoneWarning'] == true) ||
-        (electricity['hasData'] == true &&
-            electricity['hasZoneWarning'] == true);
+        (electricity['hasData'] == true && electricity['hasZoneWarning'] == true) ||
+        (food['hasZoneWarning'] == true);
 
     return [
       Row(
@@ -7472,24 +7516,21 @@ class ExecutiveScreen extends StatelessWidget {
             style: TextStyle(fontSize: 10.5, color: Color(0xFFE11D48)),
           ),
         ),
-      // Water & Electricity side by side, two columns in one row. Wrapped in
-      // IntrinsicHeight + stretch so both cards always match the height of
-      // whichever one is taller (e.g. when one has more anomaly zones listed),
-      // instead of each card only being as tall as its own content.
-      IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _buildResourcePanel('Water Consumption', water)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildResourcePanel(
-                'Electricity Consumption',
-                electricity,
-              ),
+      Column(
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _buildResourcePanel('Water Consumption', water)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildResourcePanel('Electricity Consumption', electricity)),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          _buildResourcePanel('F&B Waste (Total Diverted)', food),
+        ],
       ),
       const SizedBox(height: 12),
     ];
