@@ -1,6 +1,6 @@
 /**
  * Facilities Utility Audit & Maintenance Log
- * Features: Hotel Zone map, sub-meter logging, automated 15% anomaly flagger,
+ * Features: Hotel Zone map, sub-meter logging, automated above-baseline anomaly flagger,
  * housekeeping defect reporting, resource loss volume estimation, technician dispatch & ticket lifecycle status updates.
  */
 
@@ -101,7 +101,7 @@ export class Module5Facilities {
 
           <div class="card kpi-card">
             <div class="kpi-header">
-              <span class="kpi-label">Utility Anomalies (&ge;15%)</span>
+              <span class="kpi-label">Utility Anomalies (Above Baseline)</span>
               <span class="badge ${anomaliesCount > 0 ? 'badge-danger' : 'badge-success'}">${anomaliesCount} Active</span>
             </div>
             <div class="kpi-body">
@@ -346,7 +346,7 @@ export class Module5Facilities {
             <div class="form-group">
               <label class="form-label">Current Meter Reading Value</label>
               <input type="number" step="0.1" min="0.1" class="form-input" id="meter-input-val" placeholder="Enter physical readout..." required />
-              <small class="form-help">If reading is &ge;15% above baseline, the zone will be flagged as an Anomaly on the telemetry board. It will NOT auto-create a repair ticket — file a "Report Facility Defect" if a work order is needed.</small>
+              <small class="form-help">If reading exceeds baseline (by any amount), the zone will be immediately flagged as an Anomaly on the telemetry board. It will NOT auto-create a repair ticket — file a "Report Facility Defect" if a work order is needed.</small>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-meter">Cancel</button>
@@ -539,7 +539,7 @@ export class Module5Facilities {
         meterModal.style.display = 'none';
 
         if (res && res.isAnomaly) {
-          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}% Spike)! High-Priority Ticket ${res.newTicket.ticketNumber} dispatched.`, 'warning');
+          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}%)! Zone marked red on the telemetry board — file a Report Facility Defect if a work order is needed.`, 'warning');
         } else {
           window.showGlobalToast?.(`Meter reading for ${meterId} recorded.`, 'success');
         }

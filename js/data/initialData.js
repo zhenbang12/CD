@@ -35,26 +35,37 @@ export const INITIAL_DATA = {
   // Operational Baselines (Target Standards)
   // NOTE: every baseline that corresponds to a physical sub-meter in
   // utilityMeters (Module 5: Facilities Utility Audit & Maintenance Log)
-  // MUST carry the exact same value as that meter's baselineDaily, and every
-  // metered zone must appear here. Keep both lists in sync when either changes.
+  // carries a "meterId" pointing at that exact meter record. Updating a
+  // baseline's value here (via db.updateBaseline) now writes straight through
+  // to that meter's baselineDaily and recomputes its anomaly status, so the
+  // Executive Analytics "Operational Resource Baselines" table and the
+  // Facilities "Zone Telemetry & Sensor Nodes" board can never drift apart —
+  // they read the same underlying value. Only "buffet_food_waste" (F&B) has
+  // no meterId, since it isn't tied to a physical zone meter.
+  // This list is intentionally ordered to match the zone sequence of
+  // utilityMeters below (Floor 1 -> Floor 2 -> Floor 3 -> Kitchen -> Laundry ->
+  // Central Chiller Plant -> Front Office & Lobby -> Pool -> Rooftop), with the
+  // single F&B (non zone-metered) standard kept at the end.
   baselines: [
-    { id: "BL-01", key: "water_per_room", name: "Standard Water Consumption per Room", value: 180, unit: "L/occupied room/day", category: "Water", updatedBy: "Zhen Bang", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-02", key: "power_per_room", name: "Standard Electricity per Room", value: 12.5, unit: "kWh/occupied room/day", category: "Electricity", updatedBy: "Kar Hang", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-03", key: "kitchen_water", name: "Main Kitchen Daily Water Baseline", value: 4500, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-02 09:30" },
-    { id: "BL-04", key: "kitchen_power", name: "Main Kitchen Daily Electricity Baseline", value: 380, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-02 09:30" },
-    { id: "BL-05", key: "buffet_food_waste", name: "Max Allowed Food Waste per Diner", value: 0.12, unit: "kg/guest/service", category: "F&B", updatedBy: "Sze Ping", updatedAt: "2026-08-03 14:15" },
-    { id: "BL-06", key: "laundry_water", name: "Commercial Laundry Water Baseline", value: 6200, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-07", key: "hvac_chiller_power", name: "Central Chilled Water HVAC Baseline", value: 850, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-05 11:20" },
-    { id: "BL-08", key: "laundry_power", name: "Commercial Laundry Power Baseline", value: 290, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-09", key: "pool_water", name: "Pool Filtration Daily Top-up Baseline", value: 800, unit: "L/day", category: "Water", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
-    { id: "BL-10", key: "lobby_hvac", name: "Lobby HVAC Energy Baseline", value: 120, unit: "kWh/day", category: "Electricity", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
-    { id: "BL-11", key: "floor1_water", name: "Floor 1 Guest Wing Water Baseline", value: 1800, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-12", key: "floor1_power", name: "Floor 1 Guest Wing Electricity Baseline", value: 140, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-13", key: "floor2_water", name: "Floor 2 Guest Wing Water Baseline", value: 1750, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-14", key: "floor2_power", name: "Floor 2 Guest Wing Electricity Baseline", value: 145, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-15", key: "floor3_water", name: "Floor 3 Executive Wing Water Baseline", value: 1600, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-16", key: "facilities_workshop_water", name: "Maintenance Workshop Water Baseline", value: 500, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
-    { id: "BL-17", key: "front_office_water", name: "Front Office & Lobby Water Baseline", value: 700, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" }
+    { id: "BL-01", key: "floor1_water", meterId: "MTR-W-F1", name: "Floor 1 Guest Wing Water Baseline", value: 1800, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-02", key: "floor1_power", meterId: "MTR-E-F1", name: "Floor 1 Guest Wing Electricity Baseline", value: 140, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-03", key: "floor2_water", meterId: "MTR-W-F2", name: "Floor 2 Guest Wing Water Baseline", value: 1750, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-04", key: "floor2_power", meterId: "MTR-E-F2", name: "Floor 2 Guest Wing Electricity Baseline", value: 145, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-05", key: "floor3_water", meterId: "MTR-W-F3", name: "Floor 3 Executive Wing Water Baseline", value: 1600, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-06", key: "floor3_power", meterId: "MTR-E-F3", name: "Floor 3 Executive Wing Electricity Baseline", value: 155, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-06 09:15" },
+    { id: "BL-07", key: "kitchen_water", meterId: "MTR-W-KIT", name: "Main Culinary Kitchen Water Baseline", value: 4500, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-02 09:30" },
+    { id: "BL-08", key: "kitchen_power", meterId: "MTR-E-KIT", name: "Main Culinary Kitchen Electricity Baseline", value: 380, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-02 09:30" },
+    { id: "BL-09", key: "laundry_water", meterId: "MTR-W-LDY", name: "Commercial Eco-Laundry Water Baseline", value: 6200, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-10", key: "laundry_power", meterId: "MTR-E-LDY", name: "Commercial Eco-Laundry Electricity Baseline", value: 290, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-11", key: "chiller_plant_power", meterId: "MTR-E-HVAC", name: "Central Chiller Plant Electricity Baseline", value: 850, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-05 11:20" },
+    { id: "BL-12", key: "chiller_plant_water", meterId: "MTR-W-FAC", name: "Central Chiller Plant Water Baseline", value: 500, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-13 08:00" },
+    { id: "BL-13", key: "front_office_water", meterId: "MTR-W-FO", name: "Front Office & Lobby Water Baseline", value: 700, unit: "L/day", category: "Water", updatedBy: "Wan Ching", updatedAt: "2026-08-01 10:00" },
+    { id: "BL-14", key: "front_office_power", meterId: "MTR-E-FO", name: "Front Office & Lobby Electricity Baseline", value: 120, unit: "kWh/day", category: "Electricity", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
+    { id: "BL-15", key: "pool_water", meterId: "MTR-W-POOL", name: "Swimming Pool & Spa Water Baseline", value: 800, unit: "L/day", category: "Water", updatedBy: "System", updatedAt: "2026-07-15 10:00" },
+    { id: "BL-16", key: "pool_power", meterId: "MTR-E-POOL", name: "Swimming Pool & Spa Electricity Baseline", value: 95, unit: "kWh/day", category: "Electricity", updatedBy: "Wan Ching", updatedAt: "2026-08-06 09:00" },
+    { id: "BL-17", key: "rooftop_water", meterId: "MTR-W-RTB", name: "Rooftop Restaurant & Bar Water Baseline", value: 950, unit: "L/day", category: "Water", updatedBy: "Sze Ping", updatedAt: "2026-08-06 09:00" },
+    { id: "BL-18", key: "rooftop_power", meterId: "MTR-E-RTB", name: "Rooftop Restaurant & Bar Electricity Baseline", value: 210, unit: "kWh/day", category: "Electricity", updatedBy: "Sze Ping", updatedAt: "2026-08-06 09:00" },
+    { id: "BL-19", key: "buffet_food_waste", meterId: null, name: "Max Allowed Food Waste per Diner", value: 0.12, unit: "kg/guest/service", category: "F&B", updatedBy: "Sze Ping", updatedAt: "2026-08-03 14:15" }
   ],
 
   // Module 1: Historical Compliance Logs (Last 6 Months towards VM2026)
@@ -164,6 +175,7 @@ export const INITIAL_DATA = {
     { meterId: "MTR-W-F2", departmentId: "housekeeping", zone: "Floor 2 Guest Wing", type: "Water", baselineDaily: 1750, unit: "L/day", lastReading: 1710, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\uD83D\uDCA7" },
     { meterId: "MTR-E-F2", departmentId: "housekeeping", zone: "Floor 2 Guest Wing", type: "Electricity", baselineDaily: 145, unit: "kWh/day", lastReading: 140, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\u26A1" },
     { meterId: "MTR-W-F3", departmentId: "housekeeping", zone: "Floor 3 Executive Wing", type: "Water", baselineDaily: 1600, unit: "L/day", lastReading: 2150, lastReadingTime: "2026-08-12 18:00", status: "Anomaly Flagged (+34.3%)", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-F3", departmentId: "housekeeping", zone: "Floor 3 Executive Wing", type: "Electricity", baselineDaily: 155, unit: "kWh/day", lastReading: 149, lastReadingTime: "2026-08-12 18:00", status: "Normal", icon: "\u26A1" },
 
     // Kitchen
     { meterId: "MTR-W-KIT", departmentId: "kitchen", zone: "Main Culinary Kitchen", type: "Water", baselineDaily: 4500, unit: "L/day", lastReading: 4320, lastReadingTime: "2026-08-12 21:00", status: "Normal", icon: "\uD83D\uDCA7" },
@@ -175,11 +187,20 @@ export const INITIAL_DATA = {
 
     // Facilities
     { meterId: "MTR-E-HVAC", departmentId: "facilities", zone: "Central Chiller Plant", type: "Electricity", baselineDaily: 850, unit: "kWh/day", lastReading: 820, lastReadingTime: "2026-08-12 22:00", status: "Normal", icon: "\u26A1" },
-    { meterId: "MTR-W-FAC", departmentId: "facilities", zone: "Maintenance Workshop", type: "Water", baselineDaily: 500, unit: "L/day", lastReading: 620, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+24.0%)", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-W-FAC", departmentId: "facilities", zone: "Central Chiller Plant", type: "Water", baselineDaily: 500, unit: "L/day", lastReading: 620, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+24.0%)", icon: "\uD83D\uDCA7" },
 
     // Front Office
     { meterId: "MTR-W-FO", departmentId: "front-office", zone: "Front Office & Lobby", type: "Water", baselineDaily: 700, unit: "L/day", lastReading: 680, lastReadingTime: "2026-08-13 08:00", status: "Normal", icon: "\uD83D\uDCA7" },
-    { meterId: "MTR-E-FO", departmentId: "front-office", zone: "Front Office & Lobby", type: "Electricity", baselineDaily: 120, unit: "kWh/day", lastReading: 148, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+23.3%)", icon: "\u26A1" }
+    { meterId: "MTR-E-FO", departmentId: "front-office", zone: "Front Office & Lobby", type: "Electricity", baselineDaily: 120, unit: "kWh/day", lastReading: 148, lastReadingTime: "2026-08-13 08:00", status: "Anomaly Flagged (+23.3%)", icon: "\u26A1" },
+
+    // Swimming Pool & Spa (baseline aligned to BL-09 / BL-18 in Executive Analytics)
+    { meterId: "MTR-W-POOL", departmentId: "facilities", zone: "Swimming Pool & Spa", type: "Water", baselineDaily: 800, unit: "L/day", lastReading: 760, lastReadingTime: "2026-08-13 07:30", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-POOL", departmentId: "facilities", zone: "Swimming Pool & Spa", type: "Electricity", baselineDaily: 95, unit: "kWh/day", lastReading: 90, lastReadingTime: "2026-08-13 07:30", status: "Normal", icon: "\u26A1" },
+
+    // Rooftop Restaurant & Bar (baseline aligned to BL-19 / BL-20)
+    { meterId: "MTR-W-RTB", departmentId: "kitchen", zone: "Rooftop Restaurant & Bar", type: "Water", baselineDaily: 950, unit: "L/day", lastReading: 905, lastReadingTime: "2026-08-13 07:45", status: "Normal", icon: "\uD83D\uDCA7" },
+    { meterId: "MTR-E-RTB", departmentId: "kitchen", zone: "Rooftop Restaurant & Bar", type: "Electricity", baselineDaily: 210, unit: "kWh/day", lastReading: 246, lastReadingTime: "2026-08-13 07:45", status: "Anomaly Flagged (+17.1%)", icon: "\u26A1" },
+
   ],
 
   // Module 5: Defect Category Catalog (managed from the Web Admin Dashboard only)

@@ -84,6 +84,7 @@ class HotelDatabase extends ChangeNotifier {
     UtilityMeter(meterId: 'MTR-W-F2', zone: 'Floor 2 Guest Wing', type: 'Water', baselineDaily: 1750, unit: 'L/day', lastReading: 1710, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-E-F2', zone: 'Floor 2 Guest Wing', type: 'Electricity', baselineDaily: 145, unit: 'kWh/day', lastReading: 140, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-W-F3', zone: 'Floor 3 Executive Wing', type: 'Water', baselineDaily: 1600, unit: 'L/day', lastReading: 2150, lastReadingTime: '2026-08-12 18:00', status: 'Anomaly Flagged (+34.3%)'),
+    UtilityMeter(meterId: 'MTR-E-F3', zone: 'Floor 3 Executive Wing', type: 'Electricity', baselineDaily: 155, unit: 'kWh/day', lastReading: 149, lastReadingTime: '2026-08-12 18:00', status: 'Normal'),
 
     // Kitchen
     UtilityMeter(meterId: 'MTR-W-KIT', zone: 'Main Culinary Kitchen', type: 'Water', baselineDaily: 4500, unit: 'L/day', lastReading: 4320, lastReadingTime: '2026-08-12 21:00', status: 'Normal'),
@@ -95,11 +96,20 @@ class HotelDatabase extends ChangeNotifier {
 
     // Facilities
     UtilityMeter(meterId: 'MTR-E-HVAC', zone: 'Central Chiller Plant', type: 'Electricity', baselineDaily: 850, unit: 'kWh/day', lastReading: 820, lastReadingTime: '2026-08-12 22:00', status: 'Normal'),
-    UtilityMeter(meterId: 'MTR-W-FAC', zone: 'Maintenance Workshop', type: 'Water', baselineDaily: 500, unit: 'L/day', lastReading: 620, lastReadingTime: '2026-08-13 08:00', status: 'Anomaly Flagged (+24.0%)'),
+    UtilityMeter(meterId: 'MTR-W-FAC', zone: 'Central Chiller Plant', type: 'Water', baselineDaily: 500, unit: 'L/day', lastReading: 620, lastReadingTime: '2026-08-13 08:00', status: 'Anomaly Flagged (+24.0%)'),
 
     // Front Office
     UtilityMeter(meterId: 'MTR-W-FO', zone: 'Front Office & Lobby', type: 'Water', baselineDaily: 700, unit: 'L/day', lastReading: 680, lastReadingTime: '2026-08-13 08:00', status: 'Normal'),
     UtilityMeter(meterId: 'MTR-E-FO', zone: 'Front Office & Lobby', type: 'Electricity', baselineDaily: 120, unit: 'kWh/day', lastReading: 148, lastReadingTime: '2026-08-13 08:00', status: 'Anomaly Flagged (+23.3%)'),
+
+    // Swimming Pool & Spa (baseline aligned to BL-09 / BL-18 in Executive Analytics)
+    UtilityMeter(meterId: 'MTR-W-POOL', zone: 'Swimming Pool & Spa', type: 'Water', baselineDaily: 800, unit: 'L/day', lastReading: 760, lastReadingTime: '2026-08-13 07:30', status: 'Normal'),
+    UtilityMeter(meterId: 'MTR-E-POOL', zone: 'Swimming Pool & Spa', type: 'Electricity', baselineDaily: 95, unit: 'kWh/day', lastReading: 90, lastReadingTime: '2026-08-13 07:30', status: 'Normal'),
+
+    // Rooftop Restaurant & Bar (baseline aligned to BL-19 / BL-20)
+    UtilityMeter(meterId: 'MTR-W-RTB', zone: 'Rooftop Restaurant & Bar', type: 'Water', baselineDaily: 950, unit: 'L/day', lastReading: 905, lastReadingTime: '2026-08-13 07:45', status: 'Normal'),
+    UtilityMeter(meterId: 'MTR-E-RTB', zone: 'Rooftop Restaurant & Bar', type: 'Electricity', baselineDaily: 210, unit: 'kWh/day', lastReading: 246, lastReadingTime: '2026-08-13 07:45', status: 'Anomaly Flagged (+17.1%)'),
+
   ];
 
   // Technicians (Module 5)
@@ -266,8 +276,8 @@ class HotelDatabase extends ChangeNotifier {
     return 'TK-$todayStr-$seq';
   }
 
-  // A meter reading that exceeds baseline only flags the zone as an Anomaly
-  // on the telemetry board — it no longer auto-dispatches a repair ticket.
+  // Any meter reading that exceeds baseline (even slightly) immediately flags
+  // the zone as an Anomaly on the telemetry board — it no longer auto-dispatches a repair ticket.
   // Repair tickets are only created from an explicit reportDefect() call,
   // so staff decide whether a flagged anomaly actually needs a work order.
   bool logMeterReading(String meterId, double reading) {
@@ -279,7 +289,8 @@ class HotelDatabase extends ChangeNotifier {
     meter.lastReadingTime = '2026-08-13 08:30';
 
     final dev = ((reading - meter.baselineDaily) / meter.baselineDaily) * 100.0;
-    final isAnomaly = dev >= 15.0;
+    // Any reading strictly above baseline is an Anomaly — no minimum spike % required.
+    final isAnomaly = reading > meter.baselineDaily;
 
     meter.status = isAnomaly ? 'Anomaly Flagged (+${dev.toStringAsFixed(1)}%)' : 'Normal';
 

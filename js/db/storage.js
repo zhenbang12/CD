@@ -60,7 +60,7 @@ class StorageEngine {
     }
 
     // Force sync new items from INITIAL_DATA without overwriting existing data (Idempotent)
-    const mergeArrays = ['users', 'utilityMeters', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'baselines', 'complianceLogs'];
+    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'complianceLogs'];
     mergeArrays.forEach(key => {
       if (INITIAL_DATA[key]) {
         if (!this.data[key]) this.data[key] = [];
@@ -76,6 +76,64 @@ class StorageEngine {
         });
       }
     });
+
+    // utilityMeters & baselines are seed-config-defined collections — their
+    // zone list, meter definitions, and baseline catalog live in code
+    // (initialData.js), not created by users at runtime. Unlike the additive
+    // merge above, fully reconcile these two against INITIAL_DATA on every
+    // load: this picks up zones added or removed in code (in the correct
+    // order) instead of only ever appending, while still preserving any
+    // value a person actually changed at runtime —
+    //   - utilityMeters: keep the live lastReading / lastReadingTime /
+    //     status / baselineDaily (baselineDaily may have been pushed here by
+    //     updateBaseline() below); zone, type, departmentId, icon always
+    //     follow the current seed definition.
+    //   - baselines: keep the live value / updatedBy / updatedAt if a person
+    //     used "Update Operational Baseline"; everything else follows the
+    //     current seed.
+    if (INITIAL_DATA.utilityMeters) {
+      const existingMeters = new Map((this.data.utilityMeters || []).map(m => [m.meterId, m]));
+      this.data.utilityMeters = INITIAL_DATA.utilityMeters.map(seedMeter => {
+        const existing = existingMeters.get(seedMeter.meterId);
+        if (!existing) return JSON.parse(JSON.stringify(seedMeter));
+        return {
+          ...seedMeter,
+          baselineDaily: existing.baselineDaily,
+          lastReading: existing.lastReading,
+          lastReadingTime: existing.lastReadingTime,
+          status: existing.status
+        };
+      });
+    }
+
+    if (INITIAL_DATA.baselines) {
+      // Match by the stable "key" (e.g. "floor1_water"), NOT "id" (BL-01...).
+      // "id" is just positional ordering and is expected to shift whenever a
+      // baseline is reordered, renamed, added, or removed in the seed — e.g.
+      // when the Operational Resource Baselines list is re-sequenced to match
+      // the Log Zone Meter Reading order. If reconciliation matched by "id"
+      // instead, a value cached under an old "id" could resurface attached to
+      // a completely different zone/resource after the seed changes, which
+      // silently produces a baseline value that no longer matches its meter's
+      // baselineDaily (i.e. Operational Baselines drifting out of sync with
+      // Log Zone Meter Reading). "key" is the semantically stable identifier
+      // for a given zone+resource pairing, so matching on it keeps a person's
+      // real edit attached to the correct baseline, and correctly treats a
+      // renamed/retired key (e.g. old "facilities_workshop_water") as gone
+      // rather than bleeding its stale value into whatever baseline now
+      // happens to occupy that old id slot.
+      const existingBaselines = new Map((this.data.baselines || []).map(b => [b.key, b]));
+      this.data.baselines = INITIAL_DATA.baselines.map(seedBaseline => {
+        const existing = existingBaselines.get(seedBaseline.key);
+        if (!existing) return JSON.parse(JSON.stringify(seedBaseline));
+        return {
+          ...seedBaseline,
+          value: existing.value,
+          updatedBy: existing.updatedBy,
+          updatedAt: existing.updatedAt
+        };
+      });
+    }
 
     // Reconcile technician availability/workload against the actual repair
     // tickets on every load. This is a deliberate recompute-from-source-of-truth
@@ -525,14 +583,41 @@ class StorageEngine {
     return this.data.baselines;
   }
 
-  updateBaseline(id, newValue, reason = 'Operational adjustment') {
+  updateBaseline(id, newValue, effectiveDate = null, reason = 'Operational adjustment') {
     const item = this.data.baselines.find(b => b.id === id);
-    if (!item) return false;
+    if (!item) return { success: false, error: 'Baseline not found.' };
+
+    const parsedValue = parseFloat(newValue);
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      return { success: false, error: 'Baseline value must be a positive number.' };
+    }
 
     const previousValue = `${item.value} ${item.unit}`;
-    item.value = parseFloat(newValue);
+    item.value = parsedValue;
     item.updatedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
     item.updatedBy = this.data.system.activeUser.name;
+    if (effectiveDate) {
+      item.effectiveDate = effectiveDate;
+    }
+
+    // Write through to the linked physical zone meter (if any) so the
+    // Operational Resource Baselines table and the Zone Telemetry board
+    // never disagree about a zone's baseline — they are the same value.
+    let linkedMeter = null;
+    if (item.meterId) {
+      linkedMeter = this.data.utilityMeters.find(m => m.meterId === item.meterId);
+      if (linkedMeter) {
+        linkedMeter.baselineDaily = parsedValue;
+        const hasReading = typeof linkedMeter.lastReading === 'number';
+        const isAnomaly = hasReading && linkedMeter.lastReading > linkedMeter.baselineDaily;
+        if (isAnomaly) {
+          const dev = ((linkedMeter.lastReading - linkedMeter.baselineDaily) / linkedMeter.baselineDaily) * 100;
+          linkedMeter.status = `Anomaly Flagged (+${dev.toFixed(1)}%)`;
+        } else if (hasReading) {
+          linkedMeter.status = 'Normal';
+        }
+      }
+    }
 
     // Record Immutable Audit Log
     this.recordAuditLog({
@@ -540,12 +625,15 @@ class StorageEngine {
       targetKey: item.key,
       previousValue: previousValue,
       newValue: `${item.value} ${item.unit}`,
-      reason: reason
+      reason: effectiveDate ? `${reason} (Effective ${effectiveDate})` : reason
     });
 
     this.saveDatabase();
     this.notify('baselines', this.data.baselines);
-    return true;
+    if (linkedMeter) {
+      this.notify('utilityMeters', this.data.utilityMeters);
+    }
+    return { success: true, baseline: item };
   }
 
   recordAuditLog({ action, targetKey, previousValue, newValue, reason }) {
@@ -819,7 +907,8 @@ class StorageEngine {
     meter.lastReadingTime = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
     const deviationPct = ((readingVal - meter.baselineDaily) / meter.baselineDaily) * 100;
-    const isAnomaly = deviationPct >= 15.0;
+    // Any reading strictly above baseline is an Anomaly — no minimum spike % required.
+    const isAnomaly = readingVal > meter.baselineDaily;
 
     if (isAnomaly) {
       meter.status = `Anomaly Flagged (+${deviationPct.toFixed(1)}%)`;

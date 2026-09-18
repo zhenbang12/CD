@@ -1146,7 +1146,7 @@ class FacilitiesScreen extends StatelessWidget {
                   children: [
                     Icon(Icons.crisis_alert, size: 18, color: Color(0xFFE11D48)),
                     SizedBox(width: 6),
-                    Text('15% Utility Anomaly Spikes Detected', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFE11D48))),
+                    Text('Utility Anomaly Spikes Detected', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFE11D48))),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -1329,10 +1329,7 @@ class FacilitiesScreen extends StatelessWidget {
                             minimumSize: const Size(50, 28),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                           ),
-                          onPressed: () {
-                            db.updateTicketStatus(ticket.id, 'Completed', 'Defect verified resolved by ground technician.');
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked FIXED!')));
-                          },
+                          onPressed: () => _confirmFixTicket(context, ticket.id, ticket.ticketNumber),
                           child: const Text('Fix', style: TextStyle(fontSize: 11)),
                         ),
                       ],
@@ -1341,6 +1338,31 @@ class FacilitiesScreen extends StatelessWidget {
           );
         }),
       ],
+    );
+  }
+
+  // Mirrors the Web Admin Dashboard's confirm() prompt before a repair
+  // ticket is marked COMPLETED, so both apps ask for the same confirmation
+  // before closing out a work order.
+  void _confirmFixTicket(BuildContext context, String ticketId, String ticketNumber) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Repair Complete', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        content: Text('Confirm repair ticket $ticketNumber has been resolved and marked as COMPLETED?', style: const TextStyle(fontSize: 13)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            onPressed: () {
+              db.updateTicketStatus(ticketId, 'Completed', 'Defect verified resolved by ground technician.');
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF059669), content: Text('Repair ticket $ticketNumber marked COMPLETED!')));
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1412,7 +1434,7 @@ class FacilitiesScreen extends StatelessWidget {
               TextField(controller: readingCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading Value')),
               const SizedBox(height: 4),
               Text(
-                'If reading is ≥15% above baseline, the zone is flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
+                'If reading exceeds baseline (by any amount), the zone is immediately flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
                 style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
               ),
             ],
@@ -1427,7 +1449,7 @@ class FacilitiesScreen extends StatelessWidget {
                   final isAnomaly = db.logMeterReading(meterId, r);
                   Navigator.pop(ctx);
                   if (isAnomaly) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (>=15% spike)! Report a Facility Defect if it needs a repair ticket.')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFE11D48), content: Text('ANOMALY FLAGGED (exceeds baseline)! Report a Facility Defect if it needs a repair ticket.')));
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reading logged within normal baseline.')));
                   }
