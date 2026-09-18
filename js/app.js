@@ -6,11 +6,11 @@ if (!localStorage.getItem('eco_session')) {
  * Sustainable Hospitality Operating System.
  */
 
-import { db } from './db/storage.js?v=3.0';
-import { Module1Dashboard } from './modules/m1Dashboard.js?v=3.0';
-import { Module1Department } from './modules/m1Department.js?v=3.0';
-import { Module1Baselines } from './modules/m1Baselines.js?v=3.0';
-import { Module1Audit } from './modules/m1Audit.js?v=3.0';
+import { db } from './db/storage.js?v=3.1';
+import { Module1Dashboard } from './modules/m1Dashboard.js?v=3.1';
+import { Module1Department } from './modules/m1Department.js?v=3.1';
+import { Module1Baselines } from './modules/m1Baselines.js?v=3.1';
+import { Module1Audit } from './modules/m1Audit.js?v=3.1';
 import { Module2Inventory } from './modules/m2InventoryTracker.js?v=3.0';
 import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=3.0';
 import { Module4GuestPWA } from './modules/m4GuestPWA.js?v=3.3';

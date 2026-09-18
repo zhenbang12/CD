@@ -4,7 +4,7 @@ import { ComplianceEngine } from '../engines/complianceEngine.js';
 export class Module1Department {
   constructor(container) {
     this.container = container;
-    this.selectedDepartment = '';
+    this.selectedDepartment = 'kitchen';
     this.unsubs = [];
     this.init();
   }
@@ -31,6 +31,13 @@ export class Module1Department {
 
   render() {
     let departmentPerformance = null;
+    const system = db.getSystem();
+    const user = system?.activeUser;
+    const isAuthorized = Boolean(user?.id) && (
+      system?.activeRole === 'executive' ||
+      ['Executive', 'Hotel Manager', 'Sustainability Executive', 'Operations Director', 'Tech Lead', 'Facilities Manager', 'Head Chef'].includes(user?.role) ||
+      user?.role !== 'Guest'
+    );
 
     try {
       const databaseError = db.getLastDatabaseError();
@@ -89,14 +96,31 @@ export class Module1Department {
           ${!isAuthorized ? `
             <p class="text-muted">Operations Director or Executive access is required.</p>
           ` : `
-            <select class="form-input form-input-sm" id="department-selector" style="max-width: 320px; margin-bottom: 16px;">
-              <option value="">Select a department</option>
-              <option value="kitchen">Kitchen</option>
-              <option value="housekeeping">Housekeeping</option>
-              <option value="laundry">Laundry</option>
-              <option value="facilities">Facilities</option>
-              <option value="front-office">Front Office</option>
-            </select>
+            <div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 20px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                ${[
+                  { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
+                  { id: 'housekeeping', name: 'Housekeeping', icon: '🧹' },
+                  { id: 'laundry', name: 'Laundry', icon: '🧺' },
+                  { id: 'facilities', name: 'Facilities', icon: '⚡' },
+                  { id: 'front-office', name: 'Front Office', icon: '🏨' }
+                ].map(dept => `
+                  <button class="btn btn-sm dept-btn ${this.selectedDepartment === dept.id ? 'btn-primary' : 'btn-outline'}" data-dept="${dept.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-weight: 500;">
+                    <span>${dept.icon}</span> ${dept.name}
+                  </button>
+                `).join('')}
+              </div>
+              <div>
+                <select class="form-input form-input-sm" id="department-selector" style="min-width: 180px;">
+                  <option value="">Select a department...</option>
+                  <option value="kitchen" ${this.selectedDepartment === 'kitchen' ? 'selected' : ''}>Kitchen</option>
+                  <option value="housekeeping" ${this.selectedDepartment === 'housekeeping' ? 'selected' : ''}>Housekeeping</option>
+                  <option value="laundry" ${this.selectedDepartment === 'laundry' ? 'selected' : ''}>Laundry</option>
+                  <option value="facilities" ${this.selectedDepartment === 'facilities' ? 'selected' : ''}>Facilities</option>
+                  <option value="front-office" ${this.selectedDepartment === 'front-office' ? 'selected' : ''}>Front Office</option>
+                </select>
+              </div>
+            </div>
           
             ${!this.selectedDepartment
               ? '<p class="text-muted">Select a department to review.</p>'
@@ -320,6 +344,21 @@ export class Module1Department {
       };
     });
 
+    const deptSelect = this.container.querySelector('#department-selector');
+    if (deptSelect) {
+      deptSelect.onchange = (e) => {
+        this.selectedDepartment = e.target.value;
+        this.render();
+      };
+    }
+
+    this.container.querySelectorAll('.dept-btn').forEach(btn => {
+      btn.onclick = () => {
+        this.selectedDepartment = btn.dataset.dept;
+        this.render();
+      };
+    });
+
     this.container.querySelectorAll('.dept-card').forEach(card => {
       card.onclick = () => {
         this.selectedDepartment = card.dataset.id;
@@ -341,7 +380,6 @@ export class Module1Department {
     if (backBtn) {
       backBtn.onclick = () => {
         this.selectedDepartment = '';
-    this.unsubs = [];
         this.render();
       };
     }

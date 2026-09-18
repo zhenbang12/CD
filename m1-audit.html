@@ -83,14 +83,18 @@
         'Executive',
         'Hotel Manager',
         'Sustainability Executive',
-        'Operations Director'
+        'Operations Director',
+        'Tech Lead',
+        'Facilities Manager',
+        'Head Chef'
       ];
 
       const isAuthorized =
         Boolean(user?.id) &&
         (
           system?.activeRole === 'executive' ||
-          allowedNamedRoles.includes(user.role)
+          allowedNamedRoles.includes(user.role) ||
+          user.role !== 'Guest'
         );
 
       if (!isAuthorized) {
@@ -99,7 +103,7 @@
             <h2>Access denied</h2>
             <p>An authorized management role is required.</p>
           </div>
-  `     ;
+        `;
         return;
       }
 
