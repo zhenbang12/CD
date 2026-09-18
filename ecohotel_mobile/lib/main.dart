@@ -1948,7 +1948,17 @@ class ExecutiveScreen extends StatelessWidget {
     final currentTotal = meters.fold<double>(0, (a, m) => a + m.lastReading);
     final variancePct = baselineTotal > 0 ? ((currentTotal - baselineTotal) / baselineTotal) * 100 : 0.0;
     final anomalyZones = meters.where((m) => m.isAnomaly).toList();
-    final isAbnormal = variancePct >= 15 || anomalyZones.isNotEmpty;
+    // Status follows the same sign as the displayed color: negative variance
+    // (under baseline, shown in blue) is always Normal, even if an
+    // individual sub-meter is flagged. Only at/over-baseline (positive
+    // variance, shown in red) usage can be Abnormal — either because it
+    // crosses the +15% aggregate threshold or a zone is over its own baseline.
+    final isAbnormal = variancePct >= 0 && (variancePct >= 15 || anomalyZones.isNotEmpty);
+    // Whether to show the "Abnormal consumption detected" warning block is
+    // independent of the badge/color status above: it appears whenever the
+    // aggregate crosses +15%, OR a specific zone is over its own baseline —
+    // even if the aggregate itself is still under baseline (blue/Normal).
+    final hasZoneWarning = variancePct >= 15 || anomalyZones.isNotEmpty;
     return {
       'hasData': true,
       'unit': meters.first.unit,
@@ -1957,6 +1967,7 @@ class ExecutiveScreen extends StatelessWidget {
       'baselineTotal': baselineTotal,
       'variancePct': variancePct,
       'status': isAbnormal ? 'Abnormal' : 'Normal',
+      'hasZoneWarning': hasZoneWarning,
       'anomalyZones': anomalyZones,
     };
   }
@@ -1965,8 +1976,8 @@ class ExecutiveScreen extends StatelessWidget {
     final water = _computeResourceAnalytics('Water');
     final electricity = _computeResourceAnalytics('Electricity');
     final hasMissingData = water['hasData'] != true || electricity['hasData'] != true;
-    final hasAbnormal = (water['hasData'] == true && water['status'] == 'Abnormal') ||
-        (electricity['hasData'] == true && electricity['status'] == 'Abnormal');
+    final hasAbnormal = (water['hasData'] == true && water['hasZoneWarning'] == true) ||
+        (electricity['hasData'] == true && electricity['hasZoneWarning'] == true);
 
     return [
       Row(
@@ -2034,6 +2045,7 @@ class ExecutiveScreen extends StatelessWidget {
     final variancePct = data['variancePct'] as double;
     final meterCount = data['meterCount'] as int;
     final isAbnormal = data['status'] == 'Abnormal';
+    final hasZoneWarning = data['hasZoneWarning'] == true;
     final anomalyZones = data['anomalyZones'] as List<UtilityMeter>;
     final barFraction = baselineTotal > 0 ? (currentTotal / baselineTotal).clamp(0.0, 1.0) : 0.0;
     final varianceSign = variancePct >= 0 ? '+' : '';
@@ -2074,9 +2086,9 @@ class ExecutiveScreen extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text('Variance: $varianceSign${variancePct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isAbnormal ? statusColor : const Color(0xFF71717A))),
-            if (isAbnormal) ...[
+            if (hasZoneWarning) ...[
               const Divider(height: 14),
-              Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+              const Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFE11D48))),
               if (anomalyZones.isNotEmpty)
                 ...anomalyZones.map((z) => Padding(
                       padding: const EdgeInsets.only(top: 3),
