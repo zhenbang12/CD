@@ -124,11 +124,46 @@ class _MainStaffShellState extends State<MainStaffShell> {
   String? _authenticatedGuestRoom;
   int _staffTabIndex = 0; // 0: Housekeeping, 1: Facilities, 2: Kitchen, 3: Executive
   final HotelDatabase _db = HotelDatabase();
+  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     _db.addListener(() => setState(() {}));
+  }
+
+  Future<void> _handleManualSync() async {
+    setState(() => _isSyncing = true);
+    final success = await _db.syncFromBackend();
+    if (mounted) {
+      setState(() => _isSyncing = false);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                success ? Icons.check_circle_outline : Icons.cloud_off_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  success
+                      ? 'Database refreshed & synchronized for all!'
+                      : 'Backend offline or unreachable. Using cached offline data.',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: success ? const Color(0xFF059669) : const Color(0xFFE11D48),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -176,7 +211,7 @@ class _MainStaffShellState extends State<MainStaffShell> {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 16,
+        titleSpacing: 10,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -186,19 +221,50 @@ class _MainStaffShellState extends State<MainStaffShell> {
                   : staffTitles[_staffTabIndex],
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
             ),
             Text(
               isGuest
                   ? 'Room ${activeRoom.roomNumber} • ${activeRoom.guestName}'
-                  : 'Grand Bay Eco-Resort • ${_authenticatedStaff!.name} (${_authenticatedStaff!.role})',
+                  : 'Grand Bay • ${_authenticatedStaff!.name} (${_authenticatedStaff!.role})',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
+              style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
             ),
           ],
         ),
         actions: [
+          // Top Refresh / Sync Database Button for all
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: _isSyncing ? null : _handleManualSync,
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _isSyncing
+                      ? const SizedBox(
+                          width: 11,
+                          height: 11,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF059669)),
+                        )
+                      : const Icon(Icons.sync, size: 13, color: Color(0xFF059669)),
+                  const SizedBox(width: 3),
+                  Text(
+                    _isSyncing ? 'Syncing...' : 'Refresh DB',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+                  ),
+                ],
+              ),
+            ),
+          ),
           if (!isGuest) ...[
             Builder(
               builder: (context) {
@@ -233,8 +299,8 @@ class _MainStaffShellState extends State<MainStaffShell> {
             ),
           ] else ...[
             Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              margin: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(8),
@@ -243,11 +309,11 @@ class _MainStaffShellState extends State<MainStaffShell> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.eco, size: 13, color: Color(0xFF059669)),
-                  const SizedBox(width: 4),
+                  const Icon(Icons.eco, size: 12, color: Color(0xFF059669)),
+                  const SizedBox(width: 3),
                   Text(
                     '${activeRoom.ecoPointsEarned} pts',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
                   ),
                 ],
               ),
@@ -259,7 +325,7 @@ class _MainStaffShellState extends State<MainStaffShell> {
               onTap: () => _showStaffProfileBottomSheet(context),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(20),
@@ -269,42 +335,39 @@ class _MainStaffShellState extends State<MainStaffShell> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircleAvatar(
-                      radius: 12,
+                      radius: 11,
                       backgroundColor: const Color(0xFF059669),
                       child: Text(
                         _authenticatedStaff!.avatar,
-                        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 4),
                     Text(
                       _authenticatedStaff!.username,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
                     ),
-                    const Icon(Icons.arrow_drop_down, size: 16, color: Color(0xFF64748B)),
+                    const Icon(Icons.arrow_drop_down, size: 15, color: Color(0xFF64748B)),
                   ],
                 ),
               ),
             ),
           ] else ...[
             Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                style: IconButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                  minimumSize: const Size(60, 32),
-                  foregroundColor: const Color(0xFF64748B),
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  padding: const EdgeInsets.all(4),
                 ),
+                tooltip: 'Logout',
                 onPressed: () {
                   setState(() {
                     _authenticatedStaff = null;
                     _authenticatedGuestRoom = null;
                   });
                 },
-                icon: const Icon(Icons.logout, size: 14),
-                label: const Text('Logout', style: TextStyle(fontSize: 11)),
+                icon: const Icon(Icons.logout, size: 17, color: Color(0xFF64748B)),
               ),
             ),
           ],
@@ -984,6 +1047,61 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16, top: 4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Syncing database with backend...'),
+                    duration: Duration(milliseconds: 700),
+                  ),
+                );
+                final success = await widget.db.syncFromBackend();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? '✓ Database synchronized with backend!' : '⚠ Backend unreachable. Using offline data.'),
+                      backgroundColor: success ? const Color(0xFF059669) : const Color(0xFFE11D48),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sync, size: 14, color: Color(0xFF059669)),
+                    SizedBox(width: 5),
+                    Text(
+                      'Refresh DB',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -1079,12 +1197,14 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Password',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
+                            const Flexible(
+                              child: Text(
+                                'Password',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF334155),
+                                ),
                               ),
                             ),
                             InkWell(

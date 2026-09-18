@@ -43,6 +43,32 @@ class InventoryItem {
     if (d <= 4) return 'Expires in ${d}d';
     return 'Fresh';
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'category': category,
+    'quantity': quantity,
+    'unit': unit,
+    'batchNumber': batchNumber,
+    'deliveryDate': deliveryDate,
+    'expiryDate': expiryDate,
+    'storageLocation': storageLocation,
+    'costPerKg': costPerKg,
+  };
+
+  factory InventoryItem.fromJson(Map<String, dynamic> json) => InventoryItem(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    category: json['category']?.toString() ?? '',
+    quantity: (json['quantity'] is num) ? (json['quantity'] as num).toDouble() : (double.tryParse(json['quantity']?.toString() ?? '') ?? 0.0),
+    unit: json['unit']?.toString() ?? 'kg',
+    batchNumber: json['batchNumber']?.toString() ?? '',
+    deliveryDate: json['deliveryDate']?.toString() ?? '',
+    expiryDate: json['expiryDate']?.toString() ?? '',
+    storageLocation: json['storageLocation']?.toString() ?? '',
+    costPerKg: (json['costPerKg'] is num) ? (json['costPerKg'] as num).toDouble() : (double.tryParse(json['costPerKg']?.toString() ?? '') ?? 15.0),
+  );
 }
 
 class FoodWasteLog {
@@ -69,6 +95,32 @@ class FoodWasteLog {
     required this.costImpact,
     required this.loggedBy,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'date': date,
+    'mealPeriod': mealPeriod,
+    'item': item,
+    'type': type,
+    'reason': reason,
+    'quantity': quantity,
+    'unit': unit,
+    'costImpact': costImpact,
+    'loggedBy': loggedBy,
+  };
+
+  factory FoodWasteLog.fromJson(Map<String, dynamic> json) => FoodWasteLog(
+    id: json['id']?.toString() ?? '',
+    date: json['date']?.toString() ?? '',
+    mealPeriod: json['mealPeriod']?.toString() ?? '',
+    item: json['item']?.toString() ?? '',
+    type: json['type']?.toString() ?? 'Spoilage',
+    reason: json['reason']?.toString() ?? '',
+    quantity: (json['quantity'] is num) ? (json['quantity'] as num).toDouble() : (double.tryParse(json['quantity']?.toString() ?? '') ?? 0.0),
+    unit: json['unit']?.toString() ?? 'kg',
+    costImpact: (json['costImpact'] is num) ? (json['costImpact'] as num).toDouble() : (double.tryParse(json['costImpact']?.toString() ?? '') ?? 0.0),
+    loggedBy: json['loggedBy']?.toString() ?? '',
+  );
 }
 
 class DishItem {
@@ -95,6 +147,32 @@ class DishItem {
     required this.ingredientRefs,
     this.prepStatus = 'Pending',
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'category': category,
+    'station': station,
+    'basePerGuestGrams': basePerGuestGrams,
+    'wasteMultiplier': wasteMultiplier,
+    'cookingYield': cookingYield,
+    'costPerKg': costPerKg,
+    'ingredientRefs': ingredientRefs,
+    'prepStatus': prepStatus,
+  };
+
+  factory DishItem.fromJson(Map<String, dynamic> json) => DishItem(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    category: json['category']?.toString() ?? '',
+    station: json['station']?.toString() ?? 'Hot Line',
+    basePerGuestGrams: (json['basePerGuestGrams'] is num) ? (json['basePerGuestGrams'] as num).toInt() : (int.tryParse(json['basePerGuestGrams']?.toString() ?? '') ?? 100),
+    wasteMultiplier: (json['wasteMultiplier'] is num) ? (json['wasteMultiplier'] as num).toDouble() : (double.tryParse(json['wasteMultiplier']?.toString() ?? '') ?? 1.0),
+    cookingYield: (json['cookingYield'] is num) ? (json['cookingYield'] as num).toDouble() : (double.tryParse(json['cookingYield']?.toString() ?? '') ?? 0.9),
+    costPerKg: (json['costPerKg'] is num) ? (json['costPerKg'] as num).toDouble() : (double.tryParse(json['costPerKg']?.toString() ?? '') ?? 20.0),
+    ingredientRefs: json['ingredientRefs'] != null ? List<String>.from(json['ingredientRefs']) : [],
+    prepStatus: json['prepStatus']?.toString() ?? 'Pending',
+  );
 }
 
 class PlateWasteLog {
@@ -125,6 +203,36 @@ class PlateWasteLog {
     this.note = '',
     required this.loggedBy,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'date': date,
+    'mealPeriod': mealPeriod,
+    'dishId': dishId,
+    'dishName': dishName,
+    'discardedKg': discardedKg,
+    'isAnomaly': isAnomaly,
+    'anomalyReason': anomalyReason,
+    'photoAttached': photoAttached,
+    'photoBase64': photoBase64,
+    'note': note,
+    'loggedBy': loggedBy,
+  };
+
+  factory PlateWasteLog.fromJson(Map<String, dynamic> json) => PlateWasteLog(
+    id: json['id']?.toString() ?? '',
+    date: json['date']?.toString() ?? '',
+    mealPeriod: json['mealPeriod']?.toString() ?? '',
+    dishId: json['dishId']?.toString() ?? '',
+    dishName: json['dishName']?.toString() ?? '',
+    discardedKg: (json['discardedKg'] is num) ? (json['discardedKg'] as num).toDouble() : (double.tryParse(json['discardedKg']?.toString() ?? '') ?? 0.0),
+    isAnomaly: json['isAnomaly'] ?? false,
+    anomalyReason: json['anomalyReason']?.toString() ?? '',
+    photoAttached: json['photoAttached'] ?? false,
+    photoBase64: json['photoBase64']?.toString(),
+    note: json['note']?.toString() ?? '',
+    loggedBy: json['loggedBy']?.toString() ?? '',
+  );
 }
 
 class RoomModel {
@@ -202,6 +310,20 @@ class DefectCategory {
     required this.resourceType,
     this.hint = '',
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'label': label,
+    'resourceType': resourceType,
+    'hint': hint,
+  };
+
+  factory DefectCategory.fromJson(Map<String, dynamic> json) => DefectCategory(
+    id: json['id']?.toString() ?? '',
+    label: json['label']?.toString() ?? '',
+    resourceType: json['resourceType']?.toString() ?? 'Water',
+    hint: json['hint']?.toString() ?? '',
+  );
 }
 
 class UtilityMeter {
@@ -374,6 +496,40 @@ class PrepRecommendation {
     required this.finalizedBy,
     required this.timestamp,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'date': date,
+    'mealPeriod': mealPeriod,
+    'dishId': dishId,
+    'dishName': dishName,
+    'station': station,
+    'recommendedKg': recommendedKg,
+    'wave1Kg': wave1Kg,
+    'wave2Kg': wave2Kg,
+    'wave3Kg': wave3Kg,
+    'status': status,
+    'overridden': overridden,
+    'finalizedBy': finalizedBy,
+    'timestamp': timestamp,
+  };
+
+  factory PrepRecommendation.fromJson(Map<String, dynamic> json) => PrepRecommendation(
+    id: json['id']?.toString() ?? '',
+    date: json['date']?.toString() ?? '',
+    mealPeriod: json['mealPeriod']?.toString() ?? '',
+    dishId: json['dishId']?.toString() ?? '',
+    dishName: json['dishName']?.toString() ?? '',
+    station: json['station']?.toString() ?? '',
+    recommendedKg: (json['recommendedKg'] is num) ? (json['recommendedKg'] as num).toDouble() : (double.tryParse(json['recommendedKg']?.toString() ?? '') ?? 0.0),
+    wave1Kg: (json['wave1Kg'] is num) ? (json['wave1Kg'] as num).toDouble() : (double.tryParse(json['wave1Kg']?.toString() ?? '') ?? 0.0),
+    wave2Kg: (json['wave2Kg'] is num) ? (json['wave2Kg'] as num).toDouble() : (double.tryParse(json['wave2Kg']?.toString() ?? '') ?? 0.0),
+    wave3Kg: (json['wave3Kg'] is num) ? (json['wave3Kg'] as num).toDouble() : (double.tryParse(json['wave3Kg']?.toString() ?? '') ?? 0.0),
+    status: json['status']?.toString() ?? 'Finalized',
+    overridden: json['overridden'] ?? false,
+    finalizedBy: json['finalizedBy']?.toString() ?? '',
+    timestamp: json['timestamp']?.toString() ?? '',
+  );
 }
 
 class GuestInteraction {

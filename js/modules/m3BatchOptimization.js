@@ -129,21 +129,18 @@ export class Module3BatchOptimizer {
             <button class="btn btn-sm btn-outline" id="btn-open-plate-waste-modal">
               Log Waste
             </button>
-            <button class="btn btn-sm btn-outline" id="btn-finalize-prep-sheet" style="color: #059669; border-color: #059669;">
+            <button class="btn btn-sm btn-outline" id="btn-finalize-prep-sheet" style="color: var(--primary); border-color: var(--primary);">
               ✓ Finalize & Save Batch
             </button>
-            <button class="btn btn-sm btn-outline" id="btn-export-pdf">
-              ⬇ Export to PDF
-            </button>
             <button class="btn btn-sm btn-primary" id="btn-print-prep-sheet">
-              Print Prep Sheet
+              🖨️ Print / Export PDF
             </button>
           </div>
         </div>
 
         <!-- UC2 Alternative Flow A1 Step 2: Warning Banner if utilizing Estimated Baseline Data -->
         ${data.isEstimatedBaseline ? `
-          <div class="alert-banner alert-warning-strip" style="background: #fffbeb; border: 1px solid #f59e0b; color: #b45309; padding: 10px 14px; margin-bottom: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+          <div class="alert-banner alert-warning-strip" style="padding: 10px 14px; margin-bottom: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 18px;">⚠️</span>
             <div>
               <strong>Warning: Utilizing Estimated Baseline Data</strong>
@@ -180,9 +177,6 @@ export class Module3BatchOptimizer {
                 ${data.oracleConnectionStatus === 'ONLINE' ? 'Online (48-Hour Payload Synced)' : 'Disconnected (Data Sync Failure)'}
               </strong>
             </div>
-            <button class="btn btn-xs btn-outline" id="btn-toggle-oracle-sync" style="font-size: 11px;">
-              ${data.oracleConnectionStatus === 'ONLINE' ? 'Test Failover (Disconnect)' : 'Restore Oracle Link'}
-            </button>
           </div>
 
           <div class="filter-controls" style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 14px; align-items: flex-end;">
@@ -496,7 +490,7 @@ export class Module3BatchOptimizer {
               <div class="form-group">
                 <label class="form-label">Discarded Weight (kg)</label>
                 <input type="number" step="0.1" class="form-input" id="pw-weight" placeholder="e.g., 3.8" required />
-                <div id="pw-weight-error" style="display: none; color: #dc2626; font-size: 11.5px; font-weight: 600; margin-top: 4px;">Invalid weight entry</div>
+                <div id="pw-weight-error" style="display: none; color: var(--danger); font-size: 11.5px; font-weight: 600; margin-top: 4px;">Invalid weight entry</div>
               </div>
             </div>
 
@@ -625,11 +619,11 @@ export class Module3BatchOptimizer {
           </div>
 
           <!-- Guide Tabs -->
-          <div class="tab-pills" style="margin: 14px 0 10px 0;">
-            <button class="tab-btn ${this.activeGuideTab === 'sop' ? 'active' : ''}" data-guide-tab="sop">⚡ 7-Step Kitchen SOP</button>
-            <button class="tab-btn ${this.activeGuideTab === 'overview' ? 'active' : ''}" data-guide-tab="overview">🎯 Purpose & Architecture</button>
-            <button class="tab-btn ${this.activeGuideTab === 'math' ? 'active' : ''}" data-guide-tab="math">📐 Formulas & Multipliers</button>
-            <button class="tab-btn ${this.activeGuideTab === 'faq' ? 'active' : ''}" data-guide-tab="faq">💡 FAQs & Best Practices</button>
+          <div class="tab-pills-full grid-cols-4" style="margin: 14px 0 10px 0;">
+            <button class="tab-btn ${this.activeGuideTab === 'sop' ? 'active' : ''}" data-guide-tab="sop">⚡ 7-Step SOP</button>
+            <button class="tab-btn ${this.activeGuideTab === 'overview' ? 'active' : ''}" data-guide-tab="overview">🎯 Architecture</button>
+            <button class="tab-btn ${this.activeGuideTab === 'math' ? 'active' : ''}" data-guide-tab="math">📐 Formulas</button>
+            <button class="tab-btn ${this.activeGuideTab === 'faq' ? 'active' : ''}" data-guide-tab="faq">💡 FAQs</button>
           </div>
 
           <!-- Guide Content -->
@@ -987,15 +981,7 @@ export class Module3BatchOptimizer {
       };
     }
 
-    // Oracle Connection Link Toggle Handler (UC2 A1 / UC5 A1)
-    const toggleOracleBtn = this.container.querySelector('#btn-toggle-oracle-sync');
-    if (toggleOracleBtn) {
-      toggleOracleBtn.onclick = () => {
-        const status = BatchOptimizerEngine.toggleOracleConnection();
-        window.showGlobalToast?.(`Oracle SQL DB link switched to ${status}. Baseline updated.`, status === 'ONLINE' ? 'success' : 'warning');
-        this.render();
-      };
-    }
+
 
     // Finalize & Save Prep Sheet to PREP_RECOMMENDATIONS Table (UC2 Step 7)
     const finalizeBtn = this.container.querySelector('#btn-finalize-prep-sheet');

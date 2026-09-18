@@ -289,14 +289,14 @@ export class Module4GuestPWA {
         </div>
 
         <!-- 3 Segmented Tabs Navigation -->
-        <div class="guest-tabs-bar" style="display: flex; background: var(--bg-card-subtle, #f1f5f9); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-subtle, #e2e8f0);">
-          <button class="btn-guest-tab ${this.guestActiveTab === 'stay' ? 'active' : ''}" data-tab="stay" style="flex: 1; border: none; background: ${this.guestActiveTab === 'stay' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'stay' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'stay' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
+        <div class="guest-tabs-bar" style="display: flex; background: var(--bg-card-subtle); padding: 4px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--border-subtle);">
+          <button class="btn-guest-tab ${this.guestActiveTab === 'stay' ? 'active' : ''}" data-tab="stay" style="flex: 1; border: none; background: ${this.guestActiveTab === 'stay' ? 'var(--bg-surface)' : 'transparent'}; color: ${this.guestActiveTab === 'stay' ? 'var(--primary)' : 'var(--text-muted)'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'stay' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'}; transition: all 0.15s;">
             🌿 Green Stay
           </button>
-          <button class="btn-guest-tab ${this.guestActiveTab === 'rewards' ? 'active' : ''}" data-tab="rewards" style="flex: 1; border: none; background: ${this.guestActiveTab === 'rewards' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'rewards' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'rewards' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
+          <button class="btn-guest-tab ${this.guestActiveTab === 'rewards' ? 'active' : ''}" data-tab="rewards" style="flex: 1; border: none; background: ${this.guestActiveTab === 'rewards' ? 'var(--bg-surface)' : 'transparent'}; color: ${this.guestActiveTab === 'rewards' ? 'var(--primary)' : 'var(--text-muted)'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'rewards' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'}; transition: all 0.15s;">
             🎁 Eco-Rewards (${vouchersForRoom.length})
           </button>
-          <button class="btn-guest-tab ${this.guestActiveTab === 'impact' ? 'active' : ''}" data-tab="impact" style="flex: 1; border: none; background: ${this.guestActiveTab === 'impact' ? '#ffffff' : 'transparent'}; color: ${this.guestActiveTab === 'impact' ? '#059669' : '#64748b'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'impact' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none'};">
+          <button class="btn-guest-tab ${this.guestActiveTab === 'impact' ? 'active' : ''}" data-tab="impact" style="flex: 1; border: none; background: ${this.guestActiveTab === 'impact' ? 'var(--bg-surface)' : 'transparent'}; color: ${this.guestActiveTab === 'impact' ? 'var(--primary)' : 'var(--text-muted)'}; font-weight: 700; font-size: 12px; padding: 8px; border-radius: 8px; cursor: pointer; box-shadow: ${this.guestActiveTab === 'impact' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'}; transition: all 0.15s;">
             🌍 My Impact
           </button>
         </div>

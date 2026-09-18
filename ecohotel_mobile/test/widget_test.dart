@@ -120,5 +120,31 @@ void main() {
     final doubleClaim = db.claimRewardTier('202', 'tier-dining');
     expect(doubleClaim, isFalse);
   });
+
+  testWidgets('Test top Refresh DB button exists and triggers sync in Flutter app', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // 1. Verify Refresh DB on EcoHotelLoginScreen
+    await tester.pumpWidget(const EcoHotelMobileApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Refresh DB'), findsOneWidget);
+    await tester.tap(find.text('Refresh DB'));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // 2. Log in as Guest (room 304)
+    await tester.enterText(find.byType(TextField).first, '304');
+    await tester.enterText(find.byType(TextField).last, 'password123');
+    await tester.tap(find.text('Login'));
+    await tester.pumpAndSettle();
+
+    // 3. Verify Refresh DB button is visible on top in MainStaffShell for Guest
+    expect(find.text('Refresh DB'), findsOneWidget);
+    await tester.tap(find.text('Refresh DB'));
+    await tester.pump(const Duration(milliseconds: 100));
+  });
 }
+
 

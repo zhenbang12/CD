@@ -72,6 +72,12 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
 </head>
 <body>
+  <div style="position: absolute; top: 16px; right: 20px; z-index: 100;">
+    <button id="btn-login-refresh-db" class="btn btn-xs" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 12px; font-weight: 600; background: white; border: 1px solid #cbd5e1; border-radius: 8px; color: #0f172a; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" title="Refresh and sync database from backend">
+      <svg id="icon-login-refresh" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      <span id="text-login-refresh">Refresh DB</span>
+    </button>
+  </div>
   <div class="login-container">
     <div class="login-header">
       <div class="logo-icon">🌿</div>
@@ -213,6 +219,32 @@
         resetStatus.textContent = 'Account not found. Please verify your employee username.';
       }
     };
+
+    const refreshBtn = document.getElementById('btn-login-refresh-db');
+    if (refreshBtn) {
+      refreshBtn.onclick = async () => {
+        const icon = document.getElementById('icon-login-refresh');
+        const text = document.getElementById('text-login-refresh');
+        if (icon) icon.classList.add('spin-animation');
+        if (text) text.textContent = 'Syncing...';
+        refreshBtn.disabled = true;
+
+        try {
+          const res = await db.refreshDatabase();
+          if (res && res.success) {
+            alert('✓ Database refreshed & synchronized with backend!');
+          } else {
+            alert('Synced local cache (' + (res?.error || 'offline') + ')');
+          }
+        } catch (e) {
+          alert('Sync error: ' + e.message);
+        } finally {
+          if (icon) icon.classList.remove('spin-animation');
+          if (text) text.textContent = 'Refresh DB';
+          refreshBtn.disabled = false;
+        }
+      };
+    }
   </script>
 </body>
 </html>
