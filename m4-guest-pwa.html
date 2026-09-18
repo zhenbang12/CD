@@ -9,7 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./css/style.css" />
   <script>
-    if (!localStorage.getItem('eco_session')) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGuestAccess = urlParams.has('room') || urlParams.has('token') || urlParams.get('mode') === 'guest';
+    if (!isGuestAccess && !localStorage.getItem('eco_session')) {
       window.location.href = 'login.html';
     }
     (function() {

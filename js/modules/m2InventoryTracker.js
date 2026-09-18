@@ -27,9 +27,16 @@ export class Module2Inventory {
   }
 
   render() {
+    this.container.style.height = 'auto';
+    this.container.style.overflow = 'visible';
+    document.body.style.overflowY = 'auto';
+
     const inventory = db.get('inventory');
     const wasteLogs = db.get('foodWasteLogs');
     const currentDate = new Date('2026-08-13');
+    
+
+  
 
     // Process Shelf-life & Expiry Alerts
     const inventoryWithStatus = inventory.map(item => {
@@ -87,7 +94,10 @@ export class Module2Inventory {
     const prepPct = totalWasteKg > 0 ? 100 - spoilagePct : 0;
 
     this.container.innerHTML = `
-      <div class="module-view m2-container fade-in">
+    <div
+        class="module-view m2-container fade-in"
+        style="height: auto; min-height: max-content; overflow: visible;"
+    >
         <!-- View Header -->
         <div class="view-header">
           <div>
@@ -164,7 +174,10 @@ export class Module2Inventory {
             </div>
           </div>
 
-          <div class="table-responsive">
+          <div   
+          class="table-responsive"
+          style="max-height: 420px; overflow-y: auto;"
+          >
             <table class="data-table">
               <thead>
                 <tr>
@@ -203,12 +216,13 @@ export class Module2Inventory {
                           <span class="status-dot ${isExpiring ? 'danger' : 'success'}"></span>
                           ${item.status}
                         </span>
-                      </td>
                       <td class="col-action">
-                        <button class="btn btn-xs btn-outline btn-quick-adjust row-action-hover" data-id="${item.id}" data-name="${item.name}" data-qty="${item.quantity}">
-                          Adjust
-                        </button>
-                      </td>
+                         <button
+                        class="btn btn-xs btn-primary btn-edit-inventory"
+                        data-id="${item.id}">
+                         Edit  
+                         </button>
+                     </td>
                     </tr>
                   `;
                 }).join('')}
@@ -241,7 +255,7 @@ export class Module2Inventory {
                   </tr>
                 </thead>
                 <tbody>
-                  ${wasteLogs.slice(0, 6).map(log => `
+                  ${wasteLogs.map(log => `
                     <tr>
                       <td><strong>${log.date}</strong> <small class="text-muted">(${log.mealPeriod})</small></td>
                       <td>${log.item}</td>
