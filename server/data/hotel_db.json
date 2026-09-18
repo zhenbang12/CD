@@ -982,7 +982,7 @@
       "optOutDays": 0,
       "linenDelayDays": 0,
       "towelReuse": true,
-      "cleaningStatus": "Active Clean List",
+      "cleaningStatus": "Completed",
       "ecoPointsEarned": 5,
       "qrToken": "RM301-SEC-901"
     },
@@ -996,7 +996,7 @@
       "optOutDays": 0,
       "linenDelayDays": 0,
       "towelReuse": false,
-      "cleaningStatus": "Inspection Passed",
+      "cleaningStatus": "Completed",
       "ecoPointsEarned": 0,
       "qrToken": "RM302-SEC-110"
     },
@@ -1022,11 +1022,12 @@
       "status": "Occupied",
       "servicePreference": "OPT_OUT_CLEANING",
       "optOutDays": 1,
-      "linenDelayDays": 2,
+      "linenDelayDays": 0,
       "towelReuse": true,
       "cleaningStatus": "Skipped (Opt-Out)",
-      "ecoPointsEarned": 25,
+      "ecoPointsEarned": 5,
       "qrToken": "RM304-SEC-426",
+      "pointsSpent": 25,
       "claimedTiers": [
         "tier-dining"
       ],
@@ -1055,7 +1056,7 @@
       "pointsCost": 25,
       "issueDate": "2026-08-13 07:15",
       "expiryDate": "2026-08-20",
-      "isRedeemed": false
+      "isRedeemed": true
     },
     {
       "code": "VM26-TRP-4409",
