@@ -177,6 +177,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
   String _selectedStation = 'ALL';
   String _selectedShift = 'Breakfast';
 
+   // Module 2 - Inventory Search & Filter
+  String _inventorySearchQuery = '';
+  String _inventoryFilter = 'ALL';
+
   @override
   Widget build(BuildContext context) {
     final urgentExpiring = widget.db.inventory.where((i) => i.daysUntilExpiry <= 2).toList();
@@ -456,100 +460,681 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   // --- RAW INVENTORY VIEW (MODULE 2) ---
-  Widget _buildInventoryView(BuildContext context, List<InventoryItem> urgentExpiring) {
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        if (urgentExpiring.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
-              border: Border.all(color: const Color(0xFFD97706)),
-              borderRadius: BorderRadius.circular(8),
+  Widget _buildInventoryView(
+  BuildContext context,
+  List<InventoryItem> urgentExpiring,
+) {
+  // Start with all inventory items.
+  List<InventoryItem> filteredInventory = List<InventoryItem>.from(
+    widget.db.inventory,
+  );
+
+  // -----------------------------
+  // 1. APPLY FILTER
+  // -----------------------------
+  if (_inventoryFilter == 'EXPIRING') {
+    filteredInventory = filteredInventory
+        .where((item) => item.daysUntilExpiry <= 4)
+        .toList();
+  } else if (_inventoryFilter != 'ALL') {
+    filteredInventory = filteredInventory
+        .where(
+          (item) => item.category
+              .toLowerCase()
+              .contains(_inventoryFilter.toLowerCase()),
+        )
+        .toList();
+  }
+
+  // -----------------------------
+  // 2. APPLY SEARCH
+  // -----------------------------
+  final searchText = _inventorySearchQuery.trim().toLowerCase();
+
+  if (searchText.isNotEmpty) {
+    filteredInventory = filteredInventory.where((item) {
+      final name = item.name.toLowerCase();
+      final id = item.id.toLowerCase();
+      final batch = item.batchNumber.toLowerCase();
+      final location = item.storageLocation.toLowerCase();
+
+      return name.contains(searchText) ||
+          id.contains(searchText) ||
+          batch.contains(searchText) ||
+          location.contains(searchText);
+    }).toList();
+  }
+
+  return ListView(
+    padding: const EdgeInsets.all(14),
+    children: [
+
+      // =====================================================
+      // SHELF-LIFE ALERT
+      // =====================================================
+      if (urgentExpiring.isNotEmpty)
+        Container(
+          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            border: Border.all(
+              color: const Color(0xFFD97706),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFD97706)),
-                    SizedBox(width: 6),
-                    Text('Shelf-Life Risk Radar (Cook Today)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFD97706))),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  children: urgentExpiring.map((item) => Chip(
-                    label: Text('${item.name} (${item.quantity}${item.unit})', style: const TextStyle(fontSize: 11)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: Color(0xFFD97706),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Shelf-Life Risk Radar (Cook Today)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: Color(0xFFD97706),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: urgentExpiring.map((item) {
+                  return Chip(
+                    label: Text(
+                      '${item.name} (${item.quantity}${item.unit})',
+                      style: const TextStyle(fontSize: 11),
+                    ),
                     backgroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE4E4E7)),
+                    side: const BorderSide(
+                      color: Color(0xFFE4E4E7),
+                    ),
                     padding: EdgeInsets.zero,
-                  )).toList(),
-                )
-              ],
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+
+      // =====================================================
+      // ACTION BUTTONS
+      // =====================================================
+      Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF18181B),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => _showAddStockSheet(context),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text(
+                'Log Stock Entry',
+                style: TextStyle(fontSize: 12),
+              ),
             ),
           ),
 
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF18181B), foregroundColor: Colors.white),
-                onPressed: () => _showAddStockSheet(context),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Log Stock Entry', style: TextStyle(fontSize: 12)),
+          const SizedBox(width: 8),
+
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF18181B),
+              ),
+              onPressed: () => _showLogSpoilageDialog(context),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 16,
+              ),
+              label: const Text(
+                'Record Food Waste',
+                style: TextStyle(fontSize: 12),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF18181B)),
-                onPressed: () => _showLogSpoilageDialog(context),
-                icon: const Icon(Icons.delete_outline, size: 16),
-                label: const Text('Record Spoilage', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 14),
+
+      // =====================================================
+      // SEARCH
+      // =====================================================
+      TextField(
+        onChanged: (value) {
+          setState(() {
+            _inventorySearchQuery = value;
+          });
+        },
+        decoration: InputDecoration(
+          hintText: 'Search ingredient, SKU, batch, or location...',
+          prefixIcon: const Icon(
+            Icons.search,
+            size: 19,
+          ),
+          suffixIcon: _inventorySearchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    setState(() {
+                      _inventorySearchQuery = '';
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: Color(0xFFE4E4E7),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: Color(0xFFE4E4E7),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: Color(0xFF059669),
+              width: 1.5,
+            ),
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      // =====================================================
+      // FILTER
+      // =====================================================
+      const Text(
+        'FILTER INVENTORY',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF71717A),
+          letterSpacing: 0.5,
+        ),
+      ),
+
+      const SizedBox(height: 6),
+
+      SizedBox(
+        height: 38,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _buildInventoryFilterChip(
+              label: 'All',
+              value: 'ALL',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Expiring ≤ 4d',
+              value: 'EXPIRING',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Meat & Poultry',
+              value: 'Meat',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Seafood',
+              value: 'Seafood',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Produce',
+              value: 'Produce',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Grains & Dry',
+              value: 'Grains',
+            ),
+            _buildInventoryFilterChip(
+              label: 'Dairy & Eggs',
+              value: 'Dairy',
+            ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 14),
+
+      // =====================================================
+      // INVENTORY TITLE
+      // =====================================================
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'ACTIVE CHILLER & DRY INVENTORY',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF71717A),
+            ),
+          ),
+
+          Text(
+            '${filteredInventory.length} item${filteredInventory.length == 1 ? '' : 's'}',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF71717A),
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 6),
+
+      // =====================================================
+      // NO MATCHING RECORDS
+      // =====================================================
+      if (filteredInventory.isEmpty)
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color(0xFFE4E4E7),
+            ),
+          ),
+          child: const Column(
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 28,
+                color: Color(0xFF71717A),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No matching inventory records',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Try a different search term or filter.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF71717A),
+                ),
+              ),
+            ],
+          ),
+        )
+
+      // =====================================================
+      // INVENTORY LIST
+      // =====================================================
+      else
+        ...filteredInventory.map(
+          (item) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Item name + quantity
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      Text(
+                        '${item.quantity} ${item.unit}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  // SKU + category
+                  Text(
+                    'SKU: ${item.id} • ${item.category}',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  // Batch + location
+                  Text(
+                    'Batch: ${item.batchNumber} • ${item.storageLocation}',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
+
+                  const SizedBox(height: 3),
+
+                  // Delivery + expiry
+                  Text(
+                    'Delivered: ${item.deliveryDate} • Expiry: ${item.expiryDate}',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Status
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: item.daysUntilExpiry <= 2
+                              ? const Color(0xFFFFF1F2)
+                              : item.daysUntilExpiry <= 4
+                                  ? const Color(0xFFFFFBEB)
+                                  : const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              item.daysUntilExpiry <= 2
+                                  ? Icons.warning_amber_rounded
+                                  : item.daysUntilExpiry <= 4
+                                      ? Icons.schedule
+                                      : Icons.check_circle_outline,
+                              size: 12,
+                              color: item.daysUntilExpiry <= 2
+                                  ? const Color(0xFFE11D48)
+                                  : item.daysUntilExpiry <= 4
+                                      ? const Color(0xFFD97706)
+                                      : const Color(0xFF059669),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.expiryStatus,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: item.daysUntilExpiry <= 2
+                                    ? const Color(0xFFE11D48)
+                                    : item.daysUntilExpiry <= 4
+                                        ? const Color(0xFFD97706)
+                                        : const Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // =====================================================
+        // FOOD WASTE RECORDS
+        // =====================================================
+        const SizedBox(height: 18),
+
+        const Text(
+         'FOOD WASTE RECORDS',
+      style: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF71717A),
+  ),
+),
+
+    const SizedBox(height: 8),
+
+    _buildFoodWasteRecords(),
+
+    ],
+  );
+}
+
+// Module 2 - Food Waste Records
+// Displays recorded Spoilage and Prep Waste entries.
+Widget _buildFoodWasteRecords() {
+  final wasteLogs = widget.db.foodWasteLogs;
+
+  if (wasteLogs.isEmpty) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.delete_outline,
+              size: 30,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'No Food Waste Records',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'Recorded food waste will appear here.',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade600,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-
-        const Text('ACTIVE CHILLER & DRY INVENTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
-        const SizedBox(height: 6),
-        ...widget.db.inventory.map((item) => Card(
-          child: ListTile(
-            dense: true,
-            title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            subtitle: Text('SKU: ${item.id} • ${item.storageLocation} • Exp: ${item.expiryDate}', style: const TextStyle(fontSize: 11)),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('${item.quantity} ${item.unit}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF059669))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: item.daysUntilExpiry <= 2 ? const Color(0xFFFFF1F2) : const Color(0xFFF4F4F5),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    item.expiryStatus,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: item.daysUntilExpiry <= 2 ? const Color(0xFFE11D48) : const Color(0xFF71717A),
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        )),
-      ],
+      ),
     );
   }
+
+  return Column(
+    children: wasteLogs.reversed.map((log) {
+      final isSpoilage = log.type == 'Spoilage';
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isSpoilage
+                      ? const Color(0xFFFFF1F2)
+                      : const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isSpoilage
+                      ? Icons.warning_amber_rounded
+                      : Icons.eco_outlined,
+                  size: 18,
+                  color: isSpoilage
+                      ? const Color(0xFFE11D48)
+                      : const Color(0xFF059669),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            log.item,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSpoilage
+                                ? const Color(0xFFFFF1F2)
+                                : const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            log.type,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: isSpoilage
+                                  ? const Color(0xFFE11D48)
+                                  : const Color(0xFF059669),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    Text(
+                      '${log.date} • ${log.mealPeriod}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    Text(
+                      'Reason: ${log.reason}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF52525B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              Text(
+                '${log.quantity} ${log.unit}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF18181B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList(),
+  );
+}
+
+// Module 2 - Inventory Filter Chip
+// Displays selectable filter options for the inventory list.
+Widget _buildInventoryFilterChip({
+  required String label,
+  required String value,
+}) {
+  final isSelected = _inventoryFilter == value;
+
+  return Padding(
+    padding: const EdgeInsets.only(right: 6),
+    child: ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: isSelected
+              ? FontWeight.w700
+              : FontWeight.w500,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (_) {
+        setState(() {
+          _inventoryFilter = value;
+        });
+      },
+      selectedColor: const Color(0xFFD1FAE5),
+      backgroundColor: Colors.white,
+      side: BorderSide(
+        color: isSelected
+            ? const Color(0xFF059669)
+            : const Color(0xFFE4E4E7),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+      ),
+      visualDensity: VisualDensity.compact,
+    ),
+  );
+}
+
 
   // --- PLATE WASTE RETURNS VIEW (MODULE 3) ---
   Widget _buildPlateWasteView(BuildContext context) {
@@ -734,134 +1319,1016 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   void _showAddStockSheet(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final qtyCtrl = TextEditingController();
-    String category = 'Produce';
-    String unit = 'kg';
+  final formKey = GlobalKey<FormState>();
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 16, right: 16, top: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Log Incoming Stock (M2)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 12),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Ingredient Name')),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity'))),
-                const SizedBox(width: 8),
-                DropdownButton<String>(
-                  value: unit,
-                  items: ['kg', 'L', 'units'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                  onChanged: (val) => unit = val!,
+  final nameCtrl = TextEditingController();
+  final qtyCtrl = TextEditingController();
+
+  // Default values for the simulated project date.
+  // Keep this aligned with the date used elsewhere in your demo data.
+  final demoToday = DateTime(2026, 8, 13);
+
+  final batchCtrl = TextEditingController(
+    text: 'BCH-${demoToday.year}${demoToday.month.toString().padLeft(2, '0')}${demoToday.day.toString().padLeft(2, '0')}-SK',
+  );
+
+  final locationCtrl = TextEditingController();
+
+  String category = 'Produce';
+  String unit = 'kg';
+
+  DateTime? deliveryDate = DateTime.now();
+  DateTime? expiryDate = DateTime.now().add(const Duration(days: 5));
+
+  String formatDate(DateTime? date) {
+    if (date == null) return 'Select date';
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+
+  String toIsoDate(DateTime date) {
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+    ),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) {
+        Future<void> pickDeliveryDate() async {
+          final picked = await showDatePicker(
+            context: ctx,
+            initialDate: deliveryDate ?? demoToday,
+            firstDate: DateTime(2020),
+            lastDate: DateTime(2100),
+            helpText: 'Select Delivery Date',
+          );
+
+          if (picked != null) {
+            setDialogState(() {
+              deliveryDate = picked;
+
+              // Expiry date cannot be before delivery date.
+              if (expiryDate != null && expiryDate!.isBefore(picked)) {
+                expiryDate = null;
+              }
+            });
+          }
+        }
+
+        Future<void> pickExpiryDate() async {
+          final minimumDate = deliveryDate ?? demoToday;
+
+          final picked = await showDatePicker(
+            context: ctx,
+            initialDate: expiryDate != null && !expiryDate!.isBefore(minimumDate)
+                ? expiryDate!
+                : minimumDate,
+            firstDate: minimumDate,
+            lastDate: DateTime(2100),
+            helpText: 'Select Expiry Date',
+          );
+
+          if (picked != null) {
+            setDialogState(() {
+              expiryDate = picked;
+            });
+          }
+        }
+
+        void saveStock() {
+          if (!formKey.currentState!.validate()) {
+            return;
+          }
+
+          if (deliveryDate == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select a delivery date.'),
+              ),
+            );
+            return;
+          }
+
+          if (expiryDate == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select an expiry date.'),
+              ),
+            );
+            return;
+          }
+
+          if (expiryDate!.isBefore(deliveryDate!)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Expiry date cannot be earlier than the delivery date.',
                 ),
-              ],
+              ),
+            );
+            return;
+          }
+
+          final quantity = double.tryParse(qtyCtrl.text.trim());
+
+          if (quantity == null || quantity <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Quantity must be a valid number greater than 0.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          final newItem = InventoryItem(
+            id: 'ING-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+            name: nameCtrl.text.trim(),
+            category: category,
+            quantity: quantity,
+            unit: unit,
+            batchNumber: batchCtrl.text.trim(),
+            storageLocation: locationCtrl.text.trim(),
+            deliveryDate: toIsoDate(deliveryDate!),
+            expiryDate: toIsoDate(expiryDate!),
+          );
+
+          widget.db.addInventoryItem(newItem);
+
+          Navigator.pop(ctx);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Stock "${newItem.name}" successfully added to the inventory.',
+              ),
             ),
-            const SizedBox(height: 14),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF18181B),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 44),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                if (nameCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                  widget.db.addInventoryItem(InventoryItem(
-                    id: 'ING-${Random().nextInt(900) + 100}',
-                    name: nameCtrl.text,
-                    category: category,
-                    quantity: double.tryParse(qtyCtrl.text) ?? 10.0,
-                    unit: unit,
-                    batchNumber: 'BCH-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-                    deliveryDate: '2026-08-13',
-                    expiryDate: '2026-08-18',
-                    storageLocation: 'Main Chiller',
-                  ));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stock item logged to Oracle SQL database!')));
-                }
-              },
-              child: const Text('Save to Stock Register'),
-            )
-          ],
-        ),
-      ),
-    );
-  }
+          );
+        }
 
-  void _showLogSpoilageDialog(BuildContext context) {
-    final itemCtrl = TextEditingController();
-    final qtyCtrl = TextEditingController();
-    String type = 'Spoilage';
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              top: 18,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+            ),
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Log Incoming Stock (M2)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Record newly received kitchen inventory',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF71717A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Record Shift Food Waste (M2)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Spoilage (Loss)'),
-                    selected: type == 'Spoilage',
-                    onSelected: (_) => setDialogState(() => type = 'Spoilage'),
-                  ),
-                  const SizedBox(width: 6),
-                  ChoiceChip(
-                    label: const Text('Prep (Compost)'),
-                    selected: type == 'Prep Waste',
-                    onSelected: (_) => setDialogState(() => type = 'Prep Waste'),
-                  ),
-                ],
+                    const SizedBox(height: 18),
+
+                    // Section: Item Details
+                    const Text(
+                      'ITEM DETAILS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: nameCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Ingredient Name',
+                        hintText: 'e.g. Fresh Chicken Breast',
+                        prefixIcon: Icon(Icons.restaurant_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Ingredient name is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    DropdownButtonFormField<String>(
+                      value: category,
+                      decoration: const InputDecoration(
+                        labelText: 'Category',
+                        prefixIcon: Icon(Icons.category_outlined),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Produce',
+                          child: Text('Produce & Vegetables'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Meat & Poultry',
+                          child: Text('Meat & Poultry'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Seafood',
+                          child: Text('Seafood'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Dairy & Eggs',
+                          child: Text('Dairy & Eggs'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Grains & Dry',
+                          child: Text('Grains & Dry Storage'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            category = value;
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: qtyCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Quantity',
+                              hintText: 'e.g. 25.0',
+                              prefixIcon: Icon(Icons.scale_outlined),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
+                              }
+
+                              final number = double.tryParse(value.trim());
+
+                              if (number == null) {
+                                return 'Invalid number';
+                              }
+
+                              if (number <= 0) {
+                                return 'Must be > 0';
+                              }
+
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: unit,
+                            decoration: const InputDecoration(
+                              labelText: 'Unit',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'kg',
+                                child: Text('kg'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'L',
+                                child: Text('Litres'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'units',
+                                child: Text('Units'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  unit = value;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Section: Batch & Storage
+                    const Text(
+                      'BATCH & STORAGE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: batchCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Batch Identifier Number',
+                        hintText: 'e.g. BCH-20260813-SK',
+                        prefixIcon: Icon(Icons.qr_code_2_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Batch number is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      controller: locationCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Storage Location',
+                        hintText: 'e.g. Walk-in Chiller A',
+                        prefixIcon: Icon(Icons.inventory_2_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Storage location is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Section: Shelf Life
+                    const Text(
+                      'SHELF LIFE',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: pickDeliveryDate,
+                            icon: const Icon(Icons.calendar_today_outlined),
+                            label: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Delivery Date',
+                                  style: TextStyle(fontSize: 9),
+                                ),
+                                Text(
+                                  formatDate(deliveryDate),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              alignment: Alignment.centerLeft,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: pickExpiryDate,
+                            icon: const Icon(Icons.event_available_outlined),
+                            label: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Expiry Date',
+                                  style: TextStyle(fontSize: 9),
+                                ),
+                                Text(
+                                  formatDate(expiryDate),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              alignment: Alignment.centerLeft,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (deliveryDate != null && expiryDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: Color(0xFF059669),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Expiry date must be on or after delivery date.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+
+                    // Save
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: saveStock,
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text(
+                          'Save to Stock Register',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF18181B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
-              TextField(controller: itemCtrl, decoration: const InputDecoration(labelText: 'Item Name')),
-              const SizedBox(height: 8),
-              TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Discarded kg')),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
-              onPressed: () {
-                if (itemCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                  final qty = double.tryParse(qtyCtrl.text) ?? 1.0;
-                  widget.db.addFoodWasteLog(FoodWasteLog(
-                    id: 'WST-${Random().nextInt(900) + 100}',
-                    date: '2026-08-13',
-                    mealPeriod: 'Dinner Shift',
-                    item: itemCtrl.text,
-                    type: type,
-                    reason: type == 'Spoilage' ? 'Expired / Damaged' : 'Peelings diverted to composter',
-                    quantity: qty,
-                    unit: 'kg',
-                    costImpact: type == 'Spoilage' ? qty * 18.5 : 0.0,
-                    loggedBy: 'Mobile App User',
-                  ));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food waste recorded!')));
-                }
-              },
-              child: const Text('Save Log'),
-            ),
-          ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  );
+}
+
+ void _showLogSpoilageDialog(BuildContext context) {
+  final formKey = GlobalKey<FormState>();
+
+  final itemCtrl = TextEditingController();
+  final qtyCtrl = TextEditingController();
+  final reasonCtrl = TextEditingController();
+
+  String type = 'Spoilage';
+  String selectedShift = 'Dinner Shift';
+  String selectedUnit = 'kg';
+
+  // Simulated project date.
+  final disposalDate = DateTime(2026, 8, 13);
+
+  String formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
   }
+
+  String toIsoDate(DateTime date) {
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+    ),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) {
+        void saveWaste() {
+          if (!formKey.currentState!.validate()) {
+            return;
+          }
+
+          final quantity = double.tryParse(qtyCtrl.text.trim());
+
+          if (quantity == null || quantity <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Quantity must be a valid number greater than 0.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          widget.db.addFoodWasteLog(
+            FoodWasteLog(
+              id: 'WST-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+              date: toIsoDate(disposalDate),
+              mealPeriod: selectedShift,
+              item: itemCtrl.text.trim(),
+              type: type,
+              reason: reasonCtrl.text.trim(),
+              quantity: quantity,
+              unit: selectedUnit,
+              costImpact: type == 'Spoilage' ? quantity * 18.5 : 0.0,
+              loggedBy: 'Mobile App User',
+            ),
+          );
+
+          Navigator.pop(ctx);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${type == 'Spoilage' ? 'Spoilage' : 'Prep Waste'} record successfully saved.',
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              top: 18,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+            ),
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Record Food Waste (M2)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Record discarded food from the current shift',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF71717A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Classification
+                    const Text(
+                      'WASTE CLASSIFICATION',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                type = 'Spoilage';
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: type == 'Spoilage'
+                                    ? const Color(0xFFFFF1F2)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: type == 'Spoilage'
+                                      ? const Color(0xFFE11D48)
+                                      : const Color(0xFFE4E4E7),
+                                  width: type == 'Spoilage' ? 1.5 : 1,
+                                ),
+                              ),
+                              child: const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Color(0xFFE11D48),
+                                    size: 20,
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Spoilage',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Expired, rotten, or damaged raw items',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: Color(0xFF71717A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                type = 'Prep Waste';
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: type == 'Prep Waste'
+                                    ? const Color(0xFFECFDF5)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: type == 'Prep Waste'
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFFE4E4E7),
+                                  width: type == 'Prep Waste' ? 1.5 : 1,
+                                ),
+                              ),
+                              child: const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.eco_outlined,
+                                    color: Color(0xFF059669),
+                                    size: 20,
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Prep Waste',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Peelings, bones, and food trimmings',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      color: Color(0xFF71717A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Waste details
+                    const Text(
+                      'WASTE DETAILS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: itemCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Discarded Item Name',
+                        hintText: 'e.g. Fresh Farm Poultry',
+                        prefixIcon: Icon(Icons.restaurant_menu_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Item name is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedShift,
+                            decoration: const InputDecoration(
+                              labelText: 'Meal Shift',
+                              prefixIcon: Icon(
+                                Icons.schedule_outlined,
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Breakfast Shift',
+                                child: Text('Breakfast'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Lunch Shift',
+                                child: Text('Lunch'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Dinner Shift',
+                                child: Text('Dinner'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedShift = value;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedUnit,
+                            decoration: const InputDecoration(
+                              labelText: 'Unit',
+                              prefixIcon: Icon(
+                                Icons.straighten_outlined,
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'kg',
+                                child: Text('kg'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'L',
+                                child: Text('Litres'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'units',
+                                child: Text('Units'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  selectedUnit = value;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      controller: qtyCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        hintText: 'e.g. 3.5',
+                        prefixIcon: Icon(Icons.scale_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Quantity is required.';
+                        }
+
+                        final number = double.tryParse(value.trim());
+
+                        if (number == null) {
+                          return 'Enter a valid number.';
+                        }
+
+                        if (number <= 0) {
+                          return 'Quantity must be greater than 0.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      controller: reasonCtrl,
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Reason / Disposal Notes',
+                        hintText:
+                            'e.g. Expired due to incorrect storage temperature',
+                        prefixIcon: Icon(Icons.notes_outlined),
+                        alignLabelWithHint: true,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Disposal notes are required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Automatic disposal date
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F4F5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFE4E4E7),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.event_outlined,
+                            size: 18,
+                            color: Color(0xFF71717A),
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Disposal Date',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFF71717A),
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Recorded automatically',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            formatDate(disposalDate),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: saveWaste,
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text(
+                          'Save Waste Log',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 
   // Bottom Sheet: User & Kitchen Operations Guide (Module 3 - PIC: Zhen Bang)
   void _showUserGuideSheet(BuildContext context) {
