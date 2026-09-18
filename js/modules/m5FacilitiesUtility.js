@@ -562,7 +562,7 @@ export class Module5Facilities {
         meterModal.style.display = 'none';
 
         if (res && res.isAnomaly) {
-          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}%)! Zone marked red on the telemetry board — file a Report Facility Defect if a work order is needed.`, 'warning');
+          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}%)!`, 'warning');
         } else {
           window.showGlobalToast?.(`Meter reading for ${meterId} recorded.`, 'success');
         }
