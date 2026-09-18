@@ -49,7 +49,7 @@ class StorageEngine {
         const backendData = await res.json();
         if (backendData && typeof backendData === 'object') {
           // Merge collections from backend
-          const syncKeys = ['rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory', 'foodWasteLogs', 'plateWasteLogs'];
+          const syncKeys = ['rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory', 'foodWasteLogs', 'plateWasteLogs', 'guestInteractions'];
           let changed = false;
           for (const key of syncKeys) {
             if (Array.isArray(backendData[key]) && backendData[key].length > 0) {
@@ -116,6 +116,16 @@ class StorageEngine {
               if (m) Object.assign(m, event.payload);
               this.saveDatabase(this.data, false);
               this.notify('utilityMeters', this.data.utilityMeters);
+            } else if (event.type === 'interaction_created' && event.payload) {
+              this.data.guestInteractions = this.data.guestInteractions || [];
+              // Avoid duplicates
+              const exists = this.data.guestInteractions.some(i => i.id === event.payload.id);
+              if (!exists) {
+                this.data.guestInteractions.unshift(event.payload);
+                this.saveDatabase(this.data, false);
+                this.notify('guestInteractions', this.data.guestInteractions);
+                console.log('[SSE] Live guest interaction received:', event.payload.action, event.payload.roomNumber);
+              }
             }
           } catch (e) {
             // Ignore non-json heartbeats
@@ -305,7 +315,8 @@ class StorageEngine {
               utilityMeters: this.data.utilityMeters,
               inventory: this.data.inventory,
               foodWasteLogs: this.data.foodWasteLogs,
-              plateWasteLogs: this.data.plateWasteLogs
+              plateWasteLogs: this.data.plateWasteLogs,
+              guestInteractions: this.data.guestInteractions
             })
           }).catch(() => {});
         }, 300);

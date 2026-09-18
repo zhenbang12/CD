@@ -119,6 +119,11 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
                 meters = db_state.get('utilityMeters', [])
                 self.send_json_response(200, {"meters": meters})
             return
+        elif path == '/api/interactions':
+            with db_lock:
+                interactions = db_state.get('guestInteractions', [])
+                self.send_json_response(200, {"interactions": interactions})
+            return
         elif path == '/api/health':
             self.send_json_response(200, {"status": "ok", "service": "EcoHotel OS API", "time": time.time()})
             return
@@ -145,6 +150,8 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             self.handle_create_defect(body)
         elif path == '/api/meters/reading':
             self.handle_meter_reading(body)
+        elif path == '/api/interactions':
+            self.handle_create_interaction(body)
         elif path == '/api/sync':
             self.handle_bulk_sync(body)
         else:
@@ -241,8 +248,23 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             points_spent = room.get('pointsSpent', 0)
             room['ecoPointsEarned'] = max(0, base + today_pts - points_spent)
 
+            # Log guest interaction for this preference change
+            import time as _time
+            interaction = {
+                "id": f"GIL-{int(_time.time() * 1000) % 100000}",
+                "roomNumber": room_number,
+                "timestamp": _time.strftime('%Y-%m-%d %H:%M:%S'),
+                "action": "PWA_SERVICE_SELECTION",
+                "details": f"Selected {pref}{' + Towel Reuse' if towel else ''}",
+                "pointsEarned": today_pts,
+                "source": "mobile"
+            }
+            interactions = db_state.setdefault('guestInteractions', [])
+            interactions.insert(0, interaction)
+
             save_db()
             broadcast_event('room_updated', room)
+            broadcast_event('interaction_created', interaction)
 
         self.send_json_response(200, {"success": True, "room": room})
 
@@ -324,8 +346,23 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             vouchers = db_state.setdefault('ecoVouchers', [])
             vouchers.insert(0, voucher)
 
+            # Log guest interaction for voucher claim
+            import time as _time
+            interaction = {
+                "id": f"GIL-{int(_time.time() * 1000) % 100000}",
+                "roomNumber": room_number,
+                "timestamp": _time.strftime('%Y-%m-%d %H:%M:%S'),
+                "action": "VOUCHER_CLAIMED",
+                "details": f"Claimed {tier['title']} ({cost} pts)",
+                "pointsEarned": 0,
+                "source": "mobile"
+            }
+            interactions = db_state.setdefault('guestInteractions', [])
+            interactions.insert(0, interaction)
+
             save_db()
             broadcast_event('voucher_claimed', {"room": room, "voucher": voucher})
+            broadcast_event('interaction_created', interaction)
 
         self.send_json_response(200, {"success": True, "voucher": voucher, "room": room})
 
@@ -379,6 +416,20 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             broadcast_event('meter_updated', meter)
 
         self.send_json_response(200, {"success": True, "meter": meter})
+
+    def handle_create_interaction(self, body):
+        with db_lock:
+            interactions = db_state.setdefault('guestInteractions', [])
+            interaction = dict(body)
+            if 'id' not in interaction:
+                interaction['id'] = f"GIL-{int(time.time() * 1000) % 100000}"
+            if 'timestamp' not in interaction:
+                interaction['timestamp'] = time.strftime('%Y-%m-%d %H:%M:%S')
+            interactions.insert(0, interaction)
+            save_db()
+            broadcast_event('interaction_created', interaction)
+
+        self.send_json_response(200, {"success": True, "interaction": interaction})
 
     def handle_bulk_sync(self, body):
         with db_lock:

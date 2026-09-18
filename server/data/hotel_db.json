@@ -982,7 +982,7 @@
       "optOutDays": 0,
       "linenDelayDays": 0,
       "towelReuse": true,
-      "cleaningStatus": "Active Clean List",
+      "cleaningStatus": "Completed",
       "ecoPointsEarned": 5,
       "qrToken": "RM301-SEC-901"
     },
@@ -996,7 +996,7 @@
       "optOutDays": 0,
       "linenDelayDays": 0,
       "towelReuse": false,
-      "cleaningStatus": "Inspection Passed",
+      "cleaningStatus": "Completed",
       "ecoPointsEarned": 0,
       "qrToken": "RM302-SEC-110"
     },
@@ -1022,14 +1022,25 @@
       "status": "Occupied",
       "servicePreference": "OPT_OUT_CLEANING",
       "optOutDays": 1,
-      "linenDelayDays": 2,
+      "linenDelayDays": 0,
       "towelReuse": true,
       "cleaningStatus": "Skipped (Opt-Out)",
-      "ecoPointsEarned": 25,
-      "qrToken": "RM304-SEC-426"
+      "ecoPointsEarned": 5,
+      "qrToken": "RM304-SEC-426",
+      "pointsSpent": 25
     }
   ],
   "ecoVouchers": [
+    {
+      "code": "VM26-ECO-7716",
+      "roomNumber": "304",
+      "guestName": "Simon Wong",
+      "rewardTitle": "15% Farm-to-Table Dining Voucher",
+      "description": "Valid at Ocean Reef Bistro.",
+      "pointsCost": 25,
+      "expiryDate": "2026-08-25",
+      "isRedeemed": false
+    },
     {
       "code": "VM26-ECO-7821",
       "roomNumber": "304",
@@ -1039,7 +1050,7 @@
       "pointsCost": 25,
       "issueDate": "2026-08-13 07:15",
       "expiryDate": "2026-08-20",
-      "isRedeemed": false
+      "isRedeemed": true
     },
     {
       "code": "VM26-TRP-4409",
@@ -1054,6 +1065,240 @@
     }
   ],
   "guestInteractions": [
+    {
+      "id": "GIL-48387",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:12:28",
+      "action": "VOUCHER_CLAIMED",
+      "details": "Claimed 15% Farm-to-Table Dining Voucher (25 pts)",
+      "pointsEarned": 0,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-48706",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:12:28",
+      "action": "VOUCHER_CLAIMED",
+      "details": "Claimed 15% Farm-to-Table Dining Voucher (25 pts)",
+      "pointsEarned": 0,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-13939",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:53",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-14243",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:54",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-04359",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:44",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-4673",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:44",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-02873",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:42",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-2877",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:42",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-00310",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:40",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-881",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:40",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-98544",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:38",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-98546",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:38",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-97583",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:37",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-97889",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:37",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-96289",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:36",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-96291",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:36",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-94876",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:34",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-95447",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:35",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected LINEN_DELAY + Towel Reuse",
+      "pointsEarned": 15,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-69073",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:09",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-69385",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:09",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-67230",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:07",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected STANDARD + Towel Reuse",
+      "pointsEarned": 5,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-67545",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:07",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected STANDARD + Towel Reuse",
+      "pointsEarned": 5,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-65283",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:05",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-65285",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:05",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected OPT_OUT_CLEANING + Towel Reuse",
+      "pointsEarned": 20,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-62302",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:02",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected STANDARD + Towel Reuse",
+      "pointsEarned": 5,
+      "source": "mobile"
+    },
+    {
+      "id": "GIL-62869",
+      "roomNumber": "304",
+      "timestamp": "2026-09-19 03:11:02",
+      "action": "PWA_SERVICE_SELECTION",
+      "details": "Selected STANDARD + Towel Reuse",
+      "pointsEarned": 5,
+      "source": "mobile"
+    },
     {
       "id": "GIL-001",
       "roomNumber": "304",

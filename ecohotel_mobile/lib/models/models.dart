@@ -369,3 +369,45 @@ class PrepRecommendation {
     required this.timestamp,
   });
 }
+
+class GuestInteraction {
+  final String id;
+  final String roomNumber;
+  final String timestamp;
+  final String action;
+  final String details;
+  final int pointsEarned;
+  final String source;
+
+  GuestInteraction({
+    required this.id,
+    required this.roomNumber,
+    required this.timestamp,
+    required this.action,
+    required this.details,
+    this.pointsEarned = 0,
+    this.source = 'mobile',
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'roomNumber': roomNumber,
+    'timestamp': timestamp,
+    'action': action,
+    'details': details,
+    'pointsEarned': pointsEarned,
+    'source': source,
+  };
+
+  factory GuestInteraction.fromJson(Map<String, dynamic> json) {
+    return GuestInteraction(
+      id: json['id'] ?? '',
+      roomNumber: json['roomNumber'] ?? '',
+      timestamp: json['timestamp'] ?? '',
+      action: json['action'] ?? '',
+      details: json['details'] ?? '',
+      pointsEarned: json['pointsEarned'] ?? 0,
+      source: json['source'] ?? 'unknown',
+    );
+  }
+}
