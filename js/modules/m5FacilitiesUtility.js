@@ -4,7 +4,7 @@
  * housekeeping defect reporting, resource loss volume estimation, technician dispatch & ticket lifecycle status updates.
  */
 
-import { db } from '../db/storage.js';
+import { db, StorageEngine } from '../db/storage.js';
 
 export class Module5Facilities {
   constructor(container) {
@@ -75,7 +75,7 @@ export class Module5Facilities {
           </div>
           <div class="header-actions">
             <button class="btn btn-sm btn-outline" id="btn-open-defect-modal">
-              Report Defect
+              Report Facility Defect
             </button>
             <button class="btn btn-sm btn-primary" id="btn-open-meter-modal">
               Log Meter Reading
@@ -196,13 +196,14 @@ export class Module5Facilities {
                   <th class="col-number">Loss Rate</th>
                   <th>Priority</th>
                   <th>Assigned</th>
+                  <th>Evidence</th>
                   <th>Status</th>
                   <th class="col-action">Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredTickets.length === 0 ? `
-                  <tr><td colspan="8" class="text-center py-4" style="color: var(--text-muted);">No repair tickets match the selected filter.</td></tr>
+                  <tr><td colspan="9" class="text-center py-4" style="color: var(--text-muted);">No repair tickets match the selected filter.</td></tr>
                 ` : filteredTickets.map(t => `
                   <tr>
                     <td><code>${t.ticketNumber}</code></td>
@@ -216,6 +217,13 @@ export class Module5Facilities {
                       </span>
                     </td>
                     <td><span style="font-size: 12px;">${t.assignedTechnician}</span></td>
+                    <td>
+                      ${t.photoAttached && t.photoDataUrl ? `
+                        <img src="${t.photoDataUrl}" alt="Defect evidence thumbnail" title="Defect photo evidence" style="width:36px; height:36px; object-fit:cover; border-radius: var(--radius-sm); border:1px solid var(--border-subtle); display:block; cursor:pointer;" class="btn-view-photo" data-id="${t.id}" />
+                      ` : `
+                        <span style="font-size: 11px; color: var(--text-muted);">-</span>
+                      `}
+                    </td>
                     <td>
                       <span class="status-dot-wrap">
                         <span class="status-dot ${t.status === 'Completed' ? 'success' : t.status === 'In Progress' ? 'warning' : 'neutral'}"></span>
@@ -357,12 +365,13 @@ export class Module5Facilities {
             </div>
             <div class="grid grid-2">
               <div class="form-group">
-                <label class="form-label">Severity Level</label>
-                <select class="form-input" id="defect-severity" required>
-                  <option value="High">High Severity (Continuous Rapid Loss)</option>
-                  <option value="Normal">Normal Severity (Moderate Drip/Noise)</option>
-                  <option value="Low">Low Severity (Minor Cosmetic/Slow)</option>
+                <label class="form-label">Priority Level <span style="font-weight:400; color: var(--text-muted); font-size:11px;">(auto, from est. loss)</span></label>
+                <select class="form-input" id="defect-severity" disabled>
+                  <option value="High">High Severity</option>
+                  <option value="Normal">Normal Severity</option>
+                  <option value="Low">Low Severity</option>
                 </select>
+                <small class="form-help" id="defect-severity-help"></small>
               </div>
               <div class="form-group">
                 <label class="form-label">Resource Type</label>
@@ -527,6 +536,8 @@ export class Module5Facilities {
     const defectForm = this.container.querySelector('#form-report-defect');
     const defectCategoryField = this.container.querySelector('#defect-category');
     const defectResourceField = this.container.querySelector('#defect-resource');
+    const defectSeverityField = this.container.querySelector('#defect-severity');
+    const defectSeverityHelp = this.container.querySelector('#defect-severity-help');
 
     // Keep Resource Type in sync with the selected Defect Category, since
     // each category (e.g. "Dripping Basin Faucet" vs "HVAC Thermostat
@@ -539,7 +550,41 @@ export class Module5Facilities {
       if (selectedCat) defectResourceField.value = selectedCat.resourceType;
     };
 
-    if (defectCategoryField) defectCategoryField.onchange = syncResourceTypeFromCategory;
+    // Severity Level is no longer a manual pick — it's auto-classified from
+    // the selected Defect Category's estimated daily resource loss, using
+    // the exact same thresholds/logic as db.reportFacilityDefect() (single
+    // source of truth in storage.js), so what's shown here always matches
+    // what ends up on the ticket in the Repair Ticket Queue.
+    const HINT_PATTERN = /(\d+(?:\.\d+)?)\s*(L|Liters?|kWh)\s*\/?\s*day/i;
+    const computeAndSetSeverity = () => {
+      if (!defectCategoryField || !defectSeverityField) return;
+      const currentCategories = db.get('defectCategories') || [];
+      const selectedCat = currentCategories.find(c => c.label === defectCategoryField.value);
+      const resourceVal = defectResourceField
+        ? defectResourceField.value
+        : (selectedCat ? selectedCat.resourceType : 'Water');
+
+      const hintMatch = selectedCat && selectedCat.hint ? selectedCat.hint.match(HINT_PATTERN) : null;
+      const lossNum = hintMatch
+        ? parseFloat(hintMatch[1])
+        : (StorageEngine.DEFAULT_DAILY_LOSS[resourceVal] ?? StorageEngine.DEFAULT_DAILY_LOSS.Water);
+
+      const computed = db.classifySeverity(resourceVal, lossNum);
+      defectSeverityField.value = computed;
+
+      if (defectSeverityHelp) {
+        const t = StorageEngine.SEVERITY_THRESHOLDS[resourceVal] || StorageEngine.SEVERITY_THRESHOLDS.Water;
+        defectSeverityHelp.textContent =
+          `~${lossNum} ${t.unit} \u2192 ${computed} Severity (Low < ${t.low}, Normal ${t.low}\u2013${t.high - 1}, High \u2265 ${t.high} ${t.unit}).`;
+      }
+    };
+
+    if (defectCategoryField) {
+      defectCategoryField.onchange = () => { syncResourceTypeFromCategory(); computeAndSetSeverity(); };
+    }
+    if (defectResourceField) {
+      defectResourceField.onchange = computeAndSetSeverity;
+    }
 
     // Valid "Affected Room / Zone" values are either a guest room in the
     // 101-110, 201-210, or 301-310 ranges, OR one of the named facility
@@ -579,6 +624,7 @@ export class Module5Facilities {
       this.pendingPhotoDataUrl = null;
       defectModal.style.display = 'flex';
       syncResourceTypeFromCategory();
+      computeAndSetSeverity();
     };
     if (closeDefectBtn) closeDefectBtn.onclick = () => { defectModal.style.display = 'none'; };
     if (cancelDefectBtn) cancelDefectBtn.onclick = () => { defectModal.style.display = 'none'; };
@@ -710,7 +756,7 @@ export class Module5Facilities {
         const resourceType = resourceInput.value;
         const hint = hintInput.value.trim();
         if (hint && !HINT_PATTERN.test(hint)) {
-          const msg = 'Estimated Loss Hint must look like "~60 L/day" or "~25 kWh/day" (or leave it blank).';
+          const msg = 'Please use the format "~value unit/day" or leave blank.';
           if (hintError) { hintError.textContent = msg; hintError.style.display = 'block'; } else { alert(msg); }
           hintInput.focus();
           return;
@@ -719,8 +765,9 @@ export class Module5Facilities {
         db.addDefectCategory({ label: name, resourceType, hint });
 
         // Preserve in-progress form values across the re-render
+        // (Severity is no longer preserved here — it's auto-recomputed
+        // below via a change event, since it now depends on the category.)
         const zoneVal = this.container.querySelector('#defect-zone')?.value || '';
-        const severityVal = this.container.querySelector('#defect-severity')?.value || 'Normal';
         const descVal = this.container.querySelector('#defect-desc')?.value || '';
 
         this.render();
@@ -732,14 +779,14 @@ export class Module5Facilities {
         if (zoneField) zoneField.value = zoneVal;
         const categoryField = this.container.querySelector('#defect-category');
         if (categoryField) categoryField.value = name;
-        const severityField = this.container.querySelector('#defect-severity');
-        if (severityField) severityField.value = severityVal;
-        const resourceField = this.container.querySelector('#defect-resource');
-        if (resourceField) resourceField.value = resourceType;
         const descField = this.container.querySelector('#defect-desc');
         if (descField) descField.value = descVal;
         // Photo preview is restored automatically at the top of attachEventListeners()
         // via this.pendingPhotoDataUrl, since this.render() re-runs it.
+        // Re-sync Resource Type + auto-recompute Severity for the
+        // newly-added (now selected) category, via the freshly-bound
+        // change handler on the re-rendered category field.
+        categoryField?.dispatchEvent(new Event('change'));
 
         window.showGlobalToast?.(`New defect category "${name}" added.`, 'success');
       };
@@ -757,8 +804,9 @@ export class Module5Facilities {
         const removed = db.removeDefectCategory(categoryId);
 
         // Preserve in-progress form values / panel open state across the re-render
+        // (Severity is no longer preserved here — it's auto-recomputed
+        // below via a change event, since it now depends on the category.)
         const zoneVal = this.container.querySelector('#defect-zone')?.value || '';
-        const severityVal = this.container.querySelector('#defect-severity')?.value || 'Normal';
         const descVal = this.container.querySelector('#defect-desc')?.value || '';
 
         this.render();
@@ -770,10 +818,12 @@ export class Module5Facilities {
 
         const zoneField = this.container.querySelector('#defect-zone');
         if (zoneField) zoneField.value = zoneVal;
-        const severityField = this.container.querySelector('#defect-severity');
-        if (severityField) severityField.value = severityVal;
         const descField = this.container.querySelector('#defect-desc');
         if (descField) descField.value = descVal;
+        // Re-sync Resource Type + auto-recompute Severity for whichever
+        // category ends up selected after the category list changed.
+        const categoryFieldAfterRemove = this.container.querySelector('#defect-category');
+        categoryFieldAfterRemove?.dispatchEvent(new Event('change'));
 
         if (removed) {
           window.showGlobalToast?.(`Removed defect category "${cat.label}".`, 'success');

@@ -5853,8 +5853,33 @@ class FacilitiesScreen extends StatelessWidget {
     final zoneCtrl = TextEditingController(text: 'Room 201');
     final descCtrl = TextEditingController();
     String selectedCategoryId = db.defectCategories.isNotEmpty ? db.defectCategories.first.id : 'cat-toilet-flapper';
-    String severity = 'High';
     String resourceType = db.defectCategories.isNotEmpty ? db.defectCategories.first.resourceType : 'Water';
+
+    // Severity Level is no longer a manual pick — it's auto-classified from
+    // the selected Defect Category's estimated daily resource loss, using
+    // the exact same thresholds/logic as HotelDatabase.reportDefect() /
+    // classifySeverity() (single source of truth in hotel_database.dart),
+    // so what's shown here always matches what ends up on the ticket.
+    double lossNumForSeverityDialog(String categoryId, String resType) {
+      final cat = db.defectCategories.where((c) => c.id == categoryId).isEmpty
+          ? null
+          : db.defectCategories.firstWhere((c) => c.id == categoryId);
+      final hintMatch = cat != null
+          ? RegExp(r'(\d+(?:\.\d+)?)\s*(L|Liters?|kWh)\s*/?\s*day', caseSensitive: false).firstMatch(cat.hint)
+          : null;
+      if (hintMatch != null) return double.parse(hintMatch.group(1)!);
+      return kDefaultDailyLoss[resType] ?? kDefaultDailyLoss['Water']!;
+    }
+
+    String severityHelpTextFor(String resType, double lossNum, String computed) {
+      final t = kSeverityThresholds[resType] ?? kSeverityThresholds['Water']!;
+      final lossLabel = lossNum == lossNum.roundToDouble() ? lossNum.toInt().toString() : lossNum.toString();
+      return '~$lossLabel ${t.unit} \u2192 $computed Severity  '
+          '(Low < ${t.low.toInt()}, Normal ${t.low.toInt()}\u2013${t.high.toInt() - 1}, High \u2265 ${t.high.toInt()} ${t.unit})';
+    }
+
+    double initialLossNum = lossNumForSeverityDialog(selectedCategoryId, resourceType);
+    String severity = classifySeverity(resourceType, initialLossNum);
     String? pickedPhotoDataUrl;
 
     showDialog(
@@ -5948,6 +5973,8 @@ class FacilitiesScreen extends StatelessWidget {
                                   selectedCategoryId = val;
                                   final cat = db.defectCategories.firstWhere((c) => c.id == val);
                                   resourceType = cat.resourceType;
+                                  final lossNum = lossNumForSeverityDialog(selectedCategoryId, resourceType);
+                                  severity = classifySeverity(resourceType, lossNum);
                                 });
                               }
                             },
@@ -5956,16 +5983,29 @@ class FacilitiesScreen extends StatelessWidget {
                           DropdownButtonFormField<String>(
                             initialValue: severity,
                             decoration: const InputDecoration(
-                              labelText: 'Severity Level',
+                              labelText: 'Priority Level (auto, from est. loss)',
                               prefixIcon: Icon(Icons.warning_amber_outlined, size: 18),
                             ),
                             isExpanded: true,
                             items: const [
-                              DropdownMenuItem(value: 'High', child: Text('High Severity (Rapid Continuous Loss)', style: TextStyle(fontSize: 12.5))),
-                              DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip / Hum)', style: TextStyle(fontSize: 12.5))),
-                              DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic / Slow)', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'High', child: Text('High Severity', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'Normal', child: Text('Normal Severity', style: TextStyle(fontSize: 12.5))),
+                              DropdownMenuItem(value: 'Low', child: Text('Low Severity', style: TextStyle(fontSize: 12.5))),
                             ],
-                            onChanged: (val) => setDialogState(() => severity = val ?? 'High'),
+                            // Severity is auto-classified from the selected category's
+                            // estimated loss, not picked manually — disabled so ground
+                            // staff can see it, but can't set it out of sync with the
+                            // loss thresholds shown above.
+                            onChanged: null,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            severityHelpTextFor(
+                              resourceType,
+                              lossNumForSeverityDialog(selectedCategoryId, resourceType),
+                              severity,
+                            ),
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                           ),
                           const SizedBox(height: 14),
                           DropdownButtonFormField<String>(
@@ -5979,7 +6019,11 @@ class FacilitiesScreen extends StatelessWidget {
                               DropdownMenuItem(value: 'Water', child: Text('Water Resource (L/day)', style: TextStyle(fontSize: 12.5))),
                               DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource (kWh/day)', style: TextStyle(fontSize: 12.5))),
                             ],
-                            onChanged: (val) => setDialogState(() => resourceType = val ?? 'Water'),
+                            onChanged: (val) => setDialogState(() {
+                              resourceType = val ?? 'Water';
+                              final lossNum = lossNumForSeverityDialog(selectedCategoryId, resourceType);
+                              severity = classifySeverity(resourceType, lossNum);
+                            }),
                           ),
                           const SizedBox(height: 14),
                           TextField(

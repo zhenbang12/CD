@@ -1550,6 +1550,33 @@ updateInventoryItem(id, updates) {
     return { meter, isAnomaly, deviationPct, newTicket: null };
   }
 
+  // --- Severity auto-classification (Report Facility Defect) -------------
+  // Severity is derived automatically from the selected Defect Category's
+  // estimated daily resource loss instead of being picked manually, so
+  // "Low / Normal / High Severity" always matches the loss number already
+  // shown next to the category in the dropdown (e.g. "~45 L/day").
+  //   Water:       Low  < 50 L/day   | Normal 50-149 L/day  | High >= 150 L/day
+  //   Electricity: Low  < 15 kWh/day | Normal 15-29 kWh/day | High >= 30 kWh/day
+  static get SEVERITY_THRESHOLDS() {
+    return {
+      Water: { low: 50, high: 150, unit: 'L/day' },
+      Electricity: { low: 15, high: 30, unit: 'kWh/day' }
+    };
+  }
+
+  // Conservative default daily loss used only when a category has no
+  // parseable "Estimated Loss Hint" (e.g. a custom category saved blank).
+  static get DEFAULT_DAILY_LOSS() {
+    return { Water: 80, Electricity: 20 };
+  }
+
+  classifySeverity(resourceType, dailyLossNum) {
+    const t = StorageEngine.SEVERITY_THRESHOLDS[resourceType] || StorageEngine.SEVERITY_THRESHOLDS.Water;
+    if (dailyLossNum >= t.high) return 'High';
+    if (dailyLossNum < t.low) return 'Low';
+    return 'Normal';
+  }
+
   reportFacilityDefect({ roomOrZone, category, description, severity, resourceType, photoDataUrl }) {
     // Estimated loss rate now comes directly from the selected Defect
     // Category's "Estimated Loss Hint" (e.g. "~280 L/day", "~25 kWh/day"),
@@ -1569,11 +1596,17 @@ updateInventoryItem(id, updates) {
     } else {
       // No parseable hint on the category (e.g. a custom category saved
       // without one) — fall back to a conservative resource-type default.
-      estimatedDailyLossNum = severity === 'High' ? 40 : 15;
+      estimatedDailyLossNum = StorageEngine.DEFAULT_DAILY_LOSS[resourceType] ?? StorageEngine.DEFAULT_DAILY_LOSS.Water;
       estimatedLossRate = resourceType === 'Electricity' ? `${estimatedDailyLossNum} kWh / day` : `${estimatedDailyLossNum} Liters / day`;
     }
 
-    const priority = severity === 'High' || estimatedDailyLossNum >= 100 ? 'High' : 'Normal';
+    // Severity is auto-classified from the resource-loss thresholds above,
+    // NOT taken as-is from whatever was passed in — this is what actually
+    // fixes "I picked Low/Normal Severity but the ticket queue shows High".
+    // Priority then mirrors severity 1:1, so a Low/Normal Severity report
+    // can never surface as a High-priority ticket.
+    severity = this.classifySeverity(resourceType, estimatedDailyLossNum);
+    const priority = severity;
     const assignedTech = this.getAvailableTechnician();
 
     const newTicket = {

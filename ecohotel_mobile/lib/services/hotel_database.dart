@@ -4,6 +4,40 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/models.dart';
 
+// --- Severity auto-classification (Report Facility Defect) ---------------
+// Severity is derived automatically from the selected Defect Category's
+// estimated daily resource loss instead of being picked manually, so
+// "Low / Normal / High Severity" always matches the loss number already
+// shown next to the category in the dropdown (e.g. "~45 L/day"). Mirrors
+// js/db/storage.js on the Web Admin Dashboard.
+//   Water:       Low  < 50 L/day   | Normal 50-149 L/day  | High >= 150 L/day
+//   Electricity: Low  < 15 kWh/day | Normal 15-29 kWh/day | High >= 30 kWh/day
+class SeverityThreshold {
+  final double low;
+  final double high;
+  final String unit;
+  const SeverityThreshold(this.low, this.high, this.unit);
+}
+
+const Map<String, SeverityThreshold> kSeverityThresholds = {
+  'Water': SeverityThreshold(50, 150, 'L/day'),
+  'Electricity': SeverityThreshold(15, 30, 'kWh/day'),
+};
+
+// Conservative default daily loss used only when a category has no
+// parseable "Estimated Loss Hint" (e.g. a custom category saved blank).
+const Map<String, double> kDefaultDailyLoss = {
+  'Water': 80,
+  'Electricity': 20,
+};
+
+String classifySeverity(String resourceType, double dailyLossNum) {
+  final t = kSeverityThresholds[resourceType] ?? kSeverityThresholds['Water']!;
+  if (dailyLossNum >= t.high) return 'High';
+  if (dailyLossNum < t.low) return 'Low';
+  return 'Normal';
+}
+
 class HotelDatabase extends ChangeNotifier {
   String apiBaseUrl;
   bool isConnected = false;
@@ -973,11 +1007,16 @@ class HotelDatabase extends ChangeNotifier {
     } else {
       // No parseable hint on the category — fall back to a conservative
       // resource-type default.
-      lossNum = severity == 'High' ? 40 : 15;
+      lossNum = kDefaultDailyLoss[resourceType] ?? kDefaultDailyLoss['Water']!;
       lossStr = resourceType == 'Electricity' ? '${lossNum.round()} kWh / day' : '${lossNum.round()} Liters / day';
     }
 
-    final priority = severity == 'High' || lossNum >= 100 ? 'High' : 'Normal';
+    // Severity is auto-classified from the resource-loss thresholds above,
+    // not taken as-is from whatever the dialog passed in. Priority then
+    // mirrors severity 1:1, so a Low/Normal Severity report can never
+    // surface as a High-priority ticket.
+    severity = classifySeverity(resourceType, lossNum);
+    final priority = severity;
     final tech = technicians.firstWhere((t) => t.status == 'Available', orElse: () => technicians.first);
     final ticket = RepairTicket(
       id: 'TCK-${Random().nextInt(9000) + 1000}',
