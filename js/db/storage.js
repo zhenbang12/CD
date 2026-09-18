@@ -579,11 +579,49 @@ class StorageEngine {
   }
 
   // --- MODULE 1: Baselines & Audit Logs ---
-  getBaselines() {
+    getBaselines() {
     return this.data.baselines;
   }
 
-  updateBaseline(id, newValue, effectiveDate = null, reason = 'Operational adjustment') {
+  addBaseline(baselineObj) {
+    // Generate a unique ID
+    baselineObj.id = `BASE-${Date.now().toString().slice(-4)}`;
+    this.data.baselines.push(baselineObj);
+    
+    this.recordAuditLog({
+      action: 'ADD_OPERATIONAL_BASELINE',
+      targetKey: baselineObj.key,
+      previousValue: 'N/A',
+      newValue: `${baselineObj.value} ${baselineObj.unit}`,
+      reason: 'New baseline configured'
+    });
+    
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return { success: true, id: baselineObj.id };
+  }
+
+  deleteBaseline(id) {
+    const index = this.data.baselines.findIndex(b => b.id === id);
+    if (index === -1) return false;
+    
+    const item = this.data.baselines[index];
+    this.data.baselines.splice(index, 1);
+    
+    this.recordAuditLog({
+      action: 'DELETE_OPERATIONAL_BASELINE',
+      targetKey: item.key,
+      previousValue: `${item.value} ${item.unit}`,
+      newValue: 'DELETED',
+      reason: 'Baseline removed from system'
+    });
+    
+    this.saveDatabase();
+    this.notify('baselines', this.data.baselines);
+    return true;
+  }
+
+  updateBaseline(id, newValue, reason = 'Operational adjustment') {
     const item = this.data.baselines.find(b => b.id === id);
     if (!item) return { success: false, error: 'Baseline not found.' };
 
