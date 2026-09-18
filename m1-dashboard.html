@@ -132,7 +132,7 @@
       const resetBtn = document.getElementById('btn-standalone-reset-db');
       if (resetBtn) {
         resetBtn.onclick = () => {
-          if (confirm('Reset database to clean initial demonstration dataset? All modified baselines, logs, and tickets will be restored to default.')) {
+          if (confirm('Reset database to factory defaults? All modified baselines, logs, and tickets will be restored.')) {
             db.resetDatabase();
             window.location.reload();
           }
