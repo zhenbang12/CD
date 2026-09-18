@@ -5782,7 +5782,7 @@ class FacilitiesScreen extends StatelessWidget {
                               border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
                             child: const Text(
-                              'Notice: If reading exceeds baseline by ≥15%, the zone will be automatically flagged as an Anomaly. File a Report Facility Defect to dispatch a technician if maintenance is required.',
+                              'Notice: If reading exceeds baseline, the zone will be automatically flagged as an Anomaly.',
                               style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
                             ),
                           ),
@@ -5942,7 +5942,7 @@ class FacilitiesScreen extends StatelessWidget {
                             spacing: 6,
                             runSpacing: 4,
                             children: [
-                              'Room 101', 'Room 201', 'Room 304', 'Kitchen', 'Central Chiller', 'Commercial Laundry'
+                              'Room 101', 'Room 201', 'Room 301', 'Kitchen', 'Central Chiller Plant', 'Commercial Eco-Laundry'
                             ].map((z) => ActionChip(
                               visualDensity: VisualDensity.compact,
                               label: Text(z, style: const TextStyle(fontSize: 10.5)),
