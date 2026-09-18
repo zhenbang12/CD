@@ -71,7 +71,7 @@ export class Module5Facilities {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <h1 class="view-title">Facilities & Maintenance</h1>
+            <h1 class="view-title">Facilities Utility Audit & Maintenance Log</h1>
           </div>
           <div class="header-actions">
             <button class="btn btn-sm btn-outline" id="btn-open-defect-modal">

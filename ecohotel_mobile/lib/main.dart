@@ -204,7 +204,7 @@ class _MainStaffShellState extends State<MainStaffShell> {
 
     final staffTitles = [
       '🌿 Housekeeping Ground Sync',
-      '⚡ Facilities & Maintenance',
+      '⚡ Facilities Utility Audit & Maintenance Log',
       '🍳 Kitchen & Food Spoilage',
       '📊 Executive Compliance',
     ];
