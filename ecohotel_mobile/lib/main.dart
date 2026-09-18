@@ -320,342 +320,222 @@ class EcoHotelLoginScreen extends StatefulWidget {
 }
 
 class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
-  int _activeTab = 0; // 0: Staff Operations, 1: Guest Portal
-  final _usernameCtrl = TextEditingController(text: 'fac');
-  final _passwordCtrl = TextEditingController(text: 'password123');
-  bool _obscurePass = true;
-  String? _staffError;
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _obscurePassword = true;
+  String? _errorMessage;
 
-  String _selectedRoom = '201';
-  final _guestNameCtrl = TextEditingController(text: 'Michael Davies');
-
-  void _handleStaffSubmit() {
-    final userVal = _usernameCtrl.text.trim().toLowerCase();
+  void _handleLogin() {
+    final userVal = _usernameCtrl.text.trim();
     final passVal = _passwordCtrl.text.trim();
+
+    if (userVal.isEmpty || passVal.isEmpty) {
+      setState(() => _errorMessage = 'Invalid credentials.');
+      return;
+    }
+
     final match = widget.db.users.cast<UserModel?>().firstWhere(
-      (u) => u!.username.toLowerCase() == userVal && u.password == passVal,
+      (u) => u!.username.toLowerCase() == userVal.toLowerCase() && u.password == passVal,
       orElse: () => null,
     );
-    if (match != null) {
-      widget.onStaffLogin(match);
-    } else {
-      setState(() => _staffError = 'Invalid credentials. Try admin, fac, or chef with password123.');
-    }
-  }
 
-  void _handleGuestSubmit() {
-    widget.onGuestLogin(_selectedRoom);
+    if (match != null) {
+      setState(() => _errorMessage = null);
+      if (match.role == 'Guest' || match.username.toLowerCase() == 'guest') {
+        widget.onGuestLogin('304');
+      } else {
+        widget.onStaffLogin(match);
+      }
+      return;
+    }
+
+    // Support direct room login (e.g. username "201" or "room201")
+    final cleanRoom = userVal.toLowerCase().replaceAll('room', '').trim();
+    final roomMatch = widget.db.rooms.cast<RoomModel?>().firstWhere(
+      (r) => r!.roomNumber == cleanRoom,
+      orElse: () => null,
+    );
+
+    if (roomMatch != null && (passVal == 'password123' || passVal.toLowerCase() == roomMatch.guestName.toLowerCase())) {
+      setState(() => _errorMessage = null);
+      widget.onGuestLogin(roomMatch.roomNumber);
+      return;
+    }
+
+    setState(() => _errorMessage = 'Invalid credentials.');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Brand Header
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFECFDF5),
+              Color(0xFFD1FAE5),
+            ],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Header
+                  const Text('🌿', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'EcoHotel OS',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF064E3B),
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                  child: const Center(
-                    child: Text('🌿', style: TextStyle(fontSize: 28)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'EcoHotel OS',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Grand Bay Eco-Resort • Hospitality Operations',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 30),
 
-                // Main Login Card
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Segmented Tab Selector
-                      Container(
-                        height: 40,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
+                  // Login Card (Mirrors .login-card from login.html)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() {
-                                  _activeTab = 0;
-                                  _staffError = null;
-                                }),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: _activeTab == 0 ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: _activeTab == 0
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.05),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.shield_outlined,
-                                        size: 15,
-                                        color: _activeTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Staff Operations',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: _activeTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                                          color: _activeTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() {
-                                  _activeTab = 1;
-                                  _staffError = null;
-                                }),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: _activeTab == 1 ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: _activeTab == 1
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.05),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.person_outline,
-                                        size: 15,
-                                        color: _activeTab == 1 ? const Color(0xFF059669) : const Color(0xFF64748B),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Guest Portal',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: _activeTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                                          color: _activeTab == 1 ? const Color(0xFF059669) : const Color(0xFF64748B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 10,
+                          offset: const Offset(0, 8),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      if (_activeTab == 0) ...[
-                        // STAFF LOGIN FORM
-                        TextField(
-                          controller: _usernameCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Staff Username',
-                            prefixIcon: Icon(Icons.badge_outlined, size: 18),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _passwordCtrl,
-                          obscureText: _obscurePass,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline, size: 18),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
-                              onPressed: () => setState(() => _obscurePass = !_obscurePass),
-                            ),
-                          ),
-                        ),
-                        if (_staffError != null) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            _staffError!,
-                            style: const TextStyle(color: Color(0xFFE11D48), fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                        const SizedBox(height: 18),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A),
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 44),
-                          ),
-                          onPressed: _handleStaffSubmit,
-                          child: const Text('Sign In to Operations'),
-                        ),
-                        const SizedBox(height: 20),
-                        const Divider(color: Color(0xFFF1F5F9)),
-                        const SizedBox(height: 10),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         const Text(
-                          'QUICK LOGIN DEMO ACCOUNTS',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.5),
+                          'Username',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: widget.db.users.map((u) {
-                            return ActionChip(
-                              visualDensity: VisualDensity.compact,
-                              avatar: CircleAvatar(
-                                backgroundColor: const Color(0xFF059669),
-                                radius: 9,
-                                child: Text(u.avatar, style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
-                              ),
-                              label: Text('${u.username} (${u.name.split(' ').first})', style: const TextStyle(fontSize: 11)),
-                              backgroundColor: const Color(0xFFF8FAFC),
-                              side: const BorderSide(color: Color(0xFFE2E8F0)),
-                              onPressed: () {
-                                _usernameCtrl.text = u.username;
-                                _passwordCtrl.text = u.password;
-                                widget.onStaffLogin(u);
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ] else ...[
-                        // GUEST LOGIN FORM
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedRoom,
-                          decoration: const InputDecoration(
-                            labelText: 'Select Registered Room',
-                            prefixIcon: Icon(Icons.meeting_room_outlined, size: 18),
-                          ),
-                          items: widget.db.rooms.map((r) {
-                            return DropdownMenuItem(
-                              value: r.roomNumber,
-                              child: Text('Room ${r.roomNumber} - ${r.guestName}', style: const TextStyle(fontSize: 12.5)),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedRoom = val;
-                                final rm = widget.db.rooms.firstWhere((r) => r.roomNumber == val);
-                                _guestNameCtrl.text = rm.guestName;
-                              });
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 14),
                         TextField(
-                          controller: _guestNameCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Guest Name or Verification PIN',
-                            prefixIcon: Icon(Icons.person_outline, size: 18),
+                          controller: _usernameCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your username',
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                            fillColor: Colors.white,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                            ),
+                          ),
+                          onSubmitted: (_) => _handleLogin(),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Password',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _passwordCtrl,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your password',
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                            fillColor: Colors.white,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                size: 18,
+                                color: const Color(0xFF64748B),
+                              ),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          onSubmitted: (_) => _handleLogin(),
+                        ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 15),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 44),
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          onPressed: _handleGuestSubmit,
-                          child: const Text('Access Guest Eco-Concierge'),
-                        ),
-                        const SizedBox(height: 20),
-                        const Divider(color: Color(0xFFF1F5F9)),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'ONE-TOUCH ROOM ACCESS',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8), letterSpacing: 0.5),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: widget.db.rooms.where((r) => r.status == 'Occupied').map((r) {
-                            return ActionChip(
-                              visualDensity: VisualDensity.compact,
-                              label: Text('Room ${r.roomNumber} (${r.guestName.split(' ').first})', style: const TextStyle(fontSize: 11)),
-                              backgroundColor: const Color(0xFFF8FAFC),
-                              side: const BorderSide(color: Color(0xFFE2E8F0)),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedRoom = r.roomNumber;
-                                  _guestNameCtrl.text = r.guestName;
-                                });
-                                widget.onGuestLogin(r.roomNumber);
-                              },
-                            );
-                          }).toList(),
+                          onPressed: _handleLogin,
+                          child: const Text('Login'),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
