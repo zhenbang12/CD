@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1803,11 +1802,8 @@ void _showEditInventorySheet(
             return;
           }
 
-          // Replace the existing inventory record.
-          widget.db.inventory[index] = updatedItem;
-
-          // Refresh the Flutter UI.
-          widget.db.notifyListeners();
+          // Replace the existing inventory record and refresh UI.
+          widget.db.updateInventoryItem(index, updatedItem);
 
           Navigator.pop(ctx);
 
@@ -1911,7 +1907,7 @@ void _showEditInventorySheet(
                     const SizedBox(height: 10),
 
                     DropdownButtonFormField<String>(
-                      value: category,
+                      initialValue: category,
                       decoration:
                           const InputDecoration(
                         labelText: 'Category',
@@ -1990,7 +1986,7 @@ void _showEditInventorySheet(
                         Expanded(
                           child:
                               DropdownButtonFormField<String>(
-                            value: unit,
+                            initialValue: unit,
                             decoration:
                                 const InputDecoration(
                               labelText: 'Unit',
@@ -2701,7 +2697,7 @@ void _showEditInventorySheet(
                       const SizedBox(height: 10),
 
                       DropdownButtonFormField<String>(
-                        value: category,
+                        initialValue: category,
                         decoration: const InputDecoration(
                           labelText: 'Category',
                           prefixIcon: Icon(Icons.category_outlined),
@@ -2778,7 +2774,7 @@ void _showEditInventorySheet(
 
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: unit,
+                              initialValue: unit,
                               decoration: const InputDecoration(
                                 labelText: 'Unit',
                               ),
@@ -3294,7 +3290,7 @@ void _showEditInventorySheet(
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedShift,
+                              initialValue: selectedShift,
                               decoration: const InputDecoration(
                                 labelText: 'Meal Shift',
                                 prefixIcon: Icon(Icons.schedule_outlined),
@@ -3325,7 +3321,7 @@ void _showEditInventorySheet(
                           const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedUnit,
+                              initialValue: selectedUnit,
                               decoration: const InputDecoration(
                                 labelText: 'Unit',
                                 prefixIcon: Icon(Icons.straighten_outlined),
@@ -4498,7 +4494,6 @@ class FacilitiesScreen extends StatelessWidget {
 
   void _showMeterReadingDialog(BuildContext context, {String? initialMeterId}) {
     final readingCtrl = TextEditingController();
-    final meterFormKey = GlobalKey<FormState>();
     String meterId = initialMeterId ?? db.utilityMeters.first.meterId;
 
     showDialog(
@@ -5906,7 +5901,7 @@ class ExecutiveScreen extends StatelessWidget {
                   decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                   child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(

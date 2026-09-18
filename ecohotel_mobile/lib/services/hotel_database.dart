@@ -149,6 +149,13 @@ class HotelDatabase extends ChangeNotifier {
     }
   }
 
+  void updateInventoryItem(int index, InventoryItem item) {
+    if (index >= 0 && index < inventory.length) {
+      inventory[index] = item;
+      notifyListeners();
+    }
+  }
+
   void addFoodWasteLog(FoodWasteLog log) {
     foodWasteLogs.insert(0, log);
     notifyListeners();
