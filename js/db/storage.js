@@ -8,6 +8,17 @@ import { INITIAL_DATA } from '../data/initialData.js';
 
 const STORAGE_KEY = 'ECOHOTEL_OS_DATABASE_VM2026_PROD';
 
+export function getBackendUrl(path) {
+  if (typeof window === 'undefined' || !window.location) return path;
+  const port = window.location.port;
+  if (port === '8000' || port === '3000') {
+    return path;
+  }
+  // When running on static dev servers (e.g. npx serve on port 8080 or Live Server),
+  // target the active EcoHotel OS unified backend server on port 8000
+  return `http://localhost:8000${path}`;
+}
+
 class StorageEngine {
   constructor() {
     this.subscribers = new Map();
@@ -44,7 +55,7 @@ class StorageEngine {
   async initBackendSync() {
     try {
       // 1. Initial Fetch from backend
-      const res = await fetch('/api/db', { cache: 'no-store' });
+      const res = await fetch(getBackendUrl('/api/db'), { cache: 'no-store' });
       if (res.ok) {
         const backendData = await res.json();
         if (backendData && typeof backendData === 'object') {
@@ -82,7 +93,7 @@ class StorageEngine {
     // 2. Real-time Server-Sent Events (SSE) Listener
     if (typeof EventSource !== 'undefined') {
       try {
-        const sse = new EventSource('/api/events');
+        const sse = new EventSource(getBackendUrl('/api/events'));
         sse.onmessage = (evt) => {
           if (!evt.data) return;
           try {
@@ -333,7 +344,7 @@ class StorageEngine {
       if (syncToBackend) {
         if (this._syncTimer) clearTimeout(this._syncTimer);
         this._syncTimer = setTimeout(() => {
-          fetch('/api/sync', {
+          fetch(getBackendUrl('/api/sync'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1274,7 +1285,7 @@ updateInventoryItem(id, updates) {
     this.notify('rooms', this.data.rooms);
 
     // Sync preference to backend
-    fetch('/api/rooms/preference', {
+    fetch(getBackendUrl('/api/rooms/preference'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1359,7 +1370,7 @@ updateInventoryItem(id, updates) {
     this.notify('rooms', this.data.rooms);
 
     // Call backend API
-    fetch('/api/vouchers/claim', {
+    fetch(getBackendUrl('/api/vouchers/claim'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomNumber, tierKey })
@@ -1375,6 +1386,13 @@ updateInventoryItem(id, updates) {
     voucher.redeemedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
     this.saveDatabase();
     this.notify('ecoVouchers', this.data.ecoVouchers);
+
+    fetch(getBackendUrl('/api/vouchers/redeem'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    }).catch(() => {});
+
     return true;
   }
 
@@ -1405,6 +1423,13 @@ updateInventoryItem(id, updates) {
     this.saveDatabase();
     this.notify('rooms', this.data.rooms);
     this.notify('guestInteractions', this.data.guestInteractions);
+
+    fetch(getBackendUrl('/api/rooms/override'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomNumber, reason })
+    }).catch(() => {});
+
     return true;
   }
 

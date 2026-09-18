@@ -71,13 +71,6 @@ class HotelDatabase extends ChangeNotifier {
             }
           }
         }
-        if (data['guestInteractions'] != null && data['guestInteractions'] is List) {
-          final List iList = data['guestInteractions'];
-          guestInteractions.clear();
-          for (final i in iList) {
-            guestInteractions.add(GuestInteraction.fromJson(i));
-          }
-        }
         isConnected = true;
         notifyListeners();
       }
@@ -573,9 +566,9 @@ class HotelDatabase extends ChangeNotifier {
       // Log guest interaction
       _logInteraction(
         roomNumber: roomNumber,
-        action: 'PWA_SERVICE_SELECTION',
-        details: 'Selected $pref${towel ? " + Towel Reuse" : ""}',
-        pointsEarned: todayPoints,
+        action: 'PWA_CHOICE_UNLOCKED',
+        details: 'Unlocked choice for 30-minute guest adjustment window',
+        pointsEarned: 0,
       );
     }
   }
@@ -657,13 +650,6 @@ class HotelDatabase extends ChangeNotifier {
       'tierKey': tierKey,
     });
 
-    // Log guest interaction for voucher claim
-    _logInteraction(
-      roomNumber: roomNumber,
-      action: 'VOUCHER_CLAIMED',
-      details: 'Claimed ${tier['title']} ($cost pts)',
-      pointsEarned: 0,
-    );
     return true;
   }
 

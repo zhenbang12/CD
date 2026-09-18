@@ -431,20 +431,6 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             }
             interactions.insert(0, log_entry)
 
-            # Log guest interaction for voucher claim
-            import time as _time
-            interaction = {
-                "id": f"GIL-{int(_time.time() * 1000) % 100000}",
-                "roomNumber": room_number,
-                "timestamp": _time.strftime('%Y-%m-%d %H:%M:%S'),
-                "action": "VOUCHER_CLAIMED",
-                "details": f"Claimed {tier['title']} ({cost} pts)",
-                "pointsEarned": 0,
-                "source": "mobile"
-            }
-            interactions = db_state.setdefault('guestInteractions', [])
-            interactions.insert(0, interaction)
-
             save_db()
             broadcast_event('voucher_claimed', {"room": room, "voucher": voucher})
             broadcast_event('interaction_logged', log_entry)

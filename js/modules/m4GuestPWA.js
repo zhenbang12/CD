@@ -292,25 +292,25 @@ export class Module4GuestPWA {
           <!-- Eco-Rewards Balance & Milestone Card -->
           <div class="card" style="padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">
                 Cumulative Eco-Rewards Balance
               </span>
-              <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10.5px; border: 1px solid rgba(5,150,105,0.2); padding: 3px 8px; border-radius: 6px;">
+              <span class="badge badge-success" style="font-size: 10.5px; padding: 3px 8px; border-radius: 6px;">
                 ${(room.ecoPointsEarned || 0) >= 40 ? 'Gold Eco-Guest' : (room.ecoPointsEarned || 0) >= 20 ? 'Silver Eco-Guest' : 'Bronze Guest'}
               </span>
             </div>
             
             <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
-              <span style="font-size: 32px; font-weight: 900; color: #059669; letter-spacing: -0.02em;">${room.ecoPointsEarned || 0}</span>
-              <span style="font-size: 13px; font-weight: 600; color: #059669;">Eco-Points Earned</span>
+              <span style="font-size: 32px; font-weight: 900; color: var(--primary); letter-spacing: -0.02em;">${room.ecoPointsEarned || 0}</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--primary);">Eco-Points Earned</span>
             </div>
 
             <!-- Milestone Progress Bar -->
-            <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
-              <div style="background: #059669; height: 100%; width: ${Math.min(100, ((room.ecoPointsEarned || 0) / 45) * 100)}%; transition: width 0.3s ease;"></div>
+            <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+              <div style="background: var(--primary); height: 100%; width: ${Math.min(100, ((room.ecoPointsEarned || 0) / 45) * 100)}%; transition: width 0.3s ease;"></div>
             </div>
 
-            <div style="font-size: 11.5px; color: #64748b;">
+            <div style="font-size: 11.5px; color: var(--text-muted);">
               ${(room.ecoPointsEarned || 0) >= 45 
                 ? '🎉 <strong>All eco-milestones achieved!</strong> You have unlocked all reward vouchers.' 
                 : (room.ecoPointsEarned || 0) >= 30 
@@ -324,53 +324,53 @@ export class Module4GuestPWA {
 
           <!-- SUCCESS CONFIRMATION PANEL (ITEM 4) -->
           ${room.choiceConfirmedAt ? `
-            <div class="card success-panel fade-in" style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
+            <div class="card success-panel fade-in" style="background: var(--primary-light); border: 1.5px solid var(--primary); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);">
               <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span style="font-size: 22px;">🎉</span>
                   <div>
-                    <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #065f46;">Green Choices Confirmed & Synchronized</h3>
-                    <div style="font-size: 11px; color: #047857; margin-top: 1px;">Housekeeping dispatch route updated in real-time.</div>
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--primary);">Green Choices Confirmed & Synchronized</h3>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">Housekeeping dispatch route updated in real-time.</div>
                   </div>
                 </div>
-                <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 5px;">
+                <span class="badge badge-success" style="font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 5px;">
                   ✓ Confirmed
                 </span>
               </div>
 
               <!-- Summary of Selected Preferences -->
-              <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11.5px;">
+              <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 11.5px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #64748b;">Housekeeping Service:</span>
+                  <span style="color: var(--text-muted);">Housekeeping Service:</span>
                   <strong>${room.servicePreference === 'OPT_OUT_CLEANING' ? 'Skip Daily Room Cleaning (+15 Pts)' : room.servicePreference === 'LINEN_DELAY' ? `Delay Linen Change (+${room.linenDelayDays >= 3 ? 12 : 10} Pts)` : 'Standard Daily Service'}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                  <span style="color: #64748b;">Towel Policy:</span>
+                  <span style="color: var(--text-muted);">Towel Policy:</span>
                   <strong>${room.towelReuse ? 'Confirm Towel Reuse (+5 Pts)' : 'Standard Turnover'}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
-                  <span style="color: #64748b;">Ground Route Status:</span>
-                  <span style="color: #059669; font-weight: 700;">${room.cleaningStatus}</span>
+                  <span style="color: var(--text-muted);">Ground Route Status:</span>
+                  <span style="color: var(--primary); font-weight: 700;">${room.cleaningStatus}</span>
                 </div>
               </div>
 
               <!-- 30-Minute Grace Window Countdown Bar -->
               ${isWithin30Mins ? `
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 8px 12px;">
                   <div>
-                    <div style="font-size: 11.5px; font-weight: 700; color: #065f46; display: flex; align-items: center; gap: 4px;">
+                    <div style="font-size: 11.5px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px;">
                       <span>⏱️</span> 30-Minute Adjustment Window Active
                     </div>
-                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">
-                      Housekeeping routes finalize in: <strong id="guest-countdown-timer" style="color: #059669;">${remMin}:${remSec < 10 ? '0' : ''}${remSec}</strong>
+                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                      Housekeeping routes finalize in: <strong id="guest-countdown-timer" style="color: var(--primary);">${remMin}:${remSec < 10 ? '0' : ''}${remSec}</strong>
                     </div>
                   </div>
-                  <button id="btn-adjust-choices" class="btn btn-xs" style="background: #ffffff; color: #059669; border: 1px solid #059669; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
+                  <button id="btn-adjust-choices" class="btn btn-xs btn-outline" style="color: var(--primary); border-color: var(--primary); font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer;">
                     ✏️ Adjust Choices
                   </button>
                 </div>
               ` : `
-                <div style="font-size: 11px; color: #64748b; padding: 6px 0 0 0; display: flex; align-items: center; gap: 6px;">
+                <div style="font-size: 11px; color: var(--text-muted); padding: 6px 0 0 0; display: flex; align-items: center; gap: 6px;">
                   <span>🔒</span> Choices locked for today. Housekeeping dispatch routes have been finalized.
                 </div>
               `}
@@ -378,71 +378,71 @@ export class Module4GuestPWA {
           ` : ''}
 
           <!-- DAILY HOUSEKEEPING PREFERENCE FORM -->
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
+          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle); border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h4 style="margin: 0; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">
+              <h4 style="margin: 0; font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
                 Today's Housekeeping Preference
               </h4>
               ${isChoiceLocked ? `
-                <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 10.5px; padding: 2px 6px;">
+                <span class="badge badge-secondary" style="font-size: 10.5px; padding: 2px 6px;">
                   🔒 Locked
                 </span>
               ` : ''}
             </div>
 
             <!-- Choice 1: Opt Out Cleaning -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'OPT_OUT_CLEANING' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'OPT_OUT_CLEANING' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'OPT_OUT_CLEANING' ? '0.6' : '1'};">
+            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'OPT_OUT_CLEANING' ? 'var(--primary)' : 'var(--border-subtle)'}; background: ${room.servicePreference === 'OPT_OUT_CLEANING' ? 'var(--primary-light)' : 'var(--bg-surface)'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'OPT_OUT_CLEANING' ? '0.6' : '1'};">
               <input type="radio" name="guest_pref" value="OPT_OUT_CLEANING" ${room.servicePreference === 'OPT_OUT_CLEANING' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Skip Daily Room Cleaning</strong>
-                  <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+15 Pts</span>
+                  <strong style="font-size: 13px; color: var(--text-main);">Skip Daily Room Cleaning</strong>
+                  <span class="badge badge-success">+15 Pts</span>
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                   Saves ~180L water & chemical runoff. Housekeeping skips your room turnover today.
                 </div>
               </div>
             </label>
 
             <!-- Choice 2: Linen Delay -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'LINEN_DELAY' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'LINEN_DELAY' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'LINEN_DELAY' ? '0.6' : '1'};">
+            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'LINEN_DELAY' ? 'var(--primary)' : 'var(--border-subtle)'}; background: ${room.servicePreference === 'LINEN_DELAY' ? 'var(--primary-light)' : 'var(--bg-surface)'}; border-radius: 10px; margin-bottom: 8px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'LINEN_DELAY' ? '0.6' : '1'};">
               <input type="radio" name="guest_pref" value="LINEN_DELAY" ${room.servicePreference === 'LINEN_DELAY' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Delay Bed Linen Change</strong>
-                  <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+10 Pts</span>
+                  <strong style="font-size: 13px; color: var(--text-main);">Delay Bed Linen Change</strong>
+                  <span class="badge badge-success">+10 Pts</span>
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                   Keep existing bed linen for 2 more days. Room is tidied, trash emptied, amenities restocked.
                 </div>
               </div>
             </label>
 
             <!-- Choice 3: Standard Service -->
-            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'STANDARD' ? '#059669' : '#e2e8f0'}; background: ${room.servicePreference === 'STANDARD' ? '#f0fdf4' : '#ffffff'}; border-radius: 10px; margin-bottom: 12px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'STANDARD' ? '0.6' : '1'};">
+            <label class="choice-card" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1.5px solid ${room.servicePreference === 'STANDARD' ? 'var(--primary)' : 'var(--border-subtle)'}; background: ${room.servicePreference === 'STANDARD' ? 'var(--primary-light)' : 'var(--bg-surface)'}; border-radius: 10px; margin-bottom: 12px; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'}; opacity: ${isChoiceLocked && room.servicePreference !== 'STANDARD' ? '0.6' : '1'};">
               <input type="radio" name="guest_pref" value="STANDARD" ${room.servicePreference === 'STANDARD' ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} style="margin-top: 3px;" />
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong style="font-size: 13px; color: #0f172a;">Standard Daily Service</strong>
-                  <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 10px;">0 Pts</span>
+                  <strong style="font-size: 13px; color: var(--text-main);">Standard Daily Service</strong>
+                  <span class="badge badge-secondary">0 Pts</span>
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
                   Standard full room turnover with fresh linen and complete servicing.
                 </div>
               </div>
             </label>
 
             <!-- Towel Reuse Checkbox -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
+            <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
               <label style="display: flex; align-items: center; justify-content: space-between; cursor: ${isChoiceLocked ? 'not-allowed' : 'pointer'};">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" id="guest-chk-towel" ${room.towelReuse ? 'checked' : ''} ${isChoiceLocked ? 'disabled' : ''} />
                   <div>
-                    <strong style="font-size: 12.5px; color: #0f172a;">Confirm Towel Reuse</strong>
-                    <div style="font-size: 11px; color: #64748b;">I will hang my towels to reuse them today.</div>
+                    <strong style="font-size: 12.5px; color: var(--text-main);">Confirm Towel Reuse</strong>
+                    <div style="font-size: 11px; color: var(--text-muted);">I will hang my towels to reuse them today.</div>
                   </div>
                 </div>
-                <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10px;">+5 Pts</span>
+                <span class="badge badge-success">+5 Pts</span>
               </label>
             </div>
 
@@ -452,7 +452,7 @@ export class Module4GuestPWA {
                 <span>✓</span> ${this.isAdjustingChoices ? 'Save & Re-confirm Choices' : 'Confirm Today’s Green Choices'}
               </button>
             ` : `
-              <div style="text-align: center; padding: 8px; font-size: 11.5px; color: #64748b;">
+              <div style="text-align: center; padding: 8px; font-size: 11.5px; color: var(--text-muted);">
                 Preferences are locked for today. ${isWithin30Mins ? 'Use "Adjust Choices" above to make edits.' : ''}
               </div>
             `}
@@ -464,17 +464,17 @@ export class Module4GuestPWA {
         <div id="tab-guest-rewards" style="display: ${this.guestActiveTab === 'rewards' ? 'block' : 'none'};">
           
           <!-- Milestone Rewards Catalog (Points are NOT deducted) -->
-          <div class="card" style="padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
+          <div class="card" style="padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-subtle); border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
               <div>
-                <h4 style="margin: 0; font-size: 13px; font-weight: 800; color: #0f172a;">
+                <h4 style="margin: 0; font-size: 13px; font-weight: 800; color: var(--text-main);">
                   Sustainability Milestone Rewards
                 </h4>
-                <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
                   Unlocking milestone vouchers does not deduct from your points balance!
                 </div>
               </div>
-              <span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 11px;">
+              <span class="badge badge-success" style="font-size: 11px;">
                 ${room.ecoPointsEarned || 0} Pts
               </span>
             </div>
@@ -485,20 +485,20 @@ export class Module4GuestPWA {
                 const isClaimed = (room.claimedTiers || []).includes(tier.key) || vouchersForRoom.some(v => v.rewardTitle === tier.title || v.rewardTitle.includes(tier.shortTitle));
 
                 return `
-                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: ${isClaimed ? '#f0fdf4' : '#ffffff'};">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 10px; background: ${isClaimed ? 'var(--primary-light)' : 'var(--bg-surface)'};">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                      <div style="font-size: 24px; background: #f8fafc; border-radius: 8px; padding: 8px;">${tier.icon}</div>
+                      <div style="font-size: 24px; background: var(--bg-card-subtle); border-radius: 8px; padding: 8px;">${tier.icon}</div>
                       <div>
-                        <strong style="font-size: 12.5px; color: #0f172a;">${tier.title}</strong>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${tier.desc}</div>
-                        <span class="badge" style="background: #f1f5f9; color: #059669; font-size: 10px; font-weight: 700; margin-top: 4px; display: inline-block;">
+                        <strong style="font-size: 12.5px; color: var(--text-main);">${tier.title}</strong>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">${tier.desc}</div>
+                        <span class="badge badge-secondary" style="margin-top: 4px; display: inline-block;">
                           ${tier.cost} Eco-Points Milestone
                         </span>
                       </div>
                     </div>
                     <div>
                       ${isClaimed ? `
-                        <span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 11px; padding: 6px 10px; border-radius: 6px; white-space: nowrap;">
+                        <span class="badge badge-success" style="font-size: 11px; padding: 6px 10px; border-radius: 6px; white-space: nowrap;">
                           ✓ Unlocked
                         </span>
                       ` : canClaim ? `
@@ -506,7 +506,7 @@ export class Module4GuestPWA {
                           Claim Voucher
                         </button>
                       ` : `
-                        <button class="btn btn-sm btn-outline" disabled style="font-size: 10.5px; padding: 6px 8px; color: #94a3b8; border-color: #cbd5e1; white-space: nowrap;">
+                        <button class="btn btn-sm btn-outline" disabled style="font-size: 10.5px; padding: 6px 8px; color: var(--text-light); border-color: var(--border-subtle); white-space: nowrap;">
                           ${tier.cost - (room.ecoPointsEarned || 0)} pts short
                         </button>
                       `}
@@ -518,31 +518,31 @@ export class Module4GuestPWA {
           </div>
 
           <!-- Active Digital Vouchers List -->
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: #0f172a;">
+          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle); border-radius: 12px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: var(--text-main);">
               My Active Vouchers (${vouchersForRoom.length})
             </h4>
 
             ${vouchersForRoom.length === 0 ? `
-              <div style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
+              <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 12px;">
                 No reward vouchers unlocked yet. Earn points by opting out of daily cleaning!
               </div>
             ` : `
               <div style="display: flex; flex-direction: column; gap: 10px;">
                 ${vouchersForRoom.map(v => `
-                  <div style="border: 1.5px dashed ${v.isRedeemed ? '#cbd5e1' : '#059669'}; border-radius: 10px; padding: 12px; background: ${v.isRedeemed ? '#f8fafc' : '#ffffff'};">
+                  <div style="border: 1.5px dashed ${v.isRedeemed ? 'var(--border-subtle)' : 'var(--primary)'}; border-radius: 10px; padding: 12px; background: ${v.isRedeemed ? 'var(--bg-card-subtle)' : 'var(--bg-surface)'};">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                       <div>
-                        <strong style="font-size: 13px; color: ${v.isRedeemed ? '#94a3b8' : '#0f172a'};">${v.rewardTitle}</strong>
-                        <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${v.description}</div>
+                        <strong style="font-size: 13px; color: ${v.isRedeemed ? 'var(--text-muted)' : 'var(--text-main)'};">${v.rewardTitle}</strong>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">${v.description}</div>
                       </div>
-                      <span class="badge" style="background: ${v.isRedeemed ? '#e2e8f0' : '#ecfdf5'}; color: ${v.isRedeemed ? '#64748b' : '#059669'}; font-family: monospace; font-weight: 700; font-size: 11px;">
+                      <span class="badge ${v.isRedeemed ? 'badge-secondary' : 'badge-success'}" style="font-family: var(--font-mono); font-weight: 700; font-size: 11px;">
                         ${v.code}
                       </span>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 11px;">
-                      <span style="color: #64748b;">Expires: <strong>${v.expiryDate || '2026-08-25'}</strong></span>
+                      <span style="color: var(--text-muted);">Expires: <strong>${v.expiryDate || '2026-08-25'}</strong></span>
                       <div style="display: flex; gap: 6px;">
                         <button class="btn btn-xs btn-outline btn-view-voucher-qr" data-code="${v.code}" style="font-size: 11px; padding: 4px 8px;">
                           📱 View Digital Pass
@@ -552,7 +552,7 @@ export class Module4GuestPWA {
                             Redeem
                           </button>
                         ` : `
-                          <span style="color: #64748b; font-weight: 600; padding: 4px 0;">✓ Redeemed</span>
+                          <span style="color: var(--text-muted); font-weight: 600; padding: 4px 0;">✓ Redeemed</span>
                         `}
                       </div>
                     </div>
@@ -566,44 +566,44 @@ export class Module4GuestPWA {
 
         <!-- TAB CONTENT 3: MY IMPACT -->
         <div id="tab-guest-impact" style="display: ${this.guestActiveTab === 'impact' ? 'block' : 'none'};">
-          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle, #e2e8f0); border-radius: 12px; margin-bottom: 14px;">
-            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: #0f172a;">
+          <div class="card" style="padding: 16px; border: 1px solid var(--border-subtle); border-radius: 12px; margin-bottom: 14px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: var(--text-main);">
               My Sustainability Contribution
             </h4>
 
             <div class="grid grid-3" style="gap: 10px; margin-bottom: 16px;">
-              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="background: var(--primary-light); border: 1px solid var(--primary); border-radius: 10px; padding: 12px; text-align: center;">
                 <div style="font-size: 22px;">💧</div>
-                <div style="font-size: 20px; font-weight: 900; color: #059669; margin: 4px 0 2px 0;">
+                <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin: 4px 0 2px 0;">
                   ${((room.optOutDays || 0) * 180) + (room.towelReuse ? 40 : 0)} L
                 </div>
-                <div style="font-size: 10.5px; color: #64748b;">Water Conserved</div>
+                <div style="font-size: 10.5px; color: var(--text-muted);">Water Conserved</div>
               </div>
 
-              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="background: var(--warning-light); border: 1px solid var(--warning); border-radius: 10px; padding: 12px; text-align: center;">
                 <div style="font-size: 22px;">⚡</div>
-                <div style="font-size: 20px; font-weight: 900; color: #d97706; margin: 4px 0 2px 0;">
+                <div style="font-size: 20px; font-weight: 900; color: var(--warning); margin: 4px 0 2px 0;">
                   ${((room.optOutDays || 0) * 3.5).toFixed(1)} kWh
                 </div>
-                <div style="font-size: 10.5px; color: #64748b;">Power Saved</div>
+                <div style="font-size: 10.5px; color: var(--text-muted);">Power Saved</div>
               </div>
 
-              <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="background: var(--secondary-light); border: 1px solid var(--secondary); border-radius: 10px; padding: 12px; text-align: center;">
                 <div style="font-size: 22px;">🧪</div>
-                <div style="font-size: 20px; font-weight: 900; color: #2563eb; margin: 4px 0 2px 0;">
+                <div style="font-size: 20px; font-weight: 900; color: var(--secondary); margin: 4px 0 2px 0;">
                   ${(room.optOutDays || 0) * 85} g
                 </div>
-                <div style="font-size: 10.5px; color: #64748b;">Runoff Avoided</div>
+                <div style="font-size: 10.5px; color: var(--text-muted);">Runoff Avoided</div>
               </div>
             </div>
 
             <!-- VM2026 Badge Details -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+            <div style="background: var(--bg-card-subtle); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                 <span style="font-size: 18px;">🌿</span>
-                <strong style="font-size: 12.5px; color: #065f46;">Visit Malaysia 2026 Sustainable Tourism Pledge</strong>
+                <strong style="font-size: 12.5px; color: var(--primary);">Visit Malaysia 2026 Sustainable Tourism Pledge</strong>
               </div>
-              <p style="margin: 0; font-size: 11px; color: #64748b; line-height: 1.5;">
+              <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.5;">
                 By choosing eco-friendly housekeeping options, you directly contribute to protecting Malaysia’s coastal marine corridors and tropical rainforests. Thank you for your green commitment!
               </p>
             </div>
@@ -619,22 +619,24 @@ export class Module4GuestPWA {
             </div>
             <div class="modal-body" style="padding: 16px;" id="pass-modal-body">
               ${this.activeVoucherModal ? `
-                <div style="font-weight: 800; font-size: 14.5px; color: #0f172a; margin-bottom: 4px;">
+                <div style="font-weight: 800; font-size: 14.5px; color: var(--text-main); margin-bottom: 4px;">
                   ${this.activeVoucherModal.rewardTitle}
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
                   ${this.activeVoucherModal.description}
                 </div>
 
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
-                  ${generateQRCodeSVG(this.activeVoucherModal.code, 170)}
+                  <div class="qr-canvas-holder">
+                    ${generateQRCodeSVG(this.activeVoucherModal.code, 170)}
+                  </div>
                 </div>
 
-                <div style="background: #f1f5f9; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 13px; font-weight: 800; color: #059669; letter-spacing: 0.05em; margin-bottom: 10px;">
+                <div style="background: var(--bg-card-subtle); padding: 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; font-weight: 800; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 10px; border: 1px solid var(--border-subtle);">
                   ${this.activeVoucherModal.code}
                 </div>
 
-                <div style="font-size: 10.5px; color: #94a3b8;">
+                <div style="font-size: 10.5px; color: var(--text-muted);">
                   Present this QR pass to the outlet staff to claim your discount.
                 </div>
               ` : ''}
@@ -801,7 +803,7 @@ export class Module4GuestPWA {
             <p class="view-subtitle">Dynamic turnover schedule synchronized in real-time with guest in-room eco-choices and corridor routing.</p>
           </div>
           <div class="header-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <button class="btn btn-sm btn-outline" id="btn-switch-to-guest-mode" style="color: #059669; border-color: #059669; font-weight: 700;" title="Switch to In-Room Guest Terminal view">
+            <button class="btn btn-sm btn-outline" id="btn-switch-to-guest-mode" style="color: var(--primary); border-color: var(--primary); font-weight: 700;" title="Switch to In-Room Guest Terminal view">
               🌿 In-Room Guest Terminal
             </button>
             <button class="btn btn-sm btn-outline" id="btn-print-manifest" title="Print daily housekeeping dispatch route sheet">
@@ -869,23 +871,23 @@ export class Module4GuestPWA {
           </div>
           <div class="corridor-slider-track" id="corridor-slider-track" style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 6px; scroll-behavior: smooth;">
             ${filteredRooms.map(r => `
-              <div class="door-card ${r.cleaningStatus.includes('Skipped') ? 'door-skipped' : r.cleaningStatus.includes('Light') ? 'door-light' : 'door-active'}" style="min-width: 170px; border: 1.5px solid ${r.cleaningStatus.includes('Skipped') ? '#10b981' : r.cleaningStatus.includes('Light') ? '#f59e0b' : '#cbd5e1'}; border-radius: 10px; padding: 12px; background: ${r.cleaningStatus.includes('Skipped') ? '#f0fdf4' : r.cleaningStatus.includes('Light') ? '#fffbeb' : '#ffffff'}; flex-shrink: 0;">
+              <div class="door-card ${r.cleaningStatus.includes('Skipped') ? 'door-skipped' : r.cleaningStatus.includes('Light') ? 'door-light' : 'door-active'}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <strong style="font-size: 15px;">Room ${r.roomNumber}</strong>
-                  <span style="font-size: 11px; font-weight: 700; color: ${r.cleaningStatus.includes('Skipped') ? '#059669' : r.cleaningStatus.includes('Light') ? '#d97706' : '#2563eb'};">
+                  <strong class="door-card-num">Room ${r.roomNumber}</strong>
+                  <span class="door-status-tag">
                     ${r.cleaningStatus.includes('Skipped') ? 'BYPASS' : r.cleaningStatus.includes('Light') ? 'LIGHT' : 'CLEAN'}
                   </span>
                 </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <div class="door-card-guest">
                   ${r.guestName}
                 </div>
-                <div style="font-size: 10px; padding: 4px 6px; border-radius: 4px; background: rgba(0,0,0,0.04); margin-bottom: 8px;">
+                <div class="door-card-pref">
                   ${r.servicePreference === 'OPT_OUT_CLEANING' ? 'Opt-out Cleaning' : r.servicePreference === 'LINEN_DELAY' ? `Linen delay (${r.linenDelayDays}d)` : 'Standard'}
                 </div>
-                <div style="display: flex; gap: 4px;">
-                  <button class="btn btn-xs btn-outline btn-door-qr" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0;" title="View QR">QR</button>
-                  <button class="btn btn-xs btn-outline btn-door-terminal" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0; color: #059669; border-color: #059669;" title="Open Terminal">Terminal</button>
-                  <button class="btn btn-xs btn-outline btn-door-override" data-room="${r.roomNumber}" style="flex: 1; font-size: 10px; padding: 3px 0;" title="Override">Override</button>
+                <div class="door-card-actions">
+                  <button class="btn btn-xs btn-outline btn-door-qr" data-room="${r.roomNumber}" title="View QR">QR</button>
+                  <button class="btn btn-xs btn-outline btn-door-terminal" data-room="${r.roomNumber}" style="color: var(--primary); border-color: var(--primary);" title="Open Terminal">Terminal</button>
+                  <button class="btn btn-xs btn-outline btn-door-override" data-room="${r.roomNumber}" title="Override">Override</button>
                 </div>
               </div>
             `).join('')}
@@ -938,7 +940,7 @@ export class Module4GuestPWA {
                         <button class="btn btn-xs btn-outline btn-row-qr" data-room="${r.roomNumber}" title="View In-Room QR Code">
                           📱 QR
                         </button>
-                        <button class="btn btn-xs btn-outline btn-row-terminal" data-room="${r.roomNumber}" title="Open Guest In-Room Terminal" style="color: #059669; border-color: #059669; font-weight: 600;">
+                        <button class="btn btn-xs btn-outline btn-row-terminal" data-room="${r.roomNumber}" title="Open Guest In-Room Terminal" style="color: var(--primary); border-color: var(--primary); font-weight: 600;">
                           🌿 Terminal
                         </button>
                       </div>
@@ -977,7 +979,9 @@ export class Module4GuestPWA {
             </div>
 
             <div class="qr-preview-box" id="qr-code-display-box">
-              ${generateQRCodeSVG(this.buildGuestUrl(currentQrRoom), 180)}
+              <div class="qr-canvas-holder">
+                ${generateQRCodeSVG(this.buildGuestUrl(currentQrRoom), 180)}
+              </div>
               <div class="qr-token-pill">
                 Room ${currentQrRoom.roomNumber} • Token: <code>${currentQrRoom.qrToken || 'RM' + currentQrRoom.roomNumber}</code>
               </div>
@@ -998,7 +1002,7 @@ export class Module4GuestPWA {
               <button type="button" class="btn btn-sm btn-outline" id="btn-print-qr-card">
                 🖨️ Print Card
               </button>
-              <button type="button" class="btn btn-sm btn-success" id="btn-open-guest-terminal" style="background:#059669; color:#ffffff; font-weight:700; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
+              <button type="button" class="btn btn-sm btn-primary" id="btn-open-guest-terminal">
                 🚀 Open In-Room Guest Terminal
               </button>
             </div>

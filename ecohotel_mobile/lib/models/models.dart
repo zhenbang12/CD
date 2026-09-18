@@ -165,24 +165,6 @@ class RoomModel {
   }) : claimedTiers = claimedTiers ?? [];
 }
 
-class GuestInteraction {
-  final String id;
-  final String roomNumber;
-  final String timestamp;
-  final String action;
-  final String details;
-  final int pointsEarned;
-
-  GuestInteraction({
-    required this.id,
-    required this.roomNumber,
-    required this.timestamp,
-    required this.action,
-    required this.details,
-    required this.pointsEarned,
-  });
-}
-
 class EcoVoucher {
   final String code;
   final String roomNumber;

@@ -650,12 +650,14 @@ code {
 }
 
 .btn-primary {
-  background: var(--text-main);
-  color: var(--bg-surface);
-  border-color: var(--text-main);
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
 }
 .btn-primary:hover {
-  opacity: 0.9;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #ffffff;
 }
 
 .btn-secondary {
@@ -746,6 +748,21 @@ code {
 .form-input-sm {
   padding: 4px 8px;
   font-size: 11.5px;
+}
+
+select.form-input,
+select,
+textarea.form-input,
+textarea {
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+}
+
+select.form-input option,
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
 }
 
 .form-help {
@@ -935,8 +952,13 @@ code {
   background: rgba(0, 0, 0, 0.03);
 }
 
+body.theme-dark .tab-btn {
+  color: #a1a1aa;
+}
+
 body.theme-dark .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
+  color: #f9fafb;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .tab-btn.active {
@@ -1791,10 +1813,7 @@ body.theme-dark .tab-btn.active {
   transition: all 0.15s ease;
   user-select: none;
 }
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-}
+
 .user-profile-btn:hover {
   background: var(--bg-surface);
   border-color: var(--border-medium);
@@ -2183,6 +2202,96 @@ body.theme-dark .tab-btn.active {
   color: var(--primary);
 }
 
+/* Unified Door Cards in Corridor Track (both .door-card and .corridor-door-card) */
+.door-card {
+  min-width: 175px;
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  color: var(--text-main);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.door-card.door-active {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+}
+.door-card.door-active .door-status-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+body:not(.theme-dark) .door-card.door-active .door-status-tag {
+  color: #0284c7;
+}
+
+.door-card.door-skipped {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+.door-card.door-skipped .door-status-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.door-card.door-light {
+  background: var(--warning-light);
+  border-color: var(--warning);
+}
+.door-card.door-light .door-status-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.door-card-num {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.door-card-guest {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.door-card-pref {
+  font-size: 10.5px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.door-card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.door-card-actions .btn {
+  flex: 1;
+  font-size: 10px;
+  padding: 3px 0;
+  min-height: 26px;
+  line-height: 1;
+}
+
 /* In-Room QR Code Modal */
 .qr-preview-box {
   display: flex;
@@ -2190,11 +2299,21 @@ body.theme-dark .tab-btn.active {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: #ffffff;
+  background: var(--bg-card-subtle);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   margin: 12px 0;
   text-align: center;
+}
+
+.qr-canvas-holder {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .qr-token-pill {
