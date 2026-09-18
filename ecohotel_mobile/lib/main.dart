@@ -11,6 +11,8 @@ void main() {
   runApp(const EcoHotelMobileApp());
 }
 
+enum AppRole { guest, staff }
+
 class EcoHotelMobileApp extends StatelessWidget {
   const EcoHotelMobileApp({super.key});
 
@@ -28,47 +30,81 @@ class EcoHotelMobileApp extends StatelessWidget {
           surface: Colors.white,
           brightness: Brightness.light,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
           elevation: 0,
-          scrolledUnderElevation: 1,
+          scrolledUnderElevation: 0,
+          shape: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
           titleTextStyle: TextStyle(
-            color: Color(0xFF18181B),
-            fontSize: 16,
+            color: Color(0xFF0F172A),
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.2,
           ),
-          iconTheme: IconThemeData(color: Color(0xFF18181B)),
+          iconTheme: IconThemeData(color: Color(0xFF0F172A)),
         ),
         cardTheme: CardThemeData(
           color: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: Color(0xFFE4E4E7), width: 1),
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
           ),
-          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 0),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF059669),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            minimumSize: const Size(double.infinity, 44),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF0F172A),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+            minimumSize: const Size(double.infinity, 42),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFF4F4F5),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 10,
-          ),
+          fillColor: const Color(0xFFF8FAFC),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE4E4E7)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE4E4E7)),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
           ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          indicatorColor: const Color(0xFFECFDF5),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF059669));
+            }
+            return const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B));
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const IconThemeData(color: Color(0xFF059669), size: 22);
+            }
+            return const IconThemeData(color: Color(0xFF64748B), size: 22);
+          }),
         ),
       ),
       home: const MainStaffShell(),
@@ -84,7 +120,9 @@ class MainStaffShell extends StatefulWidget {
 }
 
 class _MainStaffShellState extends State<MainStaffShell> {
-  int _currentIndex = 3; // Default to Guest PWA for easy demo
+  UserModel? _authenticatedStaff;
+  String? _authenticatedGuestRoom;
+  int _staffTabIndex = 0; // 0: Housekeeping, 1: Facilities, 2: Kitchen, 3: Executive
   final HotelDatabase _db = HotelDatabase();
 
   @override
@@ -95,103 +133,413 @@ class _MainStaffShellState extends State<MainStaffShell> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      KitchenScreen(db: _db),
+    // If not authenticated, render production Login Screen
+    if (_authenticatedStaff == null && _authenticatedGuestRoom == null) {
+      return EcoHotelLoginScreen(
+        db: _db,
+        onStaffLogin: (user) {
+          setState(() {
+            _authenticatedStaff = user;
+            _authenticatedGuestRoom = null;
+          });
+        },
+        onGuestLogin: (roomNumber) {
+          setState(() {
+            _authenticatedGuestRoom = roomNumber;
+            _authenticatedStaff = null;
+          });
+        },
+      );
+    }
+
+    final isGuest = _authenticatedGuestRoom != null;
+    final activeRoom = isGuest
+        ? _db.rooms.firstWhere(
+            (r) => r.roomNumber == _authenticatedGuestRoom,
+            orElse: () => _db.rooms.first,
+          )
+        : _db.rooms.first;
+
+    final staffScreens = [
       HousekeepingScreen(db: _db),
       FacilitiesScreen(db: _db),
-      GuestPwaScreen(db: _db),
+      KitchenScreen(db: _db),
       ExecutiveScreen(db: _db),
     ];
 
-    final titles = [
-      '🍳 Kitchen & Food Spoilage',
+    final staffTitles = [
       '🌿 Housekeeping Ground Sync',
       '⚡ Facilities & Maintenance',
-      '📱 In-Room Guest PWA',
+      '🍳 Kitchen & Food Spoilage',
       '📊 Executive Compliance',
     ];
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 16,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(titles[_currentIndex]),
-            const Text(
-              'Grand Bay Eco-Resort • VM2026 Directive',
-              style: TextStyle(
-                fontSize: 10,
-                color: Color(0xFF71717A),
-                fontWeight: FontWeight.w400,
-              ),
+            Text(
+              isGuest
+                  ? '🌿 Guest Eco-Concierge'
+                  : staffTitles[_staffTabIndex],
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+            ),
+            Text(
+              isGuest
+                  ? 'Room ${activeRoom.roomNumber} • ${activeRoom.guestName}'
+                  : 'Grand Bay Eco-Resort • ${_authenticatedStaff!.name} (${_authenticatedStaff!.role})',
+              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
             ),
           ],
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: const Color(0xFF059669).withValues(alpha: 0.3),
+          if (!isGuest) ...[
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('VM Score: ', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF059669))),
+                  Text(
+                    '${_db.calculateScore()}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'VM Score: ',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF059669)),
-                ),
-                Text(
-                  '${_db.calculateScore()}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF059669),
+          ] else ...[
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.eco, size: 13, color: Color(0xFF059669)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${activeRoom.ecoPointsEarned} pts',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
                   ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          ],
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                minimumSize: const Size(60, 32),
+                foregroundColor: const Color(0xFF64748B),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              onPressed: () {
+                setState(() {
+                  _authenticatedStaff = null;
+                  _authenticatedGuestRoom = null;
+                });
+              },
+              icon: const Icon(Icons.logout, size: 14),
+              label: const Text('Logout', style: TextStyle(fontSize: 11)),
             ),
           ),
         ],
       ),
-      body: screens[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: Colors.white,
-        elevation: 2,
-        height: 65,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_outlined),
-            selectedIcon: Icon(Icons.restaurant),
-            label: 'Kitchen',
+      body: isGuest
+          ? GuestExperienceView(
+              db: _db,
+              activeRoomNumber: _authenticatedGuestRoom!,
+              onRoomChanged: (r) => setState(() => _authenticatedGuestRoom = r),
+            )
+          : staffScreens[_staffTabIndex],
+      bottomNavigationBar: !isGuest
+          ? NavigationBar(
+              selectedIndex: _staffTabIndex,
+              onDestinationSelected: (i) => setState(() => _staffTabIndex = i),
+              backgroundColor: Colors.white,
+              elevation: 0,
+              height: 64,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.cleaning_services_outlined),
+                  selectedIcon: Icon(Icons.cleaning_services),
+                  label: 'Housekeeping',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.build_outlined),
+                  selectedIcon: Icon(Icons.build),
+                  label: 'Facilities',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.restaurant_outlined),
+                  selectedIcon: Icon(Icons.restaurant),
+                  label: 'Kitchen',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.analytics_outlined),
+                  selectedIcon: Icon(Icons.analytics),
+                  label: 'Executive',
+                ),
+              ],
+            )
+          : null,
+    );
+  }
+}
+
+// ==========================================
+// PRODUCTION AUTHENTICATION & LOGIN SCREEN
+// ==========================================
+class EcoHotelLoginScreen extends StatefulWidget {
+  final HotelDatabase db;
+  final ValueChanged<UserModel> onStaffLogin;
+  final ValueChanged<String> onGuestLogin;
+
+  const EcoHotelLoginScreen({
+    super.key,
+    required this.db,
+    required this.onStaffLogin,
+    required this.onGuestLogin,
+  });
+
+  @override
+  State<EcoHotelLoginScreen> createState() => _EcoHotelLoginScreenState();
+}
+
+class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _obscurePassword = true;
+  String? _errorMessage;
+
+  void _handleLogin() {
+    final userVal = _usernameCtrl.text.trim();
+    final passVal = _passwordCtrl.text.trim();
+
+    if (userVal.isEmpty || passVal.isEmpty) {
+      setState(() => _errorMessage = 'Invalid credentials.');
+      return;
+    }
+
+    final match = widget.db.users.cast<UserModel?>().firstWhere(
+      (u) => u!.username.toLowerCase() == userVal.toLowerCase() && u.password == passVal,
+      orElse: () => null,
+    );
+
+    if (match != null) {
+      setState(() => _errorMessage = null);
+      if (match.role == 'Guest' || match.username.toLowerCase() == 'guest') {
+        widget.onGuestLogin('304');
+      } else {
+        widget.onStaffLogin(match);
+      }
+      return;
+    }
+
+    // Support direct room login (e.g. username "201" or "room201")
+    final cleanRoom = userVal.toLowerCase().replaceAll('room', '').trim();
+    final roomMatch = widget.db.rooms.cast<RoomModel?>().firstWhere(
+      (r) => r!.roomNumber == cleanRoom,
+      orElse: () => null,
+    );
+
+    if (roomMatch != null && (passVal == 'password123' || passVal.toLowerCase() == roomMatch.guestName.toLowerCase())) {
+      setState(() => _errorMessage = null);
+      widget.onGuestLogin(roomMatch.roomNumber);
+      return;
+    }
+
+    setState(() => _errorMessage = 'Invalid credentials.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFECFDF5),
+              Color(0xFFD1FAE5),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.cleaning_services_outlined),
-            selectedIcon: Icon(Icons.cleaning_services),
-            label: 'Housekeeping',
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Header
+                  const Text('🌿', style: TextStyle(fontSize: 48)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'EcoHotel OS',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF064E3B),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Login Card (Mirrors .login-card from login.html)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 10,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Username',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _usernameCtrl,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your username',
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                            fillColor: Colors.white,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                            ),
+                          ),
+                          onSubmitted: (_) => _handleLogin(),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Password',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _passwordCtrl,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          decoration: InputDecoration(
+                            hintText: 'Enter your password',
+                            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                            fillColor: Colors.white,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF059669), width: 1.5),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                size: 18,
+                                color: const Color(0xFF64748B),
+                              ),
+                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          onSubmitted: (_) => _handleLogin(),
+                        ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 15),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                            textStyle: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onPressed: _handleLogin,
+                          child: const Text('Login'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.build_outlined),
-            selectedIcon: Icon(Icons.build),
-            label: 'Facilities',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.phone_android_outlined),
-            selectedIcon: Icon(Icons.phone_android),
-            label: 'Guest PWA',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Executive',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -3841,7 +4189,23 @@ class FacilitiesScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        ...db.repairTickets.map((ticket) {
+        if (db.repairTickets.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: const Center(
+              child: Text(
+                'No active repair tickets dispatched.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ),
+          )
+        else
+          ...db.repairTickets.map((ticket) {
           final isCompleted = ticket.status == 'Completed';
           return Card(
             child: ListTile(
@@ -4139,107 +4503,142 @@ class FacilitiesScreen extends StatelessWidget {
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text(
-            'Log Physical Sub-Meter',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        builder: (ctx, setDialogState) => Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
-          content: Form(
-            key: meterFormKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Container(
+            width: 480,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: meterId,
-                  items: db.utilityMeters
-                      .map(
-                        (m) => DropdownMenuItem(
-                          value: m.meterId,
-                          child: Text(
-                            '${m.meterId} - ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})',
-                            style: const TextStyle(fontSize: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.speed, size: 20, color: Color(0xFF0F172A)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Log Physical Sub-Meter',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: meterId,
+                          decoration: const InputDecoration(
+                            labelText: 'Select Sub-Meter Zone',
+                            prefixIcon: Icon(Icons.tune_outlined, size: 18),
+                          ),
+                          isExpanded: true,
+                          items: db.utilityMeters.map((m) => DropdownMenuItem(
+                            value: m.meterId,
+                            child: Text(
+                              '${m.meterId} • ${m.zone} (${m.type}, Baseline: ${m.baselineDaily} ${m.unit})',
+                              style: const TextStyle(fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )).toList(),
+                          onChanged: (val) => setDialogState(() => meterId = val!),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: readingCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'Observed Gauge Reading',
+                            hintText: 'Enter numerical reading from physical dial',
+                            prefixIcon: Icon(Icons.numbers_outlined, size: 18),
                           ),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (val) => setDialogState(() => meterId = val!),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: readingCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Text(
+                            'Notice: If reading exceeds baseline by ≥15%, the zone will be automatically flagged as an Anomaly. File a Report Facility Defect to dispatch a technician if maintenance is required.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  // Only digits and a single decimal point can be typed —
-                  // blocks letters, spaces, and special characters outright.
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(90, 40)),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(120, 40),
+                      ),
+                      onPressed: () {
+                        final r = double.tryParse(readingCtrl.text);
+                        if (r != null && r > 0) {
+                          final isAnomaly = db.logMeterReading(meterId, r);
+                          Navigator.pop(ctx);
+                          if (isAnomaly) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: Color(0xFFE11D48),
+                                content: Text('ANOMALY FLAGGED (>=15% spike)! Report a Facility Defect if a repair work order is required.'),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Meter reading logged successfully within normal baseline.')),
+                            );
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a valid positive number.')),
+                          );
+                        }
+                      },
+                      child: const Text('Save Reading'),
+                    ),
                   ],
-                  decoration: const InputDecoration(
-                    labelText: 'Meter Reading Value',
-                  ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty) {
-                      return 'Meter reading is required';
-                    }
-                    final r = double.tryParse(v);
-                    if (r == null || r <= 0) {
-                      return 'Enter a valid positive number';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'If reading exceeds baseline (by any amount), the zone is immediately flagged as an Anomaly. It will NOT auto-create a repair ticket — file a Report Facility Defect if a work order is needed.',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade600,
-                    fontStyle: FontStyle.italic,
-                  ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                if (!meterFormKey.currentState!.validate()) return;
-                final r = double.parse(readingCtrl.text.trim());
-                final isAnomaly = db.logMeterReading(meterId, r);
-                Navigator.pop(ctx);
-                if (isAnomaly) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Color(0xFFE11D48),
-                      content: Text(
-                        'ANOMALY FLAGGED (exceeds baseline)! Report a Facility Defect if it needs a repair ticket.',
-                      ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reading logged within normal baseline.'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Submit'),
-            ),
-          ],
         ),
       ),
     );
@@ -4248,299 +4647,249 @@ class FacilitiesScreen extends StatelessWidget {
   void _showReportDefectDialog(BuildContext context) {
     final zoneCtrl = TextEditingController(text: 'Room 201');
     final descCtrl = TextEditingController();
-    // Valid "Affected Room / Zone" values are either a guest room in the
-    // 101-110, 201-210, or 301-310 ranges, OR one of the named facility
-    // zones that already exist on the Zone Utility Sub-Meters board (e.g.
-    // "Central Chiller Plant", "Main Culinary Kitchen"). Blanks and
-    // special characters are rejected by the validator below.
-    final validRoomPattern = RegExp(
-      r'^Room (10[1-9]|110|20[1-9]|210|30[1-9]|310)$',
-    );
-    final knownFacilityZones = db.utilityMeters
-        .map((m) => m.zone.trim().toLowerCase())
-        .toSet();
-    bool isValidRoomOrZone(String value) {
-      final v = value.trim();
-      if (v.isEmpty) return false;
-      if (validRoomPattern.hasMatch(v)) return true;
-      if (!RegExp(r'^[A-Za-z0-9 &]+$').hasMatch(v)) return false;
-      return knownFacilityZones.contains(v.toLowerCase());
-    }
-
-    final defectFormKey = GlobalKey<FormState>();
-    // Category list is sourced from the same catalog as the Web Admin Dashboard.
-    // Ground staff can pick a category here, but new categories can only be
-    // added from the web dashboard.
-    DefectCategory selectedCategory = db.defectCategories.first;
+    String selectedCategoryId = db.defectCategories.isNotEmpty ? db.defectCategories.first.id : 'cat-toilet-flapper';
     String severity = 'High';
-    String resourceType = selectedCategory.resourceType;
-    String?
-    pickedPhotoDataUrl; // base64 data URL, same format used by the web dashboard
+    String resourceType = db.defectCategories.isNotEmpty ? db.defectCategories.first.resourceType : 'Water';
+    String? pickedPhotoDataUrl;
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text(
-            'Report Facility Defect',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        builder: (ctx, setDialogState) => Dialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
-          content: SingleChildScrollView(
-            child: Form(
-              key: defectFormKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: zoneCtrl,
-                    // Any character can be typed here — invalid characters
-                    // are caught by the validator below (on submit / as the
-                    // user interacts with the form) rather than being
-                    // silently blocked as keystrokes.
-                    inputFormatters: [LengthLimitingTextInputFormatter(40)],
-                    decoration: const InputDecoration(
-                      labelText: 'Affected Room / Zone',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Room / Zone is required';
-                      }
-                      if (!isValidRoomOrZone(value)) {
-                        return 'Must be Room 101–110/201–210/301–310, or a valid facility zone. No special characters allowed.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Defect Category',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF71717A),
-                    ),
-                  ),
-                  DropdownButton<DefectCategory>(
-                    isExpanded: true,
-                    value: selectedCategory,
-                    items: db.defectCategories
-                        .map(
-                          (c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(
-                              c.hint.isNotEmpty
-                                  ? '${c.label} (${c.hint})'
-                                  : c.label,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (val) => setDialogState(() {
-                      selectedCategory = val!;
-                      resourceType = selectedCategory.resourceType;
-                    }),
-                  ),
-                  const SizedBox(height: 4),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Severity Level',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF71717A),
-                    ),
-                  ),
-                  DropdownButton<String>(
-                    isExpanded: true,
-                    value: severity,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'High',
-                        child: Text(
-                          'High Severity (Continuous Rapid Loss)',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Normal',
-                        child: Text(
-                          'Normal Severity (Moderate Drip/Noise)',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Low',
-                        child: Text(
-                          'Low Severity (Minor Cosmetic/Slow)',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) => setDialogState(() => severity = val!),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Resource Type',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF71717A),
-                    ),
-                  ),
-                  DropdownButton<String>(
-                    isExpanded: true,
-                    value: resourceType,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Water',
-                        child: Text(
-                          'Water Resource',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Electricity',
-                        child: Text(
-                          'Electricity Resource',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) =>
-                        setDialogState(() => resourceType = val!),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: descCtrl,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Defect Description & Notes',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Description is required';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Photo Evidence',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF71717A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Tap-to-attach pattern matching the Kitchen (M3) Plate Waste dialog:
-                  // a single pill button that flips to a green "Verified" checkmark
-                  // once a real photo has been picked & compressed, instead of an
-                  // inline thumbnail preview.
-                  Row(
-                    children: [
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          foregroundColor: pickedPhotoDataUrl != null
-                              ? const Color(0xFF059669)
-                              : const Color(0xFF18181B),
-                          side: BorderSide(
-                            color: pickedPhotoDataUrl != null
-                                ? const Color(0xFF059669)
-                                : const Color(0xFFD4D4D8),
-                          ),
-                        ),
-                        onPressed: () async {
-                          final picker = ImagePicker();
-                          // maxWidth/imageQuality downscale & compress the photo before
-                          // it's base64-encoded, so large camera photos don't bloat
-                          // the in-memory repair ticket data (mirrors the web
-                          // dashboard's canvas-based compression for the same field).
-                          final XFile? file = await picker.pickImage(
-                            source: ImageSource.gallery,
-                            maxWidth: 1000,
-                            imageQuality: 70,
-                          );
-                          if (file != null) {
-                            final bytes = await file.readAsBytes();
-                            final b64 = base64Encode(bytes);
-                            setDialogState(
-                              () => pickedPhotoDataUrl =
-                                  'data:image/jpeg;base64,$b64',
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          pickedPhotoDataUrl != null
-                              ? Icons.check_circle
-                              : Icons.camera_alt,
-                          size: 14,
-                        ),
-                        label: Text(
-                          pickedPhotoDataUrl != null
-                              ? 'Photo Attached (Verified)'
-                              : 'Attach Photo Evidence',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ),
-                      if (pickedPhotoDataUrl != null) ...[
-                        const SizedBox(width: 4),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: Color(0xFF71717A),
-                          ),
-                          tooltip: 'Remove photo',
-                          onPressed: () =>
-                              setDialogState(() => pickedPhotoDataUrl = null),
+          child: Container(
+            width: 480,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.report_problem_outlined, size: 20, color: Color(0xFFE11D48)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Report Facility Defect',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                         ),
                       ],
-                    ],
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close, size: 20, color: Color(0xFF64748B)),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: zoneCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Affected Room / Operational Zone',
+                            hintText: 'e.g. Room 201, Chiller Plant, Kitchen',
+                            prefixIcon: Icon(Icons.location_on_outlined, size: 18),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            'Room 101', 'Room 201', 'Room 304', 'Kitchen', 'Central Chiller', 'Commercial Laundry'
+                          ].map((z) => ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text(z, style: const TextStyle(fontSize: 10.5)),
+                            backgroundColor: const Color(0xFFF8FAFC),
+                            side: const BorderSide(color: Color(0xFFE2E8F0)),
+                            onPressed: () => setDialogState(() => zoneCtrl.text = z),
+                          )).toList(),
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedCategoryId,
+                          decoration: const InputDecoration(
+                            labelText: 'Defect Category',
+                            prefixIcon: Icon(Icons.category_outlined, size: 18),
+                          ),
+                          isExpanded: true,
+                          items: db.defectCategories.map((c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(
+                              c.hint.isNotEmpty ? '${c.label} (${c.hint})' : c.label,
+                              style: const TextStyle(fontSize: 12.5),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setDialogState(() {
+                                selectedCategoryId = val;
+                                final cat = db.defectCategories.firstWhere((c) => c.id == val);
+                                resourceType = cat.resourceType;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: severity,
+                          decoration: const InputDecoration(
+                            labelText: 'Severity Level',
+                            prefixIcon: Icon(Icons.warning_amber_outlined, size: 18),
+                          ),
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'High', child: Text('High Severity (Rapid Continuous Loss)', style: TextStyle(fontSize: 12.5))),
+                            DropdownMenuItem(value: 'Normal', child: Text('Normal Severity (Moderate Drip / Hum)', style: TextStyle(fontSize: 12.5))),
+                            DropdownMenuItem(value: 'Low', child: Text('Low Severity (Minor Cosmetic / Slow)', style: TextStyle(fontSize: 12.5))),
+                          ],
+                          onChanged: (val) => setDialogState(() => severity = val ?? 'High'),
+                        ),
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: resourceType,
+                          decoration: const InputDecoration(
+                            labelText: 'Affected Resource',
+                            prefixIcon: Icon(Icons.bolt_outlined, size: 18),
+                          ),
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'Water', child: Text('Water Resource (L/day)', style: TextStyle(fontSize: 12.5))),
+                            DropdownMenuItem(value: 'Electricity', child: Text('Electricity Resource (kWh/day)', style: TextStyle(fontSize: 12.5))),
+                          ],
+                          onChanged: (val) => setDialogState(() => resourceType = val ?? 'Water'),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: descCtrl,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: 'Defect Description & Diagnostic Notes',
+                            hintText: 'Describe leak rate, noise, physical damage, or symptoms...',
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                                  side: BorderSide(color: pickedPhotoDataUrl != null ? const Color(0xFF059669) : const Color(0xFFCBD5E1)),
+                                ),
+                                onPressed: () async {
+                                  final picker = ImagePicker();
+                                  final XFile? file = await picker.pickImage(
+                                    source: ImageSource.gallery,
+                                    maxWidth: 1000,
+                                    imageQuality: 70,
+                                  );
+                                  if (file != null) {
+                                    final bytes = await file.readAsBytes();
+                                    final b64 = base64Encode(bytes);
+                                    setDialogState(() => pickedPhotoDataUrl = 'data:image/jpeg;base64,$b64');
+                                  }
+                                },
+                                icon: Icon(pickedPhotoDataUrl != null ? Icons.check_circle : Icons.camera_alt_outlined, size: 16),
+                                label: Text(
+                                  pickedPhotoDataUrl != null ? 'Photo Evidence Attached' : 'Attach Photo Evidence',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              if (pickedPhotoDataUrl != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
+                                  tooltip: 'Remove photo',
+                                  onPressed: () => setDialogState(() => pickedPhotoDataUrl = null),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(90, 40)),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE11D48),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(140, 40),
+                      ),
+                      onPressed: () {
+                        if (zoneCtrl.text.trim().isNotEmpty) {
+                          final cat = db.defectCategories.firstWhere(
+                            (c) => c.id == selectedCategoryId,
+                            orElse: () => db.defectCategories.first,
+                          );
+                          db.reportDefect(
+                            zoneCtrl.text.trim(),
+                            cat.label,
+                            severity,
+                            resourceType,
+                            descCtrl.text.trim().isEmpty ? 'Reported by ground team.' : descCtrl.text.trim(),
+                            photoDataUrl: pickedPhotoDataUrl,
+                          );
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: Color(0xFF0F172A),
+                              content: Text('Defect ticket dispatched to Engineering queue!'),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please specify the affected room or zone.')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.send_outlined, size: 16),
+                      label: const Text('Dispatch Ticket'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE11D48),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                // Runs both TextFormField validators above; blocks submission
-                // (and shows inline errors) until the zone is a valid room
-                // and the description is non-blank.
-                if (defectFormKey.currentState!.validate()) {
-                  db.reportDefect(
-                    zoneCtrl.text.trim(),
-                    selectedCategory.label,
-                    severity,
-                    resourceType,
-                    descCtrl.text.trim(),
-                    photoDataUrl: pickedPhotoDataUrl,
-                  );
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Defect reported & ticket dispatched!'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Dispatch Ticket'),
-            ),
-          ],
         ),
       ),
     );
@@ -4548,247 +4897,315 @@ class FacilitiesScreen extends StatelessWidget {
 }
 
 // ==========================================
-// 4. GUEST PWA SCREEN (RADIO SELECTION FIXED)
+// 4. GUEST EXPERIENCE & CONCIERGE VIEW
 // ==========================================
-class GuestPwaScreen extends StatelessWidget {
+class GuestExperienceView extends StatefulWidget {
   final HotelDatabase db;
-  const GuestPwaScreen({super.key, required this.db});
+  final String activeRoomNumber;
+  final ValueChanged<String> onRoomChanged;
+
+  const GuestExperienceView({
+    super.key,
+    required this.db,
+    required this.activeRoomNumber,
+    required this.onRoomChanged,
+  });
+
+  @override
+  State<GuestExperienceView> createState() => _GuestExperienceViewState();
+}
+
+class _GuestExperienceViewState extends State<GuestExperienceView> {
+  int _guestTab = 0; // 0: Green Stay, 1: Rewards & Vouchers, 2: My Green Impact
 
   @override
   Widget build(BuildContext context) {
-    final room = db.rooms.firstWhere(
-      (r) => r.roomNumber == '304',
-      orElse: () => db.rooms.first,
+    final room = widget.db.rooms.firstWhere(
+      (r) => r.roomNumber == widget.activeRoomNumber,
+      orElse: () => widget.db.rooms.first,
     );
-    final roomVouchers = db.ecoVouchers
-        .where((v) => v.roomNumber == room.roomNumber)
-        .toList();
+    final vouchers = widget.db.ecoVouchers.where((v) => v.roomNumber == room.roomNumber).toList();
 
-    return ListView(
-      padding: const EdgeInsets.all(14),
+    return Column(
       children: [
-        // PWA Welcome Card
+        // Room Quick Switcher & Welcome strip
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          color: Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, ${room.guestName}',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${room.type} • Floor ${room.floor}',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                initialValue: room.roomNumber,
+                onSelected: widget.onRoomChanged,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Room ${room.roomNumber}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.swap_horiz, size: 15, color: Color(0xFF64748B)),
+                    ],
+                  ),
+                ),
+                itemBuilder: (ctx) => widget.db.rooms.map((r) => PopupMenuItem(
+                  value: r.roomNumber,
+                  child: Row(
+                    children: [
+                      Text('Room ${r.roomNumber}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                      const SizedBox(width: 6),
+                      Text('(${r.guestName})', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+        // Segmented Tab Pills (Full Width)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFFF8FAFC),
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                _buildTabPill(0, '🌿 Green Stay'),
+                _buildTabPill(1, '🎁 Vouchers (${vouchers.length})'),
+                _buildTabPill(2, '🌍 My Impact'),
+              ],
+            ),
+          ),
+        ),
+
+        // Body Content
+        Expanded(
+          child: _guestTab == 0
+              ? _buildGreenStayTab(room)
+              : _guestTab == 1
+                  ? _buildVouchersTab(room, vouchers)
+                  : _buildImpactTab(room),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabPill(int index, String label) {
+    final isSelected = _guestTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _guestTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? const Color(0xFF059669) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGreenStayTab(RoomModel room) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Points Balance & Milestone Card
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Room ${room.roomNumber} • ${room.guestName}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                    const Text('ECO-REWARDS BALANCE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
                       ),
-                    ),
-                    Text(
-                      room.qrToken,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontFamily: 'monospace',
-                        color: Color(0xFF71717A),
+                      child: Text(
+                        room.ecoPointsEarned >= 40 ? 'Gold Eco-Guest' : room.ecoPointsEarned >= 20 ? 'Silver Eco-Guest' : 'Bronze Guest',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       '${room.ecoPointsEarned}',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF059669),
-                      ),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF059669), letterSpacing: -1),
                     ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Eco-Rewards Pts',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
+                    const SizedBox(width: 6),
+                    const Text('Points Earned', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF059669))),
                   ],
                 ),
-                const Text(
-                  'Threshold: 25 points unlocks a 15% Eco-Dining discount voucher.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (room.ecoPointsEarned / 50.0).clamp(0.0, 1.0),
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFE2E8F0),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF059669)),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  room.ecoPointsEarned >= 25
+                      ? '✓ Milestone reached: 15% dining voucher unlocked!'
+                      : '${25 - room.ecoPointsEarned} more points to unlock your 15% Eco-Dining Voucher.',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
+        // Section: Daily Choices
         const Text(
-          'TODAY’S SUSTAINABILITY CHOICES (SELECT ONE)',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF71717A),
-          ),
+          'TODAY’S HOUSEKEEPING PREFERENCE',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
 
-        _buildRadioOptionCard(
+        _buildRadioCard(
           title: 'Skip Daily Room Cleaning',
           points: '+15 Pts',
-          subtitle: 'Saves water & chemical runoff. Housekeeping skips today.',
+          subtitle: 'Saves water & chemical runoff. Housekeeping skips your room today.',
           isSelected: room.servicePreference == 'OPT_OUT_CLEANING',
-          onTap: () => db.setGuestSelection(
-            room.roomNumber,
-            'OPT_OUT_CLEANING',
-            room.towelReuse,
-          ),
+          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'OPT_OUT_CLEANING', room.towelReuse),
         ),
-        _buildRadioOptionCard(
+        _buildRadioCard(
           title: 'Delay Bed Linen Change',
           points: '+10 Pts',
-          subtitle: 'Keep existing bed linen for 2 more days.',
+          subtitle: 'Keep existing bed linen for 2 more days. Room is tidied.',
           isSelected: room.servicePreference == 'LINEN_DELAY',
-          onTap: () => db.setGuestSelection(
-            room.roomNumber,
-            'LINEN_DELAY',
-            room.towelReuse,
-          ),
+          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'LINEN_DELAY', room.towelReuse),
         ),
-        _buildRadioOptionCard(
+        _buildRadioCard(
           title: 'Standard Daily Service',
           points: '0 Pts',
-          subtitle: 'Full room turnover and fresh linen.',
+          subtitle: 'Standard full room turnover and fresh linen replacement.',
           isSelected: room.servicePreference == 'STANDARD',
-          onTap: () => db.setGuestSelection(
-            room.roomNumber,
-            'STANDARD',
-            room.towelReuse,
-          ),
+          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'STANDARD', room.towelReuse),
         ),
 
         const SizedBox(height: 10),
+
         // Towel Checkbox Card
         Card(
           child: CheckboxListTile(
             dense: true,
-            title: const Text(
-              'Confirm Towel Reuse (+5 Pts)',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Confirm Towel Reuse', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                  ),
+                  child: const Text('+5 Pts', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+                ),
+              ],
             ),
-            subtitle: const Text(
-              'I will hang towels to reuse them.',
-              style: TextStyle(fontSize: 11),
-            ),
+            subtitle: const Text('I will hang towels to reuse them today.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
             value: room.towelReuse,
             activeColor: const Color(0xFF059669),
-            onChanged: (val) => db.setGuestSelection(
-              room.roomNumber,
-              room.servicePreference,
-              val ?? false,
-            ),
+            onChanged: (val) => widget.db.setGuestSelection(room.roomNumber, room.servicePreference, val ?? false),
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 14),
+
+        // Primary Confirm Button
         ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF18181B),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 42),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
           onPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFF059669),
-                content: Text(
-                  'Preferences confirmed for Room ${room.roomNumber}! Housekeeping route synchronized.',
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Choices confirmed for Room ${room.roomNumber}! Housekeeping route synchronized in real-time.'),
+                    ),
+                  ],
                 ),
               ),
             );
           },
-          child: const Text('Confirm Green Choices for Today'),
+          child: const Text('Confirm Today’s Green Choices'),
         ),
-
-        const SizedBox(height: 14),
-        const Text(
-          'MY EARNED ECO-VOUCHERS',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF71717A),
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (roomVouchers.isEmpty)
-          const Text(
-            'No vouchers earned yet.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
-          )
-        else
-          ...roomVouchers.map(
-            (v) => Card(
-              child: ListTile(
-                dense: true,
-                title: Text(
-                  v.rewardTitle,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                subtitle: Text(
-                  '${v.description}\nCode: ${v.code}',
-                  style: const TextStyle(fontSize: 11),
-                ),
-                trailing: v.isRedeemed
-                    ? const Text(
-                        'Redeemed',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF71717A),
-                        ),
-                      )
-                    : ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF059669),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 0,
-                          ),
-                          minimumSize: const Size(60, 28),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        onPressed: () {
-                          db.redeemVoucher(v.code);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Voucher ${v.code} redeemed!'),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Redeem',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                      ),
-              ),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildRadioOptionCard({
+  Widget _buildRadioCard({
     required String title,
     required String points,
     required String subtitle,
@@ -4796,20 +5213,21 @@ class GuestPwaScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      color: isSelected ? const Color(0xFFECFDF5) : Colors.white,
+      color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected ? const Color(0xFF059669) : const Color(0xFFE4E4E7),
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
           width: isSelected ? 1.5 : 1,
         ),
       ),
       child: ListTile(
         dense: true,
         onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Icon(
           isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-          color: isSelected ? const Color(0xFF059669) : const Color(0xFF71717A),
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFF94A3B8),
           size: 20,
         ),
         title: Row(
@@ -4820,30 +5238,354 @@ class GuestPwaScreen extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: isSelected
-                    ? const Color(0xFF059669)
-                    : const Color(0xFF18181B),
+                color: isSelected ? const Color(0xFF059669) : const Color(0xFF0F172A),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFF059669),
+                color: isSelected ? const Color(0xFF059669) : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 points,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9.5,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ],
         ),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
       ),
+    );
+  }
+
+  Widget _buildVouchersTab(RoomModel room, List<EcoVoucher> vouchers) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'ACTIVE REWARD VOUCHERS',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+
+        if (vouchers.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Column(
+                children: const [
+                  Icon(Icons.card_giftcard, size: 36, color: Color(0xFF94A3B8)),
+                  SizedBox(height: 8),
+                  Text('No Vouchers Earned Yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A))),
+                  SizedBox(height: 4),
+                  Text(
+                    'Opt out of room cleaning or delay linen to earn eco-points and unlock vouchers!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...vouchers.map((v) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          v.rewardTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF0F172A)),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: v.isRedeemed ? const Color(0xFFF1F5F9) : const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: v.isRedeemed ? const Color(0xFFE2E8F0) : const Color(0xFF059669).withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          v.isRedeemed ? 'Redeemed' : 'Ready to Use',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: v.isRedeemed ? const Color(0xFF64748B) : const Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(v.description, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  const SizedBox(height: 10),
+                  // Code & Action bar
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.qr_code, size: 18, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Text(
+                              v.code,
+                              style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                        if (!v.isRedeemed)
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              minimumSize: const Size(80, 30),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                            onPressed: () {
+                              widget.db.redeemVoucher(v.code);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Voucher ${v.code} marked as redeemed!')),
+                              );
+                            },
+                            child: const Text('Redeem', style: TextStyle(fontSize: 11)),
+                          )
+                        else
+                          const Text('Used at counter', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+
+        const SizedBox(height: 18),
+        const Text(
+          'AVAILABLE RESORT PERKS',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+
+        _buildPerkPreviewCard('☕ Complimentary Rainforest Organic Coffee', '15 Points', 'Redeemable at Lobby Green Cafe'),
+        _buildPerkPreviewCard('🍽️ 15% Sustainable Dining Discount', '25 Points', 'Valid at Ocean Reef Organic Bistro'),
+        _buildPerkPreviewCard('💆 RM30 Botanical Spa Treatment Credit', '40 Points', 'Valid at Bamboo Wellness Sanctuary'),
+        _buildPerkPreviewCard('🌱 Adopt-a-Coral VM2026 Certificate', '50 Points', 'Includes personalized digital certificate'),
+      ],
+    );
+  }
+
+  Widget _buildPerkPreviewCard(String title, String cost, String desc) {
+    return Card(
+      child: ListTile(
+        dense: true,
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF0F172A))),
+        subtitle: Text(desc, style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(cost, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImpactTab(RoomModel room) {
+    final waterSaved = (room.optOutDays * 180) + (room.towelReuse ? 40 : 0);
+    final energySaved = (room.optOutDays * 3.5).toStringAsFixed(1);
+    final runoffPrevented = room.optOutDays * 85;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // VM2026 Badge Card
+        Card(
+          color: const Color(0xFFF0FDF4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF86EFAC), width: 1),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF059669),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.verified, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Visit Malaysia 2026 Certified Guest',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF059669)),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Your green choices directly contribute to Grand Bay Eco-Resort’s carbon-neutral certification.',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF047857)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        const Text(
+          'YOUR MEASURED ENVIRONMENTAL SAVINGS',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+
+        // 3 Metric Cards
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.water_drop,
+                iconColor: const Color(0xFF0284C7),
+                val: '$waterSaved L',
+                label: 'Water Saved',
+                detail: '~4 full showers',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.bolt,
+                iconColor: const Color(0xFFD97706),
+                val: '$energySaved kWh',
+                label: 'Energy Saved',
+                detail: 'Laundry avoided',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildMetricCard(
+          icon: Icons.eco,
+          iconColor: const Color(0xFF059669),
+          val: '$runoffPrevented g',
+          label: 'Detergent & Phosphate Runoff Prevented',
+          detail: 'Protecting coastal marine biodiversity in the bay.',
+        ),
+
+        const SizedBox(height: 14),
+
+        // Certificate Details Card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('STAY VERIFICATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                const SizedBox(height: 8),
+                _buildInfoRow('Guest Name', room.guestName),
+                _buildInfoRow('Assigned Room', 'Room ${room.roomNumber} (${room.type})'),
+                _buildInfoRow('Housekeeping Status', room.cleaningStatus),
+                _buildInfoRow('Towel Reuse', room.towelReuse ? 'Yes (Active)' : 'No'),
+                _buildInfoRow('Total Eco-Points', '${room.ecoPointsEarned} Pts'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required Color iconColor,
+    required String val,
+    required String label,
+    required String detail,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: iconColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              val,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5),
+            ),
+            const SizedBox(height: 2),
+            Text(detail, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+          Text(value, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+        ],
+      ),
+    );
+  }
+}
+
+// Compatibility wrapper for any references to GuestPwaScreen
+class GuestPwaScreen extends StatelessWidget {
+  final HotelDatabase db;
+  const GuestPwaScreen({super.key, required this.db});
+
+  @override
+  Widget build(BuildContext context) {
+    return GuestExperienceView(
+      db: db,
+      activeRoomNumber: '304',
+      onRoomChanged: (_) {},
     );
   }
 }
@@ -5155,26 +5897,14 @@ class ExecutiveScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                data['status'] as String,
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: statusColor,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                  child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
                 ),
               ),
             ),

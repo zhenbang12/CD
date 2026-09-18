@@ -69,36 +69,28 @@ export class Module1Dashboard {
       filteredHistory = filteredHistory.filter(c => c.month.includes('(MTD)'));
     }
 
-    const sidebarTpl = `
-      <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 120px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-          <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 4px; letter-spacing: 0.05em;">Executive Analytics</h4>
-          
-          <button class="btn btn-sm btn-primary btn-block sidebar-nav-btn" data-target="m1-dashboard" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">📊</span> Sustainability Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-department" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🏢</span> Department Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-baselines" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🎯</span> Operational Baselines
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-audit" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🛡️</span> System Audit Log
-          </button>
-        </div>
-      </aside>
+    const subNavTpl = `
+      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 8px;">
+        <button class="tab-btn sidebar-nav-btn active" data-target="m1-dashboard">
+          <span>📊</span> Sustainability Dashboard
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-department">
+          <span>🏢</span> Department Breakdown
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-baselines">
+          <span>🎯</span> Operational Baselines
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
+          <span>🛡️</span> System Audit Log
+        </button>
+      </div>
     `;
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
         <div class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h1 class="view-title">Executive Sustainability Analytics</h1>
-            <p class="view-subtitle">Cross-property environmental aggregation and sustainability compliance metrics.</p>
+            <h1 class="view-title">Executive Analytics</h1>
           </div>
           <div>
             <button class="btn btn-sm btn-primary" id="btn-export-global-pdf">
@@ -108,148 +100,96 @@ export class Module1Dashboard {
           </div>
         </div>
 
-        <div style="display: flex; gap: 24px; align-items: flex-start; margin-top: 10px;">
-          ${sidebarTpl}
+        ${subNavTpl}
 
-          <!-- Main Content Area -->
-          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-            <div class="grid grid-4 kpi-row">
-              <div class="card kpi-card">
-                <div class="kpi-header">
-                  <span class="kpi-label">Sustainability Score</span>
-                  ${compliance.dataComplete 
-                    ? `<span class="badge" style="color: ${compliance.score >= 90 ? '#22d3ee' : compliance.score >= 80 ? '#fbbf24' : compliance.score >= 70 ? '#94a3b8' : '#ef4444'}; background: ${compliance.score >= 90 ? 'rgba(34, 211, 238, 0.1)' : compliance.score >= 80 ? 'rgba(251, 191, 36, 0.1)' : compliance.score >= 70 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; border: 1px solid ${compliance.score >= 90 ? 'rgba(34, 211, 238, 0.2)' : compliance.score >= 80 ? 'rgba(251, 191, 36, 0.2)' : compliance.score >= 70 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(239, 68, 68, 0.2)'};">${compliance.label}</span>`
-                    : `<span class="badge badge-warning">Data Incomplete</span>`
-                  }
-                </div>
-                ${compliance.dataComplete ? `
-                  <div class="kpi-body">
-                    <div class="kpi-score-main" style="color: ${compliance.score >= 90 ? '#22d3ee' : compliance.score >= 80 ? '#fbbf24' : compliance.score >= 70 ? '#94a3b8' : '#ef4444'};">${compliance.score}<span class="kpi-score-denom">/100</span></div>
-                    <div class="kpi-grade-text" style="color: ${compliance.score >= 90 ? '#22d3ee' : compliance.score >= 80 ? '#fbbf24' : compliance.score >= 70 ? '#94a3b8' : '#ef4444'};">${compliance.grade}</div>
-                  </div>
-                  <div class="progress-bar-wrap">
-                    <div class="progress-bar" style="width: ${compliance.score}%; background: ${compliance.score >= 90 ? '#22d3ee' : compliance.score >= 80 ? '#fbbf24' : compliance.score >= 70 ? '#94a3b8' : '#ef4444'};"></div>
-                  </div>
-                ` : `
-                  <div class="kpi-body" style="padding-top: 15px;">
-                    <p class="text-danger" style="margin:0; font-size: 13px;">${compliance.message}</p>
-                  </div>
-                `}
-              </div>
+        <!-- Main Content Area - Full Widescreen Width -->
+        <div class="grid grid-4 kpi-row">
+          <div class="card kpi-card">
+            <span class="kpi-label">Sustainability Score</span>
+            ${compliance.dataComplete ? `
+              <div class="kpi-value-lg text-primary">${compliance.score}<span style="font-size: 14px; color: var(--text-muted); font-weight: 400;">/100</span></div>
+              <span class="kpi-trend positive">Grade ${compliance.grade} (${compliance.label})</span>
+            ` : `
+              <div class="kpi-value-lg text-warning">—</div>
+              <span class="kpi-trend negative">Data incomplete</span>
+            `}
+          </div>
 
-              <div class="card kpi-card">
-                <div class="kpi-header">
-                  <span class="kpi-label">Food Waste Logged</span>
-                  <span class="badge" style="color: #f97316; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.2);">Live</span>
-                </div>
-                <div class="kpi-body">
-                  <div class="kpi-value-lg" style="color: #f97316;">${compliance.metrics.foodWasteCurrentKg.toFixed(1)} <span class="kpi-unit">kg current</span></div>
-                  <div class="kpi-desc">Aggregated from current waste records</div>
-                </div>
-                <div class="kpi-subtext text-muted">Current operational waste total</div>
-              </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">Food Waste</span>
+            <div class="kpi-value-lg text-primary">${compliance.metrics.foodWasteCurrentKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <span class="kpi-trend neutral">Current period aggregation</span>
+          </div>
 
-              <div class="card kpi-card">
-                <div class="kpi-header">
-                  <span class="kpi-label">Current Water Usage</span>
-                  <span class="badge" style="color: #38bdf8; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);">Live</span>
-                </div>
-                <div class="kpi-body">
-                  <div class="kpi-value-lg" style="color: #38bdf8;">${(compliance.metrics.waterUseCurrentL / 1000).toFixed(1)} <span class="kpi-unit">kL current</span></div>
-                  <div class="kpi-desc">Aggregated from current meter readings</div>
-                </div>
-                <div class="kpi-subtext text-muted">Current hotel-wide water consumption</div>
-              </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">Water Usage</span>
+            <div class="kpi-value-lg">${(compliance.metrics.waterUseCurrentL / 1000).toFixed(1)} <span class="kpi-unit">kL</span></div>
+            <span class="kpi-trend neutral">Hotel-wide consumption</span>
+          </div>
 
-              <div class="card kpi-card">
-                <div class="kpi-header">
-                  <span class="kpi-label">Current Electricity Usage</span>
-                  <span class="badge" style="color: #c084fc; background: rgba(192, 132, 252, 0.1); border: 1px solid rgba(192, 132, 252, 0.2);">Live</span>
-                </div>
-                <div class="kpi-body">
-                  <div class="kpi-value-lg" style="color: #c084fc;">${compliance.metrics.energyUseCurrentKwh.toFixed(1)} <span class="kpi-unit">kWh current</span></div>
-                  <div class="kpi-desc">Aggregated from current meter readings</div>
-                </div>
-                <div class="kpi-subtext text-muted">Current hotel-wide electricity consumption</div>
-              </div>
-            </div>
+          <div class="card kpi-card">
+            <span class="kpi-label">Electricity Usage</span>
+            <div class="kpi-value-lg">${compliance.metrics.energyUseCurrentKwh.toFixed(1)} <span class="kpi-unit">kWh</span></div>
+            <span class="kpi-trend neutral">Hotel-wide consumption</span>
+          </div>
+        </div>
 
-            <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="grid grid-2">
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Historical Trajectory Visualizer</h3>
-                <p class="card-subtitle">Month-on-month trend telemetry against targets</p>
-              </div>
+              <h3 class="card-title">Historical Trajectory</h3>
               <div class="tab-pills">
-                <button class="tab-btn ${this.chartMetric === 'food' ? 'active' : ''}" data-metric="food">Food (kg)</button>
-                <button class="tab-btn ${this.chartMetric === 'water' ? 'active' : ''}" data-metric="water">Water (kL)</button>
-                <button class="tab-btn ${this.chartMetric === 'energy' ? 'active' : ''}" data-metric="energy">Power (kWh)</button>
+                <button class="tab-btn ${this.chartMetric === 'food' ? 'active' : ''}" data-metric="food">Food</button>
+                <button class="tab-btn ${this.chartMetric === 'water' ? 'active' : ''}" data-metric="water">Water</button>
+                <button class="tab-btn ${this.chartMetric === 'energy' ? 'active' : ''}" data-metric="energy">Power</button>
                 <button class="tab-btn ${this.chartMetric === 'score' ? 'active' : ''}" data-metric="score">Score</button>
               </div>
             </div>
-            <div class="chart-container" style="padding: 16px; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin: 16px;">
-              ${this.renderSVGChart(filteredHistory, this.chartMetric)}
+            <div class="chart-container" style="padding: 10px 0;">
+              ${this.renderSVGChart(complianceHistory, this.chartMetric)}
             </div>
           </div>
 
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Compliance Audit Log</h3>
-                <p class="card-subtitle">Resource reductions across reporting quarters</p>
+              <h3 class="card-title">Compliance Audit Log</h3>
+              <div class="tab-pills">
+                <button class="tab-btn ${this.reportPeriod === 'all' ? 'active' : ''}" data-period="all">All</button>
+                <button class="tab-btn ${this.reportPeriod === 'q1' ? 'active' : ''}" data-period="q1">Q1</button>
+                <button class="tab-btn ${this.reportPeriod === 'q2' ? 'active' : ''}" data-period="q2">Q2</button>
+                <button class="tab-btn ${this.reportPeriod === 'mtd' ? 'active' : ''}" data-period="mtd">MTD</button>
               </div>
-              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <select id="filter-year" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); padding: 4px 8px; border-radius: 4px; font-size: 13px; cursor: pointer;">
-                    <option value="all-years" ${this.reportYear === 'all-years' ? 'selected' : ''}>All Years</option>
-                    <option value="2026" ${this.reportYear === '2026' ? 'selected' : ''}>2026</option>
-                    <option value="2025" ${this.reportYear === '2025' ? 'selected' : ''}>2025</option>
-                  </select>
-                  <div class="tab-pills">
-                    <button class="tab-btn ${this.reportPeriod === 'all' ? 'active' : ''}" data-period="all">All</button>
-                    <button class="tab-btn ${this.reportPeriod === 'q1' ? 'active' : ''}" data-period="q1">Q1</button>
-                    <button class="tab-btn ${this.reportPeriod === 'q2' ? 'active' : ''}" data-period="q2">Q2</button>
-                    <button class="tab-btn ${this.reportPeriod === 'q3' ? 'active' : ''}" data-period="q3">Q3</button>
-                    <button class="tab-btn ${this.reportPeriod === 'q4' ? 'active' : ''}" data-period="q4">Q4</button>
-                    <button class="tab-btn ${this.reportPeriod === 'mtd' ? 'active' : ''}" data-period="mtd">MTD</button>
-                  </div>
-                </div>
             </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Reporting Month</th>
-                    <th>Food Saved</th>
-                    <th>Water Conserved</th>
-                    <th>Energy Saved</th>
-                    <th>Compliance Score</th>
+                    <th>Reporting Period</th>
+                    <th class="col-number">Food Diverted</th>
+                    <th class="col-number">Water Saved</th>
+                    <th class="col-number">Energy Avoided</th>
+                    <th class="col-number">Target Score</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                      ${filteredHistory.length === 0 ? `
-                        <tr>
-                          <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-                            <div style="font-size: 24px; margin-bottom: 8px;">📂</div>
-                            <strong>No Data Available</strong><br/>
-                            <span style="font-size: 12px;">There are no compliance records matching this period.</span>
-                          </td>
-                        </tr>
-                      ` : filteredHistory.map(row => `
-                        <tr>
-                          <td><strong>${row.month}</strong></td>
-                          <td>${row.foodSavedKg.toLocaleString()} kg</td>
-                          <td>${(row.waterConservedL / 1000).toFixed(1)} kL</td>
-                          <td>${row.energySavedKwh.toLocaleString()} kWh</td>
-                          <td><span class="badge" style="color: ${row.vmScore >= 90 ? '#22d3ee' : row.vmScore >= 80 ? '#fbbf24' : row.vmScore >= 70 ? '#94a3b8' : '#ef4444'}; background: ${row.vmScore >= 90 ? 'rgba(34, 211, 238, 0.1)' : row.vmScore >= 80 ? 'rgba(251, 191, 36, 0.1)' : row.vmScore >= 70 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(239, 68, 68, 0.1)'}; border: 1px solid ${row.vmScore >= 90 ? 'rgba(34, 211, 238, 0.2)' : row.vmScore >= 80 ? 'rgba(251, 191, 36, 0.2)' : row.vmScore >= 70 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(239, 68, 68, 0.2)'};">${row.vmScore}/100</span></td>
-                      <td style="color: ${row.vmScore >= 90 ? '#22d3ee' : row.vmScore >= 80 ? '#fbbf24' : row.vmScore >= 70 ? '#94a3b8' : '#ef4444'}; font-weight: 600;">${row.status}</td>
-                        </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                  ${filteredHistory.map(row => `
+                    <tr>
+                      <td><strong>${row.month}</strong></td>
+                      <td class="col-number"><strong class="text-primary">${row.foodSavedKg} kg</strong></td>
+                      <td class="col-number">${(row.waterConservedL / 1000).toFixed(1)} kL</td>
+                      <td class="col-number">${row.energySavedKwh} kWh</td>
+                      <td class="col-number"><strong style="color: var(--primary);">${row.vmScore}/100</strong></td>
+                      <td>
+                        <span class="status-dot-wrap">
+                          <span class="status-dot success"></span> Verified
+                        </span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

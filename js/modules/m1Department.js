@@ -44,36 +44,28 @@ export class Module1Department {
       return;
     }
 
-    const sidebarTpl = `
-      <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 120px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-          <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 4px; letter-spacing: 0.05em;">Executive Analytics</h4>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-dashboard" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">📊</span> Sustainability Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-primary btn-block sidebar-nav-btn" data-target="m1-department" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🏢</span> Department Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-baselines" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🎯</span> Operational Baselines
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-audit" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🛡️</span> System Audit Log
-          </button>
-        </div>
-      </aside>
+    const subNavTpl = `
+      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-dashboard">
+          <span>📊</span> Sustainability Dashboard
+        </button>
+        <button class="tab-btn sidebar-nav-btn active" data-target="m1-department">
+          <span>🏢</span> Department Breakdown
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-baselines">
+          <span>🎯</span> Operational Baselines
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
+          <span>🛡️</span> System Audit Log
+        </button>
+      </div>
     `;
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
         <div class="view-header">
           <div>
-            <h1 class="view-title">Department Sustainability Analytics</h1>
-            <p class="view-subtitle">Departmental performance, spoilage logs and utility anomalies.</p>
+            <h1 class="view-title">Executive Analytics</h1>
           </div>
           <div class="header-actions">
             <button class="btn btn-sm btn-primary" id="btn-export-m1-pdf">
@@ -83,55 +75,36 @@ export class Module1Department {
           </div>
         </div>
 
-        <div style="display: flex; gap: 24px; align-items: flex-start; margin-top: 10px;">
-          ${sidebarTpl}
+        ${subNavTpl}
 
-          <!-- Main Content Area -->
-          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-            <div class="card">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">Departmental Performance</h3>
-                  <p class="card-subtitle">Select a department to view detailed resource consumption.</p>
-                </div>
-              </div>
-
-              ${!this.selectedDepartment ? `
-                ${(() => {
-                  const departments = [
-                    { id: 'kitchen', name: 'Kitchen', icon: '🍽️' },
-                    { id: 'housekeeping', name: 'Housekeeping', icon: '🧹' },
-                    { id: 'laundry', name: 'Laundry', icon: '🧺' },
-                    { id: 'facilities', name: 'Facilities', icon: '⚙️' },
-                    { id: 'front-office', name: 'Front Office', icon: '🛎️' }
-                  ];
-                  return `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 20px;">
-                      ${departments.map(dept => `
-                        <div class="card dept-card" data-id="${dept.id}" style="padding: 30px 15px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-card); text-align: center; border-radius: var(--radius-lg); box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s, box-shadow 0.2s;">
-                          <div style="font-size: 32px; margin-bottom: 12px;">${dept.icon}</div>
-                          <h4 style="margin: 0; font-size: 16px; font-weight: 600;">${dept.name}</h4>
-                        </div>
-                      `).join('')}
-                    </div>
-                  `;
-                })()}
-              ` : `
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
-                  <button class="btn btn-sm btn-outline" id="btn-back-departments">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
-                    Back to Departments
-                  </button>
-                  <h3 style="margin: 0; font-size: 18px; text-transform: capitalize;">${this.selectedDepartment.replace('-', ' ')} Department</h3>
-                </div>
-                
-                ${!departmentPerformance?.hasData
-                  ? `<p class="text-danger">${departmentPerformance.message}</p>`
-                  : this.renderDepartmentBreakdown(departmentPerformance)
-                }
-              `}
+        <!-- Main Content Area - Full Widescreen Width -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Departmental Performance</h3>
+              <p class="card-subtitle">Select a department to view detailed resource consumption and operational anomalies.</p>
             </div>
           </div>
+
+          ${!isAuthorized ? `
+            <p class="text-muted">Operations Director or Executive access is required.</p>
+          ` : `
+            <select class="form-input form-input-sm" id="department-selector" style="max-width: 320px; margin-bottom: 16px;">
+              <option value="">Select a department</option>
+              <option value="kitchen">Kitchen</option>
+              <option value="housekeeping">Housekeeping</option>
+              <option value="laundry">Laundry</option>
+              <option value="facilities">Facilities</option>
+              <option value="front-office">Front Office</option>
+            </select>
+          
+            ${!this.selectedDepartment
+              ? '<p class="text-muted">Select a department to review.</p>'
+              : !departmentPerformance?.hasData
+                ? `<p class="text-danger">${departmentPerformance.message}</p>`
+                : this.renderDepartmentBreakdown(departmentPerformance)
+            }
+          `}
         </div>
       </div>
     `;

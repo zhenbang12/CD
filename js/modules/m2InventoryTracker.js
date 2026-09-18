@@ -91,16 +91,13 @@ export class Module2Inventory {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <h1 class="view-title">Back-of-House Inventory & Spoilage Tracker</h1>
-            <p class="view-subtitle">Raw ingredient shelf-life lifecycle, storage registry, and food waste management.</p>
+            <h1 class="view-title">Inventory & Spoilage</h1>
           </div>
           <div class="header-actions">
             <button class="btn btn-sm btn-outline" id="btn-open-waste-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               Record Food Waste
             </button>
             <button class="btn btn-sm btn-primary" id="btn-open-stock-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Log Incoming Stock
             </button>
           </div>
@@ -110,79 +107,60 @@ export class Module2Inventory {
         ${expiryAlerts.length > 0 ? `
           <div class="alert-banner alert-warning-strip">
             <div class="alert-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="alert-content">
-              <strong>Smart Expiry Alert (Kitchen Action Required):</strong>
-              ${expiryAlerts.map(a => `<span class="alert-tag">${a.name} (${a.quantity} ${a.unit} • ${a.status})</span>`).join('')}
-              <div class="alert-action-text">Prioritize these items in today's kitchen prep batching to avoid spoilage.</div>
+              <strong>Expiry Alert:</strong>
+              ${expiryAlerts.map(a => `<span style="display: inline-block; margin-left: 6px; font-weight: 500;">${a.name} (${a.quantity} ${a.unit} • ${a.status})</span>`).join(',')}
             </div>
           </div>
         ` : ''}
 
-        <!-- Top Overview Stats -->
+        <!-- Top Overview Stats - Linear / Vercel Minimalist Format -->
         <div class="grid grid-4 kpi-row">
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Active Raw Stock Items</span>
-              <span class="badge badge-secondary">${inventory.length} SKUs</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg">${inventory.reduce((a, c) => a + c.quantity, 0).toFixed(0)} <span class="kpi-unit">Units/kg</span></div>
-              <div class="kpi-desc">Across all cold & dry storage zones</div>
-            </div>
+            <span class="kpi-label">Active Stock Items</span>
+            <div class="kpi-value-lg">${inventory.reduce((a, c) => a + c.quantity, 0).toFixed(0)} <span class="kpi-unit">Units/kg</span></div>
+            <span class="kpi-trend neutral">${inventory.length} items in storage</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Shelf-Life Risk Radar</span>
-              <span class="badge ${expiryAlerts.length > 0 ? 'badge-danger' : 'badge-success'}">${expiryAlerts.length} Urgent</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-danger">${expiryAlerts.length} <span class="kpi-unit">Items &le; 2 Days</span></div>
-              <div class="kpi-desc">Monitored daily</div>
-            </div>
+            <span class="kpi-label">Shelf-Life Risk</span>
+            <div class="kpi-value-lg ${expiryAlerts.length > 0 ? 'text-danger' : 'text-primary'}">${expiryAlerts.length} <span class="kpi-unit">Items &le; 2d</span></div>
+            <span class="kpi-trend ${expiryAlerts.length > 0 ? 'negative' : 'positive'}">${expiryAlerts.length > 0 ? 'Action required' : 'Optimal shelf life'}</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Avoidable Spoilage (Logged)</span>
-              <span class="badge badge-danger">Loss</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-danger">${totalSpoilageKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
-              <div class="kpi-desc">Expired / damaged raw items</div>
-            </div>
+            <span class="kpi-label">Avoidable Spoilage</span>
+            <div class="kpi-value-lg text-danger">${totalSpoilageKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <span class="kpi-trend negative">Expired / damaged</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Prep Waste (Composted)</span>
-              <span class="badge badge-info">Diverted</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-success">${totalPrepWasteKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
-              <div class="kpi-desc">Peelings, trimmings, broth bones</div>
-            </div>
+            <span class="kpi-label">Composted Prep Waste</span>
+            <div class="kpi-value-lg text-primary">${totalPrepWasteKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <span class="kpi-trend positive">Diverted to organic cycle</span>
           </div>
         </div>
 
-        <!-- Inventory Master Table with Search & Category Tabs -->
+        <!-- Category Filter Tabs - Full Width Distributed -->
+        <div class="tab-pills-full grid-cols-5" style="margin-bottom: 16px;">
+          <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All Items</button>
+          <button class="tab-btn ${this.activeFilter === 'EXPIRING' ? 'active' : ''}" data-filter="EXPIRING">Expiring &le; 3 Days</button>
+          <button class="tab-btn ${this.activeFilter === 'Meat' ? 'active' : ''}" data-filter="Meat">Meat & Poultry</button>
+          <button class="tab-btn ${this.activeFilter === 'Seafood' ? 'active' : ''}" data-filter="Seafood">Fresh Seafood</button>
+          <button class="tab-btn ${this.activeFilter === 'Produce' ? 'active' : ''}" data-filter="Produce">Farm Produce</button>
+        </div>
+
+        <!-- Inventory Master Table with Search -->
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Kitchen Inventory & Stock Register</h3>
-              <p class="card-subtitle">Real-time stock levels, batch identifiers and expiration monitoring</p>
+              <h3 class="card-title">Inventory Register</h3>
+              <p class="card-subtitle">${filteredInventory.length} lots monitored with automated FIFO traceability.</p>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <input type="text" class="form-input form-input-sm" id="search-inventory" placeholder="🔍 Search SKU, name, location..." value="${this.searchQuery}" style="width: 200px;" />
-              <div class="tab-pills">
-                <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All Items</button>
-                <button class="tab-btn ${this.activeFilter === 'EXPIRING' ? 'active' : ''}" data-filter="EXPIRING">Expiring &le; 3d</button>
-                <button class="tab-btn ${this.activeFilter === 'Meat' ? 'active' : ''}" data-filter="Meat">Meat & Poultry</button>
-                <button class="tab-btn ${this.activeFilter === 'Seafood' ? 'active' : ''}" data-filter="Seafood">Seafood</button>
-                <button class="tab-btn ${this.activeFilter === 'Produce' ? 'active' : ''}" data-filter="Produce">Produce</button>
-              </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="text" class="form-input form-input-sm" id="search-inventory" placeholder="Search item code, ingredient, batch..." value="${this.searchQuery}" style="width: 280px;" />
             </div>
           </div>
 
@@ -190,43 +168,50 @@ export class Module2Inventory {
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>SKU Code</th>
-                  <th>Raw Ingredient Name</th>
+                  <th>Item Code</th>
+                  <th>Ingredient Name</th>
                   <th>Category</th>
-                  <th>Quantity on Hand</th>
-                  <th>Batch Number</th>
+                  <th class="col-number">Quantity on Hand</th>
+                  <th class="col-center">Batch</th>
                   <th>Delivered</th>
                   <th>Expiry Date</th>
-                  <th>Storage Location</th>
+                  <th>Location</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  <th class="col-action">Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredInventory.length === 0 ? `
-                  <tr><td colspan="10" class="text-center py-4">No inventory records match the selected filter or search query.</td></tr>
-                ` : filteredInventory.map(item => `
-                  <tr>
-                    <td><code>${item.id}</code></td>
-                    <td><strong>${item.name}</strong></td>
-                    <td><span class="badge badge-secondary">${item.category}</span></td>
-                    <td>
-                      <span class="font-bold font-lg text-primary">${item.quantity}</span> ${item.unit}
-                    </td>
-                    <td><small><code>${item.batchNumber}</code></small></td>
-                    <td><small class="text-muted">${item.deliveryDate}</small></td>
-                    <td><strong>${item.expiryDate}</strong></td>
-                    <td><small class="text-muted">${item.storageLocation}</small></td>
-                    <td><span class="badge ${item.statusClass}">${item.status}</span></td>
-<td>
-    <button
-        class="btn btn-xs btn-primary btn-edit-inventory"
-        data-id="${item.id}">
-        Edit
-    </button>
-</td>
-                  </tr>
-                `).join('')}
+                  <tr><td colspan="10" class="text-center py-4" style="color: var(--text-muted);">No inventory records match the selected filter.</td></tr>
+                ` : filteredInventory.map(item => {
+                  const isExpiring = item.statusClass && item.statusClass.includes('danger');
+                  return `
+                    <tr>
+                      <td><code>${item.id}</code></td>
+                      <td><strong>${item.name}</strong></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${item.category}</span></td>
+                      <td class="col-number">
+                        <strong style="color: var(--text-main); font-size: 14px;">${item.quantity}</strong>
+                        <span style="font-size: 11px; color: var(--text-muted);">${item.unit}</span>
+                      </td>
+                      <td class="col-center"><code>${item.batchNumber}</code></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${item.deliveryDate}</span></td>
+                      <td><span style="font-weight: 500; ${isExpiring ? 'color: var(--danger);' : ''}">${item.expiryDate}</span></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${item.storageLocation}</span></td>
+                      <td>
+                        <span class="status-dot-wrap" style="color: ${isExpiring ? 'var(--danger)' : 'var(--text-main)'};">
+                          <span class="status-dot ${isExpiring ? 'danger' : 'success'}"></span>
+                          ${item.status}
+                        </span>
+                      </td>
+                      <td class="col-action">
+                        <button class="btn btn-xs btn-outline btn-quick-adjust row-action-hover" data-id="${item.id}" data-name="${item.name}" data-qty="${item.quantity}">
+                          Adjust
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>

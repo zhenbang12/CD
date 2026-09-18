@@ -20,36 +20,28 @@ export class Module1Baselines {
       return;
     }
 
-    const sidebarTpl = `
-      <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 120px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-          <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 4px; letter-spacing: 0.05em;">Executive Analytics</h4>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-dashboard" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">📊</span> Sustainability Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-department" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🏢</span> Department Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-primary btn-block sidebar-nav-btn" data-target="m1-baselines" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🎯</span> Operational Baselines
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-audit" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🛡️</span> System Audit Log
-          </button>
-        </div>
-      </aside>
+    const subNavTpl = `
+      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-dashboard">
+          <span>📊</span> Sustainability Dashboard
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-department">
+          <span>🏢</span> Department Breakdown
+        </button>
+        <button class="tab-btn sidebar-nav-btn active" data-target="m1-baselines">
+          <span>🎯</span> Operational Baselines
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-audit">
+          <span>🛡️</span> System Audit Log
+        </button>
+      </div>
     `;
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
         <div class="view-header">
           <div>
-            <h1 class="view-title">Executive Sustainability Analytics</h1>
-            <p class="view-subtitle">Calibrated targets and consumption standards.</p>
+            <h1 class="view-title">Executive Analytics</h1>
           </div>
           <div class="header-actions" style="display: flex; gap: 8px;">
             <button class="btn btn-sm btn-outline" id="btn-open-add-baseline-modal">
@@ -62,48 +54,40 @@ export class Module1Baselines {
           </div>
         </div>
 
-        <div style="display: flex; gap: 24px; align-items: flex-start; margin-top: 10px;">
-          ${sidebarTpl}
+        ${subNavTpl}
 
-          <!-- Main Content Area -->
-          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-            <div class="card">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">Operational Resource Baselines</h3>
-                  <p class="card-subtitle">Current standards across modules</p>
-                </div>
-                <span class="badge badge-secondary">Standard Configuration</span>
-              </div>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Baseline Key</th>
-                      <th>Standard Name</th>
-                      <th>Value</th>
-                      <th>Category</th>
-                      <th>Last Calibrated</th>
-                      <th style="width: 80px;">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${baselines.map(b => `
-                      <tr>
-                        <td><code>${b.key}</code></td>
-                        <td><strong>${b.name}</strong></td>
-                        <td><span class="font-bold text-primary">${b.value}</span> <small class="text-muted">${b.unit}</small></td>
-                        <td><span class="badge badge-secondary">${b.category}</span></td>
-                        <td><small class="text-muted">${b.updatedAt}</small></td>
-                        <td>
-                          <button class="btn btn-sm btn-outline btn-delete-baseline" data-id="${b.id}" style="color: var(--danger); border-color: var(--danger); padding: 2px 8px; font-size: 11px;">Delete</button>
-                        </td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
+        <!-- Main Content Area - Full Widescreen Width -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Operational Baselines</h3>
+              <p class="card-subtitle">Calibrated targets and consumption standards.</p>
             </div>
+            <span style="font-size: 12px; color: var(--text-muted);">${baselines.length} standards configured</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Metric Key</th>
+                  <th>Metric Name</th>
+                  <th class="col-number">Baseline Target</th>
+                  <th>Category</th>
+                  <th>Last Calibrated</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${baselines.map(b => `
+                  <tr>
+                    <td><code>${b.key}</code></td>
+                    <td><strong>${b.name}</strong></td>
+                    <td class="col-number"><strong style="color: var(--primary);">${b.value}</strong> <span style="font-size: 11px; color: var(--text-muted);">${b.unit}</span></td>
+                    <td><span style="font-size: 12px; color: var(--text-muted);">${b.category}</span></td>
+                    <td><span style="font-size: 12px; color: var(--text-muted);">${b.updatedAt}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
 

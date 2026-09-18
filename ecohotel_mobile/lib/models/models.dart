@@ -177,6 +177,23 @@ class EcoVoucher {
   });
 }
 
+// Defect Category Catalog — this list is managed (added/edited) from the
+// Web Admin Dashboard only. The mobile app can read and select from it,
+// but ground staff cannot add new categories here, matching the web source of truth.
+class DefectCategory {
+  final String id;
+  final String label;
+  final String resourceType; // 'Water' | 'Electricity'
+  final String hint;
+
+  const DefectCategory({
+    required this.id,
+    required this.label,
+    required this.resourceType,
+    this.hint = '',
+  });
+}
+
 class UtilityMeter {
   final String meterId;
   final String zone;
@@ -199,23 +216,6 @@ class UtilityMeter {
   });
 
   bool get isAnomaly => status.contains('Anomaly');
-}
-
-// Defect Category Catalog — this list is managed (added/edited) from the
-// Web Admin Dashboard only. The mobile app can read and select from it,
-// but ground staff cannot add new categories here, matching the web source of truth.
-class DefectCategory {
-  final String id;
-  final String label;
-  final String resourceType; // 'Water' | 'Electricity'
-  final String hint;
-
-  const DefectCategory({
-    required this.id,
-    required this.label,
-    required this.resourceType,
-    this.hint = '',
-  });
 }
 
 class RepairTicket {
@@ -273,5 +273,25 @@ class Technician {
     required this.status,
     required this.activeTickets,
     required this.phone,
+  });
+}
+
+class UserModel {
+  final String id;
+  final String username;
+  final String password;
+  final String name;
+  final String role;
+  final String department;
+  final String avatar;
+
+  const UserModel({
+    required this.id,
+    required this.username,
+    required this.password,
+    required this.name,
+    required this.role,
+    required this.department,
+    required this.avatar,
   });
 }

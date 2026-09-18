@@ -41,8 +41,8 @@ class StorageEngine {
         this.data[key] = JSON.parse(JSON.stringify(defaults[key]));
       }
     }
-    if (!this.data.system.theme) {
-      this.data.system.theme = 'dark';
+    if (!this.data.system.theme || this.data.system.theme === 'dark') {
+      this.data.system.theme = 'light';
     }
     if (!this.data.guestInteractions) {
       this.data.guestInteractions = [];
