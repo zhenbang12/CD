@@ -290,24 +290,28 @@ class App {
     const mountPoint = document.getElementById('module-mount-point');
     if (!mountPoint) return;
 
+    if (this.currentModule && typeof this.currentModule.destroy === 'function') {
+      this.currentModule.destroy();
+    }
+
     if (this.activeTab === 'm1' || this.activeTab === 'm1-dashboard') {
-      new Module1Dashboard(mountPoint);
+      this.currentModule = new Module1Dashboard(mountPoint);
     } else if (this.activeTab === 'm1-department') {
-      new Module1Department(mountPoint);
+      this.currentModule = new Module1Department(mountPoint);
     } else if (this.activeTab === 'm1-baselines') {
-      new Module1Baselines(mountPoint);
+      this.currentModule = new Module1Baselines(mountPoint);
     } else if (this.activeTab === 'm1-audit') {
-      new Module1Audit(mountPoint);
+      this.currentModule = new Module1Audit(mountPoint);
     } else if (this.activeTab === 'm2') {
-      new Module2Inventory(mountPoint);
+      this.currentModule = new Module2Inventory(mountPoint);
     } else if (this.activeTab === 'm3') {
-      new Module3BatchOptimizer(mountPoint);
+      this.currentModule = new Module3BatchOptimizer(mountPoint);
     } else if (this.activeTab === 'm4') {
-      new Module4GuestPWA(mountPoint);
+      this.currentModule = new Module4GuestPWA(mountPoint);
     } else if (this.activeTab === 'm5') {
-      new Module5Facilities(mountPoint);
+      this.currentModule = new Module5Facilities(mountPoint);
     } else if (this.activeTab === 'db') {
-      new DbSchemaView(mountPoint);
+      this.currentModule = new DbSchemaView(mountPoint);
     }
   }
 

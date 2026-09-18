@@ -70,13 +70,12 @@ export class Module1Audit {
               <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
                 <div>
                   <h3 class="card-title">System Log & Parameter Adjustments</h3>
-                  <p class="card-subtitle">Filter by Date, User, Action, or Target</p>
+                  <p class="card-subtitle">Filter by Date, User, or Action</p>
                 </div>
                 <div class="filter-group" style="display: flex; gap: 10px; align-items: center;">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-date" placeholder="Date (YYYY-MM-DD)" value="${this.auditFilters.date}">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-user" placeholder="User ID / Name" value="${this.auditFilters.user}">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-action" placeholder="Action" value="${this.auditFilters.action}">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-baseline" placeholder="Baseline ID" value="${this.auditFilters.baseline}">
                   <button class="btn btn-sm btn-outline" id="btn-audit-search">Filter</button>
                 </div>
               </div>

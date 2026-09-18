@@ -107,6 +107,19 @@ export class Module1Baselines {
           </div>
         </div>
 
+        <!-- Baseline Delete Modal -->
+        <div class="modal-backdrop" id="baseline-delete-modal" style="display: none; align-items: center; justify-content: center; z-index: 9999; background: rgba(0,0,0,0.6);">
+          <div class="modal-card" style="max-width: 400px; padding: 24px; text-align: center;">
+            <div style="font-size: 40px; color: var(--danger); margin-bottom: 16px;">&#9888;</div>
+            <h3 style="margin: 0 0 12px 0; font-size: 18px; color: var(--text-main);">Confirm Deletion</h3>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Are you sure you want to completely delete this operational baseline? This may affect compliance calculations across the entire system.</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+              <button type="button" class="btn btn-outline" id="btn-cancel-delete" style="flex: 1;">Cancel</button>
+              <button type="button" class="btn btn-primary" id="btn-confirm-delete" style="flex: 1; background: var(--danger); border-color: var(--danger);">Delete Baseline</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Baseline Add Modal Form -->
         <div class="modal-backdrop" id="baseline-add-modal" style="display: none;">
           <div class="modal-card">
@@ -117,16 +130,16 @@ export class Module1Baselines {
             <form id="form-add-baseline">
               <div class="form-group">
                 <label class="form-label">Baseline Key</label>
-                <input type="text" class="form-input" id="add-baseline-key" placeholder="e.g. pool_water_daily" required />
+                <input type="text" class="form-input" id="add-baseline-key" placeholder="e.g. pool_water_daily" />
                 <small class="form-help">Unique system identifier (no spaces).</small>
               </div>
               <div class="form-group">
                 <label class="form-label">Standard Name</label>
-                <input type="text" class="form-input" id="add-baseline-name" placeholder="e.g. Pool Maintenance" required />
+                <input type="text" class="form-input" id="add-baseline-name" placeholder="e.g. Pool Maintenance" />
               </div>
               <div class="form-group">
                 <label class="form-label">Category</label>
-                <select class="form-input" id="add-baseline-category" required>
+                <select class="form-input" id="add-baseline-category">
                   <option value="Water">Water</option>
                   <option value="Energy">Energy</option>
                   <option value="Food & Beverage">Food & Beverage</option>
@@ -136,11 +149,11 @@ export class Module1Baselines {
               <div class="form-group" style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
                   <label class="form-label">Value</label>
-                  <input type="number" step="any" min="0.01" class="form-input" id="add-baseline-val" placeholder="0.00" required />
+                  <input type="number" step="any" class="form-input" id="add-baseline-val" placeholder="0.00" />
                 </div>
                 <div style="flex: 1;">
                   <label class="form-label">Unit</label>
-                  <input type="text" class="form-input" id="add-baseline-unit" placeholder="e.g. L, kWh, kg" required />
+                  <input type="text" class="form-input" id="add-baseline-unit" placeholder="e.g. L, kWh, kg" />
                 </div>
               </div>
               <div class="modal-footer">
@@ -161,22 +174,22 @@ export class Module1Baselines {
             <form id="form-update-baseline">
               <div class="form-group">
                 <label class="form-label">Select Baseline Metric</label>
-                <select class="form-input" id="modal-baseline-id" required>
+                <select class="form-input" id="modal-baseline-id">
                   ${baselines.map(b => `<option value="${b.id}">${b.name} (Current: ${b.value} ${b.unit})</option>`).join('')}
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">New Baseline Value</label>
-                <input type="number" step="any" min="0.01" class="form-input" id="modal-baseline-val" placeholder="Enter numeric value..." required />
+                <input type="number" step="any" class="form-input" id="modal-baseline-val" placeholder="Enter numeric value..." />
                 <small class="form-help">Must be a positive numeric value.</small>
               </div>
               <div class="form-group">
                 <label class="form-label">Effective Date</label>
-                <input type="date" class="form-input" id="modal-baseline-date" required />
+                <input type="date" class="form-input" id="modal-baseline-date" />
               </div>
               <div class="form-group">
                 <label class="form-label">Reason for Modification</label>
-                <textarea class="form-input" id="modal-baseline-reason" rows="3" placeholder="Explain rationale (e.g., Aerator retrofit completed in Tower A)..." required></textarea>
+                <textarea class="form-input" id="modal-baseline-reason" rows="3" placeholder="Explain rationale (e.g., Aerator retrofit completed in Tower A)..."></textarea>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-baseline">Cancel</button>
@@ -217,19 +230,28 @@ export class Module1Baselines {
     if (form) {
       form.onsubmit = (e) => {
         e.preventDefault();
-        const id = this.container.querySelector('#modal-baseline-id').value;
-        const val = this.container.querySelector('#modal-baseline-val').value;
-        const date = this.container.querySelector('#modal-baseline-date').value;
-        const reason = this.container.querySelector('#modal-baseline-reason').value;
+        const inputs = form.querySelectorAll('.form-input');
+        inputs.forEach(inp => inp.style.borderColor = ''); // reset
 
-        if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
-          window.showGlobalToast('Baseline value must be a positive numeric number.', 'error');
-          return;
-        }
-        if (!date) {
-          window.showGlobalToast('Effective date is required.', 'error');
-          return;
-        }
+        const elId = this.container.querySelector('#modal-baseline-id');
+        const elVal = this.container.querySelector('#modal-baseline-val');
+        const elDate = this.container.querySelector('#modal-baseline-date');
+        const elReason = this.container.querySelector('#modal-baseline-reason');
+
+        const id = elId.value;
+        const val = elVal.value;
+        const date = elDate.value;
+        const reason = elReason.value;
+
+        const showError = (el, msg) => {
+          el.style.borderColor = 'var(--danger)';
+          window.showGlobalToast(msg, 'error');
+        };
+
+        if (!id) return showError(elId, 'Please select a baseline metric to update.');
+        if (!val || parseFloat(val) <= 0 || isNaN(parseFloat(val))) return showError(elVal, 'Baseline value must be a positive numeric number.');
+        if (!date) return showError(elDate, 'Effective date is required.');
+        if (!reason.trim()) return showError(elReason, 'Reason for modification is required.');
 
         const result = db.updateBaseline(id, val, date, reason);
         if (result && result.success) {
@@ -255,35 +277,44 @@ export class Module1Baselines {
     if (formAdd) {
       formAdd.onsubmit = (e) => {
         e.preventDefault();
-        const key = this.container.querySelector('#add-baseline-key').value.trim();
-        const name = this.container.querySelector('#add-baseline-name').value.trim();
-        const category = this.container.querySelector('#add-baseline-category').value;
-        const val = this.container.querySelector('#add-baseline-val').value;
-        const unit = this.container.querySelector('#add-baseline-unit').value.trim();
+        const inputs = formAdd.querySelectorAll('.form-input');
+        inputs.forEach(inp => inp.style.borderColor = ''); // reset
 
-        // Validation
-        if (!key || key.includes(' ')) {
-          window.showGlobalToast('Key must be provided and cannot contain spaces.', 'error');
-          return;
-        }
+        const elKey = this.container.querySelector('#add-baseline-key');
+        const elName = this.container.querySelector('#add-baseline-name');
+        const elCat = this.container.querySelector('#add-baseline-category');
+        const elVal = this.container.querySelector('#add-baseline-val');
+        const elUnit = this.container.querySelector('#add-baseline-unit');
+
+        const key = elKey.value.trim();
+        const name = elName.value.trim();
+        const category = elCat.value;
+        const val = elVal.value;
+        const unit = elUnit.value.trim();
+
+        const showError = (el, msg) => {
+          el.style.borderColor = 'var(--danger)';
+          window.showGlobalToast(msg, 'error');
+        };
+
+        if (!key || key.includes(' ')) return showError(elKey, 'Baseline Key must be provided and cannot contain spaces.');
+        if (!name) return showError(elName, 'Standard Name is required.');
+        if (!category) return showError(elCat, 'Category is required.');
+        if (!val || parseFloat(val) <= 0 || isNaN(parseFloat(val))) return showError(elVal, 'Value must be a positive numeric number.');
+        if (!unit) return showError(elUnit, 'Unit is required.');
         
         const existingBaselines = db.getBaselines();
-        if (existingBaselines.some(b => b.key === key)) {
-          window.showGlobalToast('A baseline with this key already exists.', 'error');
-          return;
-        }
-
-        if (parseFloat(val) <= 0 || isNaN(parseFloat(val))) {
-          window.showGlobalToast('Baseline value must be a positive numeric number.', 'error');
-          return;
+        if (existingBaselines.some(b => b.key.toLowerCase() === key.toLowerCase() || b.id.toLowerCase() === key.toLowerCase())) {
+          return showError(elKey, 'A baseline with this key already exists. Keys must be unique.');
         }
 
         db.addBaseline({
-          key,
-          name,
-          category,
+          id: key,
+          key: key,
+          name: name,
+          category: category,
           value: parseFloat(val),
-          unit,
+          unit: unit,
           updatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
           updatedBy: db.getSystem()?.activeUser?.name || 'System'
         });
@@ -295,17 +326,37 @@ export class Module1Baselines {
     }
 
     // --- DELETE LOGIC ---
-    this.container.querySelectorAll('.btn-delete-baseline').forEach(btn => {
-      btn.onclick = () => {
-        if (confirm('Are you sure you want to completely delete this operational baseline? This may affect compliance calculations.')) {
-          const success = db.deleteBaseline(btn.dataset.id);
+    const deleteModal = this.container.querySelector('#baseline-delete-modal');
+    const btnCancelDelete = this.container.querySelector('#btn-cancel-delete');
+    const btnConfirmDelete = this.container.querySelector('#btn-confirm-delete');
+    let baselineIdToDelete = null;
+
+    if (btnCancelDelete) {
+      btnCancelDelete.onclick = () => { 
+        deleteModal.style.display = 'none'; 
+        baselineIdToDelete = null;
+      };
+    }
+
+    if (btnConfirmDelete) {
+      btnConfirmDelete.onclick = () => {
+        if (baselineIdToDelete) {
+          const success = db.deleteBaseline(baselineIdToDelete);
           if (success) {
             window.showGlobalToast('Baseline deleted successfully.', 'success');
-            this.render();
           } else {
             window.showGlobalToast('Failed to delete baseline.', 'error');
           }
         }
+        deleteModal.style.display = 'none';
+        this.render();
+      };
+    }
+
+    this.container.querySelectorAll('.btn-delete-baseline').forEach(btn => {
+      btn.onclick = () => {
+        baselineIdToDelete = btn.dataset.id;
+        deleteModal.style.display = 'flex';
       };
     });
   }
