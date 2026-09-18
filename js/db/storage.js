@@ -715,6 +715,52 @@ class StorageEngine {
     return true;
   }
 
+  // Update inventory details
+updateInventoryItem(id, updates) {
+  const item = this.data.inventory.find(i => i.id === id);
+
+  if (!item) {
+    return false;
+  }
+
+  // Update editable fields only
+  if (updates.name !== undefined) {
+    item.name = updates.name;
+  }
+
+  if (updates.category !== undefined) {
+    item.category = updates.category;
+  }
+
+  if (updates.quantity !== undefined) {
+    const quantity = parseFloat(updates.quantity);
+
+    if (isNaN(quantity) || quantity < 0) {
+      return false;
+    }
+
+    item.quantity = quantity;
+  }
+
+  if (updates.unit !== undefined) {
+    item.unit = updates.unit;
+  }
+
+  if (updates.storageLocation !== undefined) {
+    item.storageLocation = updates.storageLocation;
+  }
+
+  if (updates.expiryDate !== undefined) {
+    item.expiryDate = updates.expiryDate;
+  }
+
+  // Save and refresh inventory
+  this.saveDatabase();
+  this.notify('inventory', this.data.inventory);
+
+  return true;
+}
+
   deleteInventoryItem(id) {
     const idx = this.data.inventory.findIndex(i => i.id === id);
     if (idx === -1) return false;

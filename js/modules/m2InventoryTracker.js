@@ -14,6 +14,12 @@ export class Module2Inventory {
     this.init();
   }
 
+  // Module 2 - Check whether the current user is an Admin
+  isAdmin() {
+    const system = db.getSystem();
+    return system.activeUser?.username === 'admin';
+  }
+
   init() {
     this.render();
     db.subscribe('inventory', () => this.render());
@@ -212,11 +218,13 @@ export class Module2Inventory {
                     <td><strong>${item.expiryDate}</strong></td>
                     <td><small class="text-muted">${item.storageLocation}</small></td>
                     <td><span class="badge ${item.statusClass}">${item.status}</span></td>
-                    <td>
-                      <button class="btn btn-xs btn-outline btn-quick-adjust" data-id="${item.id}" data-name="${item.name}" data-qty="${item.quantity}">
-                        Adjust
-                      </button>
-                    </td>
+<td>
+    <button
+        class="btn btn-xs btn-primary btn-edit-inventory"
+        data-id="${item.id}">
+        Edit
+    </button>
+</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -472,6 +480,171 @@ export class Module2Inventory {
           </form>
         </div>
       </div>
+
+      <!-- Modal 3: Edit Inventory Details -->
+      <div
+        class="modal-backdrop"
+        id="inventory-edit-modal"
+        style="display: none;"
+      >
+        <div class="modal-card">
+
+          <div class="modal-header">
+            <h3 class="modal-title">Edit Inventory Details</h3>
+
+            <button
+              class="modal-close"
+              id="btn-close-inventory-edit">
+              &times;
+            </button>
+          </div>
+
+          <form id="form-edit-inventory">
+
+            <input
+              type="hidden"
+              id="edit-inventory-id"
+            />
+
+            <div class="grid grid-2">
+
+              <div class="form-group">
+                <label class="form-label">Ingredient Name</label>
+
+                <input
+                  type="text"
+                  class="form-input"
+                  id="edit-stock-name"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Category</label>
+
+                <select
+                  class="form-input"
+                  id="edit-stock-category"
+                  required
+                >
+                  <option value="Produce">Produce & Vegetables</option>
+                  <option value="Meat & Poultry">Meat & Poultry</option>
+                  <option value="Seafood">Seafood</option>
+                  <option value="Dairy & Eggs">Dairy & Eggs</option>
+                  <option value="Grains & Dry">Grains & Dry Storage</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div class="grid grid-2">
+
+              <div class="form-group">
+                <label class="form-label">Quantity</label>
+
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  class="form-input"
+                  id="edit-stock-qty"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Unit</label>
+
+                <select
+                  class="form-input"
+                  id="edit-stock-unit"
+                  required
+                >
+                  <option value="kg">kg (Kilograms)</option>
+                  <option value="units">units (Pieces/Eggs)</option>
+                  <option value="L">L (Liters)</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div class="grid grid-2">
+
+              <div class="form-group">
+                <label class="form-label">Batch Identifier</label>
+
+                <input
+                  type="text"
+                  class="form-input"
+                  id="edit-stock-batch"
+                  readonly
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Storage Location</label>
+
+                <input
+                  type="text"
+                  class="form-input"
+                  id="edit-stock-location"
+                  required
+                />
+              </div>
+
+            </div>
+
+            <div class="grid grid-2">
+
+              <div class="form-group">
+                <label class="form-label">Delivery Date</label>
+
+                <input
+                  type="date"
+                  class="form-input"
+                  id="edit-stock-delivery"
+                  readonly
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Expiry Date</label>
+
+                <input
+                  type="date"
+                  class="form-input"
+                  id="edit-stock-expiry"
+                  required
+                />
+              </div>
+
+            </div>
+
+            <small class="text-muted">
+              Batch Identifier and Delivery Date cannot be changed because
+              they identify the original received stock batch.
+            </small>
+
+            <div class="modal-footer">
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline"
+                id="btn-cancel-inventory-edit">
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                class="btn btn-sm btn-primary">
+                Save Changes
+              </button>
+
+            </div>
+
+          </form>
+        </div>
+      </div>
     `;
 
     this.attachEventListeners();
@@ -499,6 +672,7 @@ export class Module2Inventory {
         }
       };
     }
+
 
     // Stock Modal Handlers
     const stockModal = this.container.querySelector('#stock-modal');
@@ -650,18 +824,202 @@ export class Module2Inventory {
       };
     }
 
-    // Quick Qty Adjustment
-    this.container.querySelectorAll('.btn-quick-adjust').forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.dataset.id;
-        const name = btn.dataset.name;
-        const currentQty = btn.dataset.qty;
-        const input = prompt(`Enter corrected stock quantity for "${name}":`, currentQty);
-        if (input !== null && !isNaN(parseFloat(input))) {
-          db.updateInventoryQuantity(id, input);
-          window.showGlobalToast?.(`Stock quantity for ${name} updated to ${input}!`, 'success');
+    // Admin-only Inventory Edit
+    const editModal =
+      this.container.querySelector('#inventory-edit-modal');
+
+    const editForm =
+      this.container.querySelector('#form-edit-inventory');
+
+    const closeEditBtn =
+      this.container.querySelector('#btn-close-inventory-edit');
+
+    const cancelEditBtn =
+      this.container.querySelector('#btn-cancel-inventory-edit');
+
+    // Close Edit modal
+    const closeEditModal = () => {
+      if (editModal) {
+        editModal.style.display = 'none';
+      }
+    };
+
+    if (closeEditBtn) {
+      closeEditBtn.onclick = closeEditModal;
+    }
+
+    if (cancelEditBtn) {
+      cancelEditBtn.onclick = closeEditModal;
+    }
+
+    // Open Edit modal
+    this.container
+      .querySelectorAll('.btn-edit-inventory')
+      .forEach(btn => {
+
+        btn.onclick = () => {
+
+          // Check Admin permission
+          if (!this.isAdmin()) {
+            window.showGlobalToast?.(
+              'Admin access is required to edit inventory details.',
+              'error'
+            );
+            return;
+          }
+
+          const id = btn.dataset.id;
+
+          const item = db
+            .get('inventory')
+            .find(record => record.id === id);
+
+          if (!item) {
+            window.showGlobalToast?.(
+              'Inventory record not found.',
+              'error'
+            );
+            return;
+          }
+
+          // Load existing inventory information
+          this.container.querySelector('#edit-inventory-id').value =
+            item.id;
+
+          this.container.querySelector('#edit-stock-name').value =
+            item.name || '';
+
+          this.container.querySelector('#edit-stock-category').value =
+            item.category || 'Produce';
+
+          this.container.querySelector('#edit-stock-qty').value =
+            item.quantity ?? 0;
+
+          this.container.querySelector('#edit-stock-unit').value =
+            item.unit || 'kg';
+
+          // Protected fields
+          this.container.querySelector('#edit-stock-batch').value =
+            item.batchNumber || '';
+
+          this.container.querySelector('#edit-stock-location').value =
+            item.storageLocation || '';
+
+          this.container.querySelector('#edit-stock-delivery').value =
+            item.deliveryDate || '';
+
+          this.container.querySelector('#edit-stock-expiry').value =
+            item.expiryDate || '';
+
+          // Show Edit modal
+          editModal.style.display = 'flex';
+        };
+      });
+
+    // Save edited inventory
+    if (editForm) {
+
+      editForm.onsubmit = (e) => {
+
+        e.preventDefault();
+
+        // Check Admin permission again before saving
+        if (!this.isAdmin()) {
+          window.showGlobalToast?.(
+            'Admin access is required to edit inventory details.',
+            'error'
+          );
+          return;
         }
+
+        const id =
+          this.container.querySelector('#edit-inventory-id').value;
+
+        const deliveryDate =
+          this.container.querySelector('#edit-stock-delivery').value;
+
+        const expiryDate =
+          this.container.querySelector('#edit-stock-expiry').value;
+
+        const quantity =
+          parseFloat(
+            this.container.querySelector('#edit-stock-qty').value
+          );
+
+        // Validate quantity
+        if (!Number.isFinite(quantity) || quantity < 0) {
+          window.showGlobalToast?.(
+            'Quantity must be a valid non-negative number.',
+            'error'
+          );
+          return;
+        }
+
+        // Validate expiry date
+        if (
+          !deliveryDate ||
+          !expiryDate ||
+          new Date(expiryDate) < new Date(deliveryDate)
+        ) {
+          window.showGlobalToast?.(
+            'Expiry date cannot be earlier than delivery date.',
+            'error'
+          );
+          return;
+        }
+
+        const updates = {
+          name: this.container
+            .querySelector('#edit-stock-name')
+            .value
+            .trim(),
+
+          category: this.container
+            .querySelector('#edit-stock-category')
+            .value,
+
+          quantity: quantity,
+
+          unit: this.container
+            .querySelector('#edit-stock-unit')
+            .value,
+
+          storageLocation: this.container
+            .querySelector('#edit-stock-location')
+            .value
+            .trim(),
+
+          expiryDate: expiryDate
+        };
+
+        // Validate required fields
+        if (!updates.name || !updates.storageLocation) {
+          window.showGlobalToast?.(
+            'Ingredient name and storage location are required.',
+            'error'
+          );
+          return;
+        }
+
+        // Save changes
+        const success =
+          db.updateInventoryItem(id, updates);
+
+        if (!success) {
+          window.showGlobalToast?.(
+            'Unable to update inventory item.',
+            'error'
+          );
+          return;
+        }
+
+        closeEditModal();
+
+        window.showGlobalToast?.(
+          `Inventory item "${updates.name}" updated successfully!`,
+          'success'
+        );
       };
-    });
-  }
+    }
+}
 }
