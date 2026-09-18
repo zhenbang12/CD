@@ -203,12 +203,13 @@ export class Module2Inventory {
                           <span class="status-dot ${isExpiring ? 'danger' : 'success'}"></span>
                           ${item.status}
                         </span>
-                      </td>
                       <td class="col-action">
-                        <button class="btn btn-xs btn-outline btn-quick-adjust row-action-hover" data-id="${item.id}" data-name="${item.name}" data-qty="${item.quantity}">
-                          Adjust
-                        </button>
-                      </td>
+                         <button
+                        class="btn btn-xs btn-primary btn-edit-inventory"
+                        data-id="${item.id}">
+                         Edit  
+                         </button>
+                     </td>
                     </tr>
                   `;
                 }).join('')}
