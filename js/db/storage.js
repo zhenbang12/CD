@@ -16,6 +16,8 @@ class StorageEngine {
     this.data = this.loadDatabase();
     this.ensureDataIntegrity();
     this.applyCurrentTheme();
+    this._syncTimer = null;
+    this.initBackendSync();
   }
 
   applyCurrentTheme() {
@@ -34,6 +36,96 @@ class StorageEngine {
       if (document.body) {
         document.body.classList.remove('theme-dark');
         document.body.classList.add('theme-light');
+      }
+    }
+  }
+
+  // Connect with Python Backend API & Real-time SSE Stream
+  async initBackendSync() {
+    try {
+      // 1. Initial Fetch from backend
+      const res = await fetch('/api/db', { cache: 'no-store' });
+      if (res.ok) {
+        const backendData = await res.json();
+        if (backendData && typeof backendData === 'object') {
+          // Merge collections from backend
+          const syncKeys = ['rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory', 'foodWasteLogs', 'plateWasteLogs'];
+          let changed = false;
+          for (const key of syncKeys) {
+            if (Array.isArray(backendData[key]) && backendData[key].length > 0) {
+              this.data[key] = backendData[key];
+              changed = true;
+            }
+          }
+          if (changed) {
+            this.saveDatabase(this.data, false);
+            this.notify('all', this.data);
+            this.notify('rooms', this.data.rooms);
+            this.notify('ecoVouchers', this.data.ecoVouchers);
+            console.log('[Backend Sync] Synchronized initial state with Python backend');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Backend Sync] Backend not reachable, running offline with localStorage:', err.message);
+    }
+
+    // 2. Real-time Server-Sent Events (SSE) Listener
+    if (typeof EventSource !== 'undefined') {
+      try {
+        const sse = new EventSource('/api/events');
+        sse.onmessage = (evt) => {
+          if (!evt.data) return;
+          try {
+            const event = JSON.parse(evt.data);
+            if (event.type === 'room_updated' && event.payload) {
+              const updatedRoom = event.payload;
+              const idx = this.data.rooms.findIndex(r => String(r.roomNumber) === String(updatedRoom.roomNumber));
+              if (idx !== -1) {
+                this.data.rooms[idx] = { ...this.data.rooms[idx], ...updatedRoom };
+              } else {
+                this.data.rooms.push(updatedRoom);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('rooms', this.data.rooms);
+              console.log('[SSE] Live room update received:', updatedRoom.roomNumber, updatedRoom.cleaningStatus);
+            } else if (event.type === 'voucher_claimed' && event.payload) {
+              if (event.payload.voucher) {
+                this.data.ecoVouchers = this.data.ecoVouchers || [];
+                this.data.ecoVouchers.unshift(event.payload.voucher);
+              }
+              if (event.payload.room) {
+                const idx = this.data.rooms.findIndex(r => String(r.roomNumber) === String(event.payload.room.roomNumber));
+                if (idx !== -1) this.data.rooms[idx] = { ...this.data.rooms[idx], ...event.payload.room };
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('ecoVouchers', this.data.ecoVouchers);
+              this.notify('rooms', this.data.rooms);
+            } else if (event.type === 'voucher_redeemed' && event.payload) {
+              const v = (this.data.ecoVouchers || []).find(x => x.code === event.payload.code);
+              if (v) v.isRedeemed = true;
+              this.saveDatabase(this.data, false);
+              this.notify('ecoVouchers', this.data.ecoVouchers);
+            } else if (event.type === 'defect_created' && event.payload) {
+              this.data.repairTickets = this.data.repairTickets || [];
+              this.data.repairTickets.unshift(event.payload);
+              this.saveDatabase(this.data, false);
+              this.notify('repairTickets', this.data.repairTickets);
+            } else if (event.type === 'meter_updated' && event.payload) {
+              const m = (this.data.utilityMeters || []).find(x => x.meterId === event.payload.meterId);
+              if (m) Object.assign(m, event.payload);
+              this.saveDatabase(this.data, false);
+              this.notify('utilityMeters', this.data.utilityMeters);
+            }
+          } catch (e) {
+            // Ignore non-json heartbeats
+          }
+        };
+        sse.onerror = () => {
+          // Browser will automatically reconnect
+        };
+      } catch (e) {
+        console.warn('[SSE] EventSource init failed:', e);
       }
     }
   }
@@ -132,21 +224,15 @@ class StorageEngine {
         if (!existing) return JSON.parse(JSON.stringify(seedMeter));
         return {
           ...seedMeter,
-          baselineDaily: existing.baselineDaily,
-          lastReading: existing.lastReading,
-          lastReadingTime: existing.lastReadingTime,
-          status: existing.status
+          lastReading: existing.lastReading !== undefined ? existing.lastReading : seedMeter.lastReading,
+          lastReadingTime: existing.lastReadingTime || seedMeter.lastReadingTime,
+          status: existing.status || seedMeter.status,
+          baselineDaily: existing.baselineDaily !== undefined ? existing.baselineDaily : seedMeter.baselineDaily
         };
       });
     }
 
     if (INITIAL_DATA.baselines) {
-      // Match by the stable "key" (e.g. "floor1_water"), NOT "id" (BL-01...).
-      // "id" is just positional ordering and is expected to shift whenever a
-      // baseline is reordered, renamed, added, or removed in the seed — e.g.
-      // when the Operational Resource Baselines list is re-sequenced to match
-      // the Log Zone Meter Reading order. If reconciliation matched by "id"
-      // instead, a value cached under an old "id" could resurface attached to
       // a completely different zone/resource after the seed changes, which
       // silently produces a baseline value that no longer matches its meter's
       // baselineDaily (i.e. Operational Baselines drifting out of sync with
@@ -201,10 +287,29 @@ class StorageEngine {
   }
 
   // Persist current state
-  saveDatabase(dataToSave = this.data) {
+  saveDatabase(dataToSave = this.data, syncToBackend = true) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
       this.lastDatabaseError = null;
+
+      if (syncToBackend) {
+        if (this._syncTimer) clearTimeout(this._syncTimer);
+        this._syncTimer = setTimeout(() => {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rooms: this.data.rooms,
+              ecoVouchers: this.data.ecoVouchers,
+              repairTickets: this.data.repairTickets,
+              utilityMeters: this.data.utilityMeters,
+              inventory: this.data.inventory,
+              foodWasteLogs: this.data.foodWasteLogs,
+              plateWasteLogs: this.data.plateWasteLogs
+            })
+          }).catch(() => {});
+        }, 300);
+      }
       return true;
     } catch (e) {
       console.error('LocalStorage save error', e);
