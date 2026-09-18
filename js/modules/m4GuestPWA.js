@@ -142,6 +142,10 @@ export class Module4GuestPWA {
       });
       this.unsubs = [];
     }
+    const nav = document.querySelector('.main-navbar');
+    if (nav) {
+      nav.style.display = '';
+    }
   }
 
   tickCountdown() {
@@ -176,7 +180,7 @@ export class Module4GuestPWA {
     // Toggle staff navigation bar visibility based on mode
     const nav = document.querySelector('.main-navbar');
     if (nav) {
-      nav.style.display = this.isGuestMode ? 'none' : 'block';
+      nav.style.display = this.isGuestMode ? 'none' : '';
     }
 
     if (this.isGuestMode) {
@@ -238,6 +242,17 @@ export class Module4GuestPWA {
     this.container.innerHTML = `
       <div class="module-view m4-guest-terminal fade-in" style="max-width: 680px; margin: 0 auto; padding: 12px 14px 40px 14px;">
         
+        <!-- Return Navigation Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm);">
+          <button id="btn-top-back-to-staff" class="btn btn-sm btn-outline" style="font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <span>←</span> Return to Housekeeping Operations
+          </button>
+          <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+            <span>In-Room Terminal Preview</span>
+            <span class="badge badge-success" style="font-weight: 700;">Room ${room.roomNumber}</span>
+          </div>
+        </div>
+
         <!-- Guest Terminal Header Strip -->
         <div class="guest-terminal-header card" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; padding: 16px; border-radius: 14px; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px;">
@@ -651,14 +666,19 @@ export class Module4GuestPWA {
   }
 
   attachGuestTerminalListeners(room, rooms) {
-    // Switch to staff view
+    // Exit terminal / return to staff view
+    const exitToStaff = () => {
+      this.isGuestMode = false;
+      const nav = document.querySelector('.main-navbar');
+      if (nav) nav.style.display = '';
+      this.render();
+    };
+
+    const backTopBtn = this.container.querySelector('#btn-top-back-to-staff');
+    if (backTopBtn) backTopBtn.onclick = exitToStaff;
+
     const switchStaffBtn = this.container.querySelector('#btn-switch-to-staff');
-    if (switchStaffBtn) {
-      switchStaffBtn.onclick = () => {
-        this.isGuestMode = false;
-        this.render();
-      };
-    }
+    if (switchStaffBtn) switchStaffBtn.onclick = exitToStaff;
 
     // Room switcher
     const selectRoom = this.container.querySelector('#guest-select-active-room');

@@ -43,6 +43,10 @@ class App {
     // Listen to browser Back/Forward navigation and hash changes
     window.addEventListener('hashchange', () => {
       const newHash = window.location.hash.replace('#/', '').trim();
+      const nav = document.querySelector('.main-navbar');
+      if (nav) {
+        nav.style.display = '';
+      }
       if (newHash && newHash !== this.activeTab) {
         this.switchTab(newHash, false);
       }
@@ -325,6 +329,10 @@ class App {
     if (updateHash) {
       window.location.hash = `#/${tabId}`;
     }
+    const nav = document.querySelector('.main-navbar');
+    if (nav) {
+      nav.style.display = '';
+    }
     document.querySelectorAll('.nav-tab').forEach(t => {
       const isM1Tab = tabId.startsWith('m1') && t.dataset.tab === 'm1-dashboard';
       t.classList.toggle('active', t.dataset.tab === tabId || isM1Tab);
@@ -338,6 +346,11 @@ class App {
 
     if (this.currentModule && typeof this.currentModule.destroy === 'function') {
       this.currentModule.destroy();
+    }
+
+    const nav = document.querySelector('.main-navbar');
+    if (nav && this.activeTab !== 'm4') {
+      nav.style.display = '';
     }
 
     if (this.activeTab === 'm1' || this.activeTab === 'm1-dashboard') {

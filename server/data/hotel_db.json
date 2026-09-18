@@ -1379,8 +1379,8 @@
       "id": "TECH-01",
       "name": "Faizal Rahim",
       "specialty": "Plumbing & Hydraulics",
-      "status": "Available",
-      "activeTickets": 0,
+      "status": "Busy (Kitchen)",
+      "activeTickets": 3,
       "phone": "+60 12-441 9021"
     },
     {
@@ -1413,6 +1413,38 @@
     "count": 0
   },
   "repairTickets": [
+    {
+      "id": "TCK-9136",
+      "ticketNumber": "TK-2026-09-19-002",
+      "zone": "Kitchen",
+      "defectCategory": "Shower Valve Pressure Leak",
+      "description": "Reported by ground team.",
+      "severity": "Normal",
+      "estimatedLossRate": "120 Liters / day",
+      "resourceType": "Water",
+      "priority": "High",
+      "assignedTechnician": "Faizal Rahim",
+      "status": "In Progress",
+      "createdAt": "2026-08-13 08:30",
+      "photoAttached": false,
+      "notes": "Technician arrived on site with repair tools."
+    },
+    {
+      "id": "TCK-8959",
+      "ticketNumber": "TK-2026-09-19-001",
+      "zone": "Room 201",
+      "defectCategory": "Bathroom Toilet Flapper Leak",
+      "description": "Reported by ground team.",
+      "severity": "High",
+      "estimatedLossRate": "280 Liters / day",
+      "resourceType": "Water",
+      "priority": "High",
+      "assignedTechnician": "Faizal Rahim",
+      "status": "In Progress",
+      "createdAt": "2026-08-13 08:30",
+      "photoAttached": false,
+      "notes": "Technician arrived on site with repair tools."
+    },
     {
       "id": "TCK-8801",
       "ticketNumber": "TK-2026-0812-01",
