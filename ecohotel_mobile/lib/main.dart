@@ -3806,9 +3806,6 @@ class FacilitiesScreen extends StatelessWidget {
                     inputFormatters: [LengthLimitingTextInputFormatter(40)],
                     decoration: const InputDecoration(
                       labelText: 'Affected Room / Zone',
-                      helperText:
-                          'Room 101–110/201–210/301–310, or a named facility zone (e.g. "Central Chiller Plant")',
-                      helperMaxLines: 2,
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {

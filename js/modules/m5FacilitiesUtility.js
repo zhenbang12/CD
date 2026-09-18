@@ -627,7 +627,7 @@ export class Module5Facilities {
       defectZoneField.onblur = () => {
         const value = defectZoneField.value.trim();
         if (value && !isValidRoomOrZone(value)) {
-          defectZoneError.textContent = 'Must be Room 101-110/201-210/301-310, or a valid facility zone (e.g. "Central Chiller Plant"). No special characters allowed.';
+          defectZoneError.textContent = 'Must be Room 101-110/201-210/301-310, or a valid facility zone (e.g. Central Chiller Plant). No special characters allowed.';
           defectZoneError.style.display = 'block';
         } else {
           defectZoneError.style.display = 'none';
