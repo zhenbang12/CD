@@ -6,16 +6,16 @@ if (!localStorage.getItem('eco_session')) {
  * Sustainable Hospitality Operating System.
  */
 
-import { db } from './db/storage.js?v=3.0';
-import { Module1Dashboard } from './modules/m1Dashboard.js?v=3.0';
-import { Module1Department } from './modules/m1Department.js?v=3.0';
-import { Module1Baselines } from './modules/m1Baselines.js?v=3.0';
-import { Module1Audit } from './modules/m1Audit.js?v=3.0';
-import { Module2Inventory } from './modules/m2InventoryTracker.js?v=3.0';
-import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=3.0';
-import { Module4GuestPWA } from './modules/m4GuestPWA.js?v=3.0';
-import { Module5Facilities } from './modules/m5FacilitiesUtility.js?v=3.0';
-import { DbSchemaView } from './modules/dbSchemaView.js?v=3.0';
+import { db } from './db/storage.js';
+import { Module1Dashboard } from './modules/m1Dashboard.js';
+import { Module1Department } from './modules/m1Department.js';
+import { Module1Baselines } from './modules/m1Baselines.js';
+import { Module1Audit } from './modules/m1Audit.js';
+import { Module2Inventory } from './modules/m2InventoryTracker.js';
+import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=2.2';
+import { Module4GuestPWA } from './modules/m4GuestPWA.js';
+import { Module5Facilities } from './modules/m5FacilitiesUtility.js';
+import { DbSchemaView } from './modules/dbSchemaView.js';
 
 class App {
   constructor() {
@@ -290,34 +290,28 @@ class App {
     const mountPoint = document.getElementById('module-mount-point');
     if (!mountPoint) return;
 
-    // Clean up previous module instance to unbind stale event subscriptions
-    if (this.currentModuleInstance && typeof this.currentModuleInstance.destroy === 'function') {
-      try {
-        this.currentModuleInstance.destroy();
-      } catch (err) {
-        console.warn('Error destroying module instance:', err);
-      }
-      this.currentModuleInstance = null;
+    if (this.currentModule && typeof this.currentModule.destroy === 'function') {
+      this.currentModule.destroy();
     }
 
     if (this.activeTab === 'm1' || this.activeTab === 'm1-dashboard') {
-      this.currentModuleInstance = new Module1Dashboard(mountPoint);
+      this.currentModule = new Module1Dashboard(mountPoint);
     } else if (this.activeTab === 'm1-department') {
-      this.currentModuleInstance = new Module1Department(mountPoint);
+      this.currentModule = new Module1Department(mountPoint);
     } else if (this.activeTab === 'm1-baselines') {
-      this.currentModuleInstance = new Module1Baselines(mountPoint);
+      this.currentModule = new Module1Baselines(mountPoint);
     } else if (this.activeTab === 'm1-audit') {
-      this.currentModuleInstance = new Module1Audit(mountPoint);
+      this.currentModule = new Module1Audit(mountPoint);
     } else if (this.activeTab === 'm2') {
-      this.currentModuleInstance = new Module2Inventory(mountPoint);
+      this.currentModule = new Module2Inventory(mountPoint);
     } else if (this.activeTab === 'm3') {
-      this.currentModuleInstance = new Module3BatchOptimizer(mountPoint);
+      this.currentModule = new Module3BatchOptimizer(mountPoint);
     } else if (this.activeTab === 'm4') {
-      this.currentModuleInstance = new Module4GuestPWA(mountPoint);
+      this.currentModule = new Module4GuestPWA(mountPoint);
     } else if (this.activeTab === 'm5') {
-      this.currentModuleInstance = new Module5Facilities(mountPoint);
+      this.currentModule = new Module5Facilities(mountPoint);
     } else if (this.activeTab === 'db') {
-      this.currentModuleInstance = new DbSchemaView(mountPoint);
+      this.currentModule = new DbSchemaView(mountPoint);
     }
   }
 
