@@ -183,12 +183,16 @@ class _MainStaffShellState extends State<MainStaffShell> {
               isGuest
                   ? '🌿 Guest Eco-Concierge'
                   : staffTitles[_staffTabIndex],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
             ),
             Text(
               isGuest
                   ? 'Room ${activeRoom.roomNumber} • ${activeRoom.guestName}'
                   : 'Grand Bay Eco-Resort • ${_authenticatedStaff!.name} (${_authenticatedStaff!.role})',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w400),
             ),
           ],
@@ -1070,12 +1074,13 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
                                 color: Color(0xFF334155),
                               ),
                             ),
-                            Flexible(
-                              child: InkWell(
-                                onTap: _showForgotPasswordDialog,
-                                child: const Text(
+                            InkWell(
+                              onTap: _showForgotPasswordDialog,
+                              borderRadius: BorderRadius.circular(4),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                child: Text(
                                   'Forgot Password?',
-                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -1217,7 +1222,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     ButtonSegment(
                       value: 0,
                       label: Text(
-                        '🍳 Smart Prep (M3)',
+                        '🍳 Smart Prep',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1227,7 +1232,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     ButtonSegment(
                       value: 1,
                       label: Text(
-                        '📦 Stock (M2)',
+                        '📦 Stock',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -2149,7 +2154,7 @@ Row(
           horizontal: 9,
           vertical: 5,
         ),
-        minimumSize: Size.zero,
+        minimumSize: const Size(48, 28),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     ),
@@ -2524,7 +2529,7 @@ void _showEditInventorySheet(
                               CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Edit Inventory (M2)',
+                              'Edit Inventory',
                               style: TextStyle(
                                 fontWeight:
                                     FontWeight.w800,
@@ -3557,7 +3562,7 @@ void _showEditInventorySheet(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Log Incoming Stock (M2)',
+                                'Log Incoming Stock',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 18,
@@ -4025,7 +4030,7 @@ void _showEditInventorySheet(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Record Food Waste (M2)',
+                                'Record Food Waste',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 18,
@@ -5066,8 +5071,8 @@ class FacilitiesScreen extends StatelessWidget {
               TextButton(
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFE11D48),
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  minimumSize: const Size(48, 28),
                 ),
                 onPressed: () async {
                   final confirmed = await showDialog<bool>(
@@ -5517,7 +5522,7 @@ class FacilitiesScreen extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 40),
+                            minimumSize: const Size(48, 40),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           onPressed: () => Navigator.pop(ctx),
@@ -5530,7 +5535,7 @@ class FacilitiesScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 40),
+                            minimumSize: const Size(48, 40),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                       onPressed: () {
@@ -5773,7 +5778,7 @@ class FacilitiesScreen extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 40),
+                            minimumSize: const Size(48, 40),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           onPressed: () => Navigator.pop(ctx),
@@ -5787,7 +5792,7 @@ class FacilitiesScreen extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFE11D48),
                             foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 40),
+                            minimumSize: const Size(48, 40),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
                           onPressed: () {
@@ -6709,14 +6714,19 @@ class ExecutiveScreen extends StatelessWidget {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'RESOURCE CONSUMPTION ANALYTICS',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF71717A),
+          const Expanded(
+            child: Text(
+              'RESOURCE CONSUMPTION ANALYTICS',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF71717A),
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -6726,7 +6736,7 @@ class ExecutiveScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              hasAbnormal ? 'Abnormal Consumption Detected' : 'Within Baseline',
+              hasAbnormal ? 'Abnormal Consumption' : 'Within Baseline',
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
@@ -6774,34 +6784,40 @@ class ExecutiveScreen extends StatelessWidget {
     if (data['hasData'] != true) {
       return Card(
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Consumption data unavailable.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFFE11D48),
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 6),
+                const Text(
+                  'Consumption data unavailable.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE11D48),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Text(
-                'No ${label.toLowerCase()} meter readings are currently available for this property.',
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  color: Color(0xFF71717A),
+                Text(
+                  'No ${label.toLowerCase()} meter readings are currently available for this property.',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: Color(0xFF71717A),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -6830,88 +6846,99 @@ class ExecutiveScreen extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${currentTotal.toStringAsFixed(0)} $unit',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: isAbnormal ? statusColor : const Color(0xFF18181B),
-              ),
-            ),
-            const Text(
-              'current',
-              style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Baseline: ${baselineTotal.toStringAsFixed(0)} $unit ($meterCount sub-meter${meterCount == 1 ? '' : 's'})',
-              style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: barFraction,
-                minHeight: 6,
-                backgroundColor: const Color(0xFFF0F0F0),
-                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Variance: $varianceSign${variancePct.toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: isAbnormal ? statusColor : const Color(0xFF71717A),
-              ),
-            ),
-            if (hasZoneWarning) ...[
-              const Divider(height: 14),
-              const Text(
-                '⚠ Abnormal consumption detected.',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFE11D48),
-                ),
-              ),
-              if (anomalyZones.isNotEmpty)
-                ...anomalyZones.map(
-                  (z) => Padding(
-                    padding: const EdgeInsets.only(top: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
                     child: Text(
-                      '${z.zone} — ${z.lastReading.toStringAsFixed(0)}/${z.baselineDaily.toStringAsFixed(0)} ${z.unit}',
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        color: Color(0xFF71717A),
-                      ),
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                   ),
-                )
-              else
-                const Text(
-                  'Aggregate usage exceeds the +15% baseline threshold.',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${currentTotal.toStringAsFixed(0)} $unit',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isAbnormal ? statusColor : const Color(0xFF18181B),
                 ),
+              ),
+              const Text(
+                'current',
+                style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Baseline: ${baselineTotal.toStringAsFixed(0)} $unit ($meterCount sub-meter${meterCount == 1 ? '' : 's'})',
+                style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+              ),
+              const SizedBox(height: 5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: barFraction,
+                  minHeight: 6,
+                  backgroundColor: const Color(0xFFF0F0F0),
+                  valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Variance: $varianceSign${variancePct.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: isAbnormal ? statusColor : const Color(0xFF71717A),
+                ),
+              ),
+              if (hasZoneWarning) ...[
+                const Divider(height: 12),
+                const Text(
+                  '⚠ Abnormal consumption detected.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFE11D48),
+                  ),
+                ),
+                if (anomalyZones.isNotEmpty)
+                  ...anomalyZones.map(
+                    (z) => Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '${z.zone} — ${z.lastReading.toStringAsFixed(0)}/${z.baselineDaily.toStringAsFixed(0)} ${z.unit}',
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          color: Color(0xFF71717A),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const Text(
+                    'Aggregate usage exceeds the +15% baseline threshold.',
+                    style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

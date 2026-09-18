@@ -391,7 +391,7 @@ export class Module3BatchOptimizer {
                     <th>Raw Ingredient Name</th>
                     <th>Supplier</th>
                     <th class="col-number">Required</th>
-                    <th class="col-number">In Stock (M2)</th>
+                    <th class="col-number">In Stock</th>
                     <th class="col-number">Unit Cost</th>
                     <th class="col-action" style="width: 140px;">Status</th>
                   </tr>
