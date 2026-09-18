@@ -5,6 +5,7 @@ export class Module1Dashboard {
   constructor(container) {
     this.container = container;
     this.chartMetric = 'food';
+    this.reportYear = '2026';
     this.reportPeriod = 'all';
     this.unsubs = [];
     this.isDestroyed = false;
@@ -16,7 +17,7 @@ export class Module1Dashboard {
     this.unsubs.push(
       db.subscribe('system', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('baselines', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('userAudit', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('repairTickets', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('plateWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('foodWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
@@ -51,12 +52,21 @@ export class Module1Dashboard {
     }
 
     let filteredHistory = complianceHistory;
-    if (this.reportPeriod === 'q1') {
-      filteredHistory = complianceHistory.filter(c => c.month.includes('Mar') || c.month.includes('Apr'));
-    } else if (this.reportPeriod === 'q2') {
-      filteredHistory = complianceHistory.filter(c => c.month.includes('May') || c.month.includes('Jun') || c.month.includes('Jul'));
-    } else if (this.reportPeriod === 'mtd') {
-      filteredHistory = complianceHistory.filter(c => c.month.includes('Aug') || c.month.includes('MTD'));
+
+  if (this.reportYear && this.reportYear !== 'all-years') {
+    filteredHistory = filteredHistory.filter(c => c.month.includes(this.reportYear));
+  }
+  
+  if (this.reportPeriod === 'q1') {
+    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Jan') || c.month.startsWith('Feb') || c.month.startsWith('Mar'));
+  } else if (this.reportPeriod === 'q2') {
+    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Apr') || c.month.startsWith('May') || c.month.startsWith('Jun'));
+  } else if (this.reportPeriod === 'q3') {
+    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Jul') || c.month.startsWith('Aug') || c.month.startsWith('Sep'));
+  } else if (this.reportPeriod === 'q4') {
+    filteredHistory = filteredHistory.filter(c => c.month.startsWith('Oct') || c.month.startsWith('Nov') || c.month.startsWith('Dec'));
+  } else if (this.reportPeriod === 'mtd') {
+      filteredHistory = filteredHistory.filter(c => c.month.includes('(MTD)'));
     }
 
     const subNavTpl = `
@@ -78,9 +88,15 @@ export class Module1Dashboard {
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
-        <div class="view-header">
+        <div class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h1 class="view-title">Executive Analytics</h1>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-primary" id="btn-export-global-pdf">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Executive Report
+            </button>
           </div>
         </div>
 
@@ -196,60 +212,62 @@ export class Module1Dashboard {
   }
 
   renderSVGChart(history, metricKey) {
-    let dataPoints = [];
-    let color = '#059669';
+  if (!history || history.length === 0) return `<div style="height: 250px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic;">No chart telemetry available for this period.</div>`;
+  let dataPoints = [];
+let color = '#10b981';
 
-    if (metricKey === 'food') {
-      dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.foodSavedKg }));
-      color = '#059669';
-    } else if (metricKey === 'water') {
-      dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.waterConservedL / 1000 }));
-      color = '#0284c7';
-    } else if (metricKey === 'energy') {
-      dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.energySavedKwh }));
-      color = '#71717a';
-    } else if (metricKey === 'score') {
-      dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.vmScore }));
-      color = '#059669';
-    }
+if (metricKey === 'food') {
+  dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.foodSavedKg }));
+  color = '#f97316';
+} else if (metricKey === 'water') {
+  dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.waterConservedL / 1000 }));
+  color = '#38bdf8';
+} else if (metricKey === 'energy') {
+  dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.energySavedKwh }));
+  color = '#c084fc';
+} else if (metricKey === 'score') {
+  dataPoints = history.map(h => ({ x: h.month.split(' ')[0], y: h.vmScore }));
+  color = '#10b981';
+}
 
-    const maxY = Math.max(...dataPoints.map(d => d.y)) * 1.15 || 100;
-    const minY = 0;
-    const width = 580;
-    const height = 180;
-    const padding = 35;
+const maxY = Math.max(...dataPoints.map(d => d.y)) * 1.15 || 100;
+const minY = 0;
+const width = 1000;
+const height = 350;
+const padding = 45;
 
-    const points = dataPoints.map((d, i) => {
-      const x = padding + (i * ((width - padding * 2) / (dataPoints.length - 1)));
-      const y = height - padding - ((d.y - minY) / (maxY - minY)) * (height - padding * 2);
-      return { x, y, val: d.y, label: d.x };
-    });
+const points = dataPoints.map((d, i) => {
+  const divisor = dataPoints.length > 1 ? (dataPoints.length - 1) : 1;
+  const x = padding + (i * ((width - padding * 2) / divisor));
+  const y = height - padding - ((d.y - minY) / (maxY - minY)) * (height - padding * 2);
+  return { x, y, val: d.y, label: d.x };
+});
 
-    const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
-    const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
-    return `
-      <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
-        <defs>
-          <linearGradient id="chartGrad-${metricKey}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="${color}" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="${color}" stop-opacity="0.0" />
-          </linearGradient>
-        </defs>
-        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(128,128,128,0.15)" stroke-width="1" />
-        <line x1="${padding}" y1="${(height - padding) / 2}" x2="${width - padding}" y2="${(height - padding) / 2}" stroke="rgba(128,128,128,0.1)" stroke-dasharray="4" />
-        <path d="${areaD}" fill="url(#chartGrad-${metricKey})" />
-        <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" />
-        ${points.map(p => `
-          <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <text x="${p.x}" y="${p.y - 8}" fill="${color}" font-size="10" font-weight="600" text-anchor="middle" font-family="sans-serif">${p.val.toLocaleString()}</text>
-          <text x="${p.x}" y="${height - 12}" fill="#71717a" font-size="11" text-anchor="middle" font-family="sans-serif">${p.label}</text>
-        `).join('')}
-      </svg>
-    `;
-  }
+return `
+  <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
+    <defs>
+      <linearGradient id="chartGrad-${metricKey}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.2" />
+        <stop offset="100%" stop-color="${color}" stop-opacity="0.0" />
+      </linearGradient>
+    </defs>
+    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(128,128,128,0.15)" stroke-width="1" />
+    <line x1="${padding}" y1="${(height - padding) / 2}" x2="${width - padding}" y2="${(height - padding) / 2}" stroke="rgba(128,128,128,0.1)" stroke-dasharray="4" />
+    <path d="${areaD}" fill="url(#chartGrad-${metricKey})" />
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round" />
+    ${points.map(p => `
+      <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+      <text x="${p.x}" y="${p.y - 8}" fill="${color}" font-size="10" font-weight="600" text-anchor="middle" font-family="sans-serif">${p.val.toLocaleString()}</text>
+      <text x="${p.x}" y="${height - 12}" fill="#71717a" font-size="11" text-anchor="middle" font-family="sans-serif">${p.label}</text>
+    `).join('')}
+  </svg>
+`;
+}
 
-  attachEventListeners() {
+attachEventListeners() {
     this.container.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
       btn.onclick = () => {
         const target = btn.dataset.target;
@@ -270,10 +288,132 @@ export class Module1Dashboard {
     });
 
     this.container.querySelectorAll('.tab-btn[data-period]').forEach(btn => {
-      btn.onclick = () => {
-        this.reportPeriod = btn.dataset.period;
-        this.render();
-      };
+  btn.onclick = () => {
+    this.reportPeriod = btn.dataset.period;
+    this.render();
+  };
+});
+
+const yearSelect = this.container.querySelector('#filter-year');
+if (yearSelect) {
+  yearSelect.onchange = (e) => {
+    this.reportYear = e.target.value;
+    this.render();
+  };
+}
+
+const exportBtn = this.container.querySelector('#btn-export-global-pdf');
+if (exportBtn) {
+  exportBtn.onclick = () => this.exportComplianceReportPDF();
+}
+}
+
+  exportComplianceReportPDF() {
+    const compliance = ComplianceEngine.calculateLiveScore();
+    
+    if (!compliance.dataComplete) {
+      window.showGlobalToast('PDF export failed. Data incomplete.', 'error');
+      return;
+    }
+
+    db.recordAuditLog({
+      action: 'GENERATE_EXECUTIVE_REPORT',
+      targetKey: 'Global VM2026 Metrics',
+      previousValue: 'N/A',
+      newValue: 'PDF Exported',
+      reason: 'User generated the Executive Sustainability Compliance Report'
     });
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      window.showGlobalToast('PDF export failed. Please check popup blockers.', 'error');
+      return;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sustainability Compliance Report</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #18181b; background: #ffffff; }
+          .header { border-bottom: 2px solid #059669; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .title { font-size: 20px; font-weight: 800; color: #18181b; margin: 0; }
+          .subtitle { color: #71717a; margin-top: 5px; font-size: 12px; }
+          .seal { border: 1.5px solid #059669; color: #059669; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; text-align: center; }
+          .score-box { background: #f9fafb; border: 1px solid #e4e4e7; border-radius: 8px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+          .score-num { font-size: 44px; font-weight: 800; color: #059669; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e4e4e7; font-size: 12px; }
+          th { background: #f4f4f5; font-size: 10px; text-transform: uppercase; color: #71717a; }
+          .footer { margin-top: 40px; font-size: 11px; color: #71717a; border-top: 1px solid #e4e4e7; padding-top: 15px; display: flex; justify-content: space-between; }
+          @media print { .no-print { display: none !important; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+          <button onclick="window.print()" style="background: var(--primary, #059669); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Save as PDF
+          </button>
+        </div>
+        <div class="header">
+          <div>
+            <div class="title">SUSTAINABILITY COMPLIANCE AUDIT REPORT</div>
+            <div class="subtitle">Property: Grand Bay Eco-Resort & Spa &bull; Date: ${new Date().toLocaleDateString()}</div>
+          </div>
+          <div class="seal">
+            Report Data<br/>${compliance.label}
+          </div>
+        </div>
+        <div class="score-box">
+          <div>
+            <h3 style="margin: 0 0 4px 0; font-size: 16px;">Overall Environmental Conformance Grade</h3>
+            <p style="margin: 0; color: #18181b; font-weight: 600;">${compliance.grade}</p>
+            <p style="margin: 4px 0 0 0; color: #71717a; font-size: 11px;">GHG Avoided: ${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} metric tons CO2e &bull; Net Operational Cost Savings: RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()}</p>
+          </div>
+          <div class="score-num">${compliance.score} / 100</div>
+        </div>
+        <h3>Cumulative Month-to-Date Resource Savings</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Metric</th>
+              <th>Month-to-Date Conserved</th>
+              <th>Status vs Baseline Target</th>
+              <th>CO2e Offset</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>F&B Spoilage & Prep Waste Prevented</td>
+              <td>${compliance.metrics.foodWasteSavedMTD} kg</td>
+              <td>+18.4% (Optimized Batching)</td>
+              <td>${(compliance.metrics.foodWasteSavedMTD * 2.5).toFixed(0)} kg CO2e</td>
+            </tr>
+            <tr>
+              <td>Water Recovered & Conserved</td>
+              <td>${(compliance.metrics.waterSavedMTD / 1000).toFixed(1)} kL</td>
+              <td>+12.1% (Aerator Flow Calibration)</td>
+              <td>${(compliance.metrics.waterSavedMTD / 1000 * 0.3).toFixed(1)} kg CO2e</td>
+            </tr>
+            <tr>
+              <td>Energy Optimization Yield</td>
+              <td>${compliance.metrics.energySavedMTD.toLocaleString()} kWh</td>
+              <td>+8.5% (Smart HVAC Throttling)</td>
+              <td>${(compliance.metrics.energySavedMTD * 0.4).toFixed(0)} kg CO2e</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <div>Generated by EcoHotel OS Validation Engine &bull; User ID: ADMIN_EXEC_01</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    
+
   }
 }

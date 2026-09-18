@@ -1,6 +1,6 @@
 /**
  * Facilities Utility Audit & Maintenance Log
- * Features: Hotel Zone map, sub-meter logging, automated 15% anomaly flagger,
+ * Features: Hotel Zone map, sub-meter logging, automated above-baseline anomaly flagger,
  * housekeeping defect reporting, resource loss volume estimation, technician dispatch & ticket lifecycle status updates.
  */
 
@@ -287,7 +287,6 @@ export class Module5Facilities {
             <div class="form-group">
               <label class="form-label">Current Meter Reading Value</label>
               <input type="number" step="0.1" min="0.1" class="form-input" id="meter-input-val" placeholder="Enter physical readout..." required />
-              <small class="form-help">If reading is &ge;15% above baseline, the zone will be flagged as an Anomaly on the telemetry board. It will NOT auto-create a repair ticket — file a "Report Facility Defect" if a work order is needed.</small>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-meter">Cancel</button>
@@ -308,7 +307,7 @@ export class Module5Facilities {
             <div class="grid grid-2">
               <div class="form-group">
                 <label class="form-label">Affected Room / Zone</label>
-                <input type="text" class="form-input" id="defect-zone" placeholder="e.g., Room 304 (Floor 3)" required />
+                <input type="text" class="form-input" id="defect-zone" placeholder='e.g. Room 101' maxlength="40" required />
               </div>
               <div class="form-group">
                 <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -322,7 +321,8 @@ export class Module5Facilities {
                   <div class="grid grid-2">
                     <div class="form-group" style="margin-bottom:8px;">
                       <label class="form-label">New Category</label>
-                      <input type="text" class="form-input" id="new-category-name" placeholder="e.g., Pool Pump Seal Leak" />
+                      <input type="text" class="form-input" id="new-category-name" placeholder="e.g. Pool Pump Seal Leak" maxlength="60" />
+                      <small class="form-help" id="new-category-name-error" style="display:none; color: var(--danger);"></small>
                     </div>
                     <div class="form-group" style="margin-bottom:8px;">
                       <label class="form-label">Resource Type</label>
@@ -334,12 +334,24 @@ export class Module5Facilities {
                   </div>
                   <div class="form-group" style="margin-bottom:8px;">
                     <label class="form-label">Estimated Loss Hint (optional)</label>
-                    <input type="text" class="form-input" id="new-category-hint" placeholder="e.g., ~60 L/day" />
+                    <input type="text" class="form-input" id="new-category-hint" placeholder="e.g. ~60 L/day" maxlength="20" />
+                    <small class="form-help" id="new-category-hint-error" style="display:none; color: var(--danger);"></small>
                   </div>
                   <div style="display:flex; gap:8px; justify-content:flex-end;">
                     <button type="button" class="btn btn-xs btn-outline" id="btn-cancel-add-category">Cancel</button>
                     <button type="button" class="btn btn-xs btn-primary" id="btn-save-new-category">Save Category</button>
                   </div>
+                  ${defectCategories.some(c => c.custom) ? `
+                  <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border-subtle);">
+                    <div class="form-label" style="margin-bottom:6px;">Your Custom Categories</div>
+                    ${defectCategories.filter(c => c.custom).map(c => `
+                      <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 0;">
+                        <span style="font-size:12px;">${c.label}${c.hint ? ` <span style="color:var(--text-muted);">(${c.hint})</span>` : ''}</span>
+                        <button type="button" class="btn btn-xs btn-outline btn-remove-category" data-category-id="${c.id}" style="color: var(--danger); border-color: var(--danger);">Remove</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                  ` : ''}
                 </div>
               </div>
             </div>
@@ -443,6 +455,16 @@ export class Module5Facilities {
       };
     });
 
+    // Clear All Repair Tickets
+    const clearAllTicketsBtn = this.container.querySelector('#btn-clear-all-tickets');
+    if (clearAllTicketsBtn) {
+      clearAllTicketsBtn.onclick = () => {
+        if (!confirm(`Delete all ${tickets.length} repair ticket(s)? This cannot be undone.`)) return;
+        db.clearAllRepairTickets();
+        window.showGlobalToast?.('All repair tickets deleted.', 'success');
+      };
+    }
+
     // Zone pin click
     this.container.querySelectorAll('.zone-pin-card').forEach(pin => {
       pin.onclick = () => {
@@ -480,7 +502,7 @@ export class Module5Facilities {
         meterModal.style.display = 'none';
 
         if (res && res.isAnomaly) {
-          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}% Spike)! High-Priority Ticket ${res.newTicket.ticketNumber} dispatched.`, 'warning');
+          window.showGlobalToast?.(`ANOMALY FLAGGED (+${res.deviationPct.toFixed(1)}%)!`, 'warning');
         } else {
           window.showGlobalToast?.(`Meter reading for ${meterId} recorded.`, 'success');
         }
@@ -518,6 +540,40 @@ export class Module5Facilities {
     };
 
     if (defectCategoryField) defectCategoryField.onchange = syncResourceTypeFromCategory;
+
+    // Valid "Affected Room / Zone" values are either a guest room in the
+    // 101-110, 201-210, or 301-310 ranges, OR one of the named facility
+    // zones that already exist on the Zone Utility Sub-Meters board (e.g.
+    // "Central Chiller Plant", "Main Culinary Kitchen"). Kept in sync with
+    // the mobile app's Report Facility Defect form.
+    const ROOM_ZONE_PATTERN = /^Room (10[1-9]|110|20[1-9]|210|30[1-9]|310)$/;
+    const KNOWN_FACILITY_ZONES = new Set(
+      (db.get('utilityMeters') || []).map(m => m.zone.trim().toLowerCase())
+    );
+    const isValidRoomOrZone = (value) => {
+      if (!value) return false;
+      if (ROOM_ZONE_PATTERN.test(value)) return true;
+      // Allow only letters, digits, spaces, and & for a named zone (no
+      // other special characters), and it must match a known zone.
+      if (!/^[A-Za-z0-9 &]+$/.test(value)) return false;
+      return KNOWN_FACILITY_ZONES.has(value.trim().toLowerCase());
+    };
+    const defectZoneField = this.container.querySelector('#defect-zone');
+    const defectZoneError = this.container.querySelector('#defect-zone-error');
+    // The field allows any character to be typed; validation (and the
+    // error message) only fires on blur/submit, not on every keystroke.
+    if (defectZoneField && defectZoneError) {
+      defectZoneField.oninput = () => { defectZoneError.style.display = 'none'; };
+      defectZoneField.onblur = () => {
+        const value = defectZoneField.value.trim();
+        if (value && !isValidRoomOrZone(value)) {
+          defectZoneError.textContent = 'Must be Room 101-110/201-210/301-310, or a valid facility zone (e.g. Central Chiller Plant). No special characters allowed.';
+          defectZoneError.style.display = 'block';
+        } else {
+          defectZoneError.style.display = 'none';
+        }
+      };
+    }
 
     if (openDefectBtn) openDefectBtn.onclick = () => {
       this.pendingPhotoDataUrl = null;
@@ -627,18 +683,38 @@ export class Module5Facilities {
       cancelAddCategoryBtn.onclick = () => { addCategoryPanel.style.display = 'none'; };
     }
     if (saveNewCategoryBtn) {
+      // Category name: required, letters/digits/spaces and basic
+      // punctuation only (&, -, /, parentheses). Hint: optional, but if
+      // provided must parse as a number + unit (e.g. "~60 L/day",
+      // "25 kWh/day") matching the pattern used everywhere else in this
+      // module, since it now directly drives the repair ticket's
+      // estimated loss rate.
+      const CATEGORY_NAME_PATTERN = /^[A-Za-z0-9 &/()\-]+$/;
+      const HINT_PATTERN = /^~?\s*(\d+(?:\.\d+)?)\s*(L|Liters?|kWh)\s*\/?\s*day$/i;
       saveNewCategoryBtn.onclick = () => {
         const nameInput = this.container.querySelector('#new-category-name');
         const resourceInput = this.container.querySelector('#new-category-resource');
         const hintInput = this.container.querySelector('#new-category-hint');
+        const nameError = this.container.querySelector('#new-category-name-error');
+        const hintError = this.container.querySelector('#new-category-hint-error');
+        if (nameError) nameError.style.display = 'none';
+        if (hintError) hintError.style.display = 'none';
 
         const name = nameInput.value.trim();
-        if (!name) {
-          alert('Please enter a category name.');
+        if (!name || !CATEGORY_NAME_PATTERN.test(name)) {
+          const msg = 'Category name is required and can only contain letters, numbers, and spaces.';
+          if (nameError) { nameError.textContent = msg; nameError.style.display = 'block'; } else { alert(msg); }
+          nameInput.focus();
           return;
         }
         const resourceType = resourceInput.value;
         const hint = hintInput.value.trim();
+        if (hint && !HINT_PATTERN.test(hint)) {
+          const msg = 'Estimated Loss Hint must look like "~60 L/day" or "~25 kWh/day" (or leave it blank).';
+          if (hintError) { hintError.textContent = msg; hintError.style.display = 'block'; } else { alert(msg); }
+          hintInput.focus();
+          return;
+        }
 
         db.addDefectCategory({ label: name, resourceType, hint });
 
@@ -669,14 +745,75 @@ export class Module5Facilities {
       };
     }
 
+    // Remove a custom defect category (built-in/default categories are
+    // protected server-side by db.removeDefectCategory and simply won't
+    // be removed if somehow targeted).
+    this.container.querySelectorAll('.btn-remove-category').forEach(btn => {
+      btn.onclick = () => {
+        const categoryId = btn.dataset.categoryId;
+        const cat = (db.get('defectCategories') || []).find(c => c.id === categoryId);
+        if (!cat) return;
+        if (!confirm(`Remove custom category "${cat.label}"? This cannot be undone.`)) return;
+        const removed = db.removeDefectCategory(categoryId);
+
+        // Preserve in-progress form values / panel open state across the re-render
+        const zoneVal = this.container.querySelector('#defect-zone')?.value || '';
+        const severityVal = this.container.querySelector('#defect-severity')?.value || 'Normal';
+        const descVal = this.container.querySelector('#defect-desc')?.value || '';
+
+        this.render();
+
+        const reopenedModal = this.container.querySelector('#defect-modal');
+        if (reopenedModal) reopenedModal.style.display = 'flex';
+        const reopenedPanel = this.container.querySelector('#add-category-panel');
+        if (reopenedPanel) reopenedPanel.style.display = 'block';
+
+        const zoneField = this.container.querySelector('#defect-zone');
+        if (zoneField) zoneField.value = zoneVal;
+        const severityField = this.container.querySelector('#defect-severity');
+        if (severityField) severityField.value = severityVal;
+        const descField = this.container.querySelector('#defect-desc');
+        if (descField) descField.value = descVal;
+
+        if (removed) {
+          window.showGlobalToast?.(`Removed defect category "${cat.label}".`, 'success');
+        } else {
+          window.showGlobalToast?.(`Could not remove "${cat.label}" (default categories can't be deleted).`, 'warning');
+        }
+      };
+    });
+
     if (defectForm) {
       defectForm.onsubmit = (e) => {
         e.preventDefault();
-        const roomOrZone = this.container.querySelector('#defect-zone').value;
+        const zoneField = this.container.querySelector('#defect-zone');
+        const descField = this.container.querySelector('#defect-desc');
+        const roomOrZone = zoneField.value.trim();
+        const description = descField.value.trim();
+
+        // Blocks blank/special-character zone values. Accepts either a
+        // Room 101-110/201-210/301-310 value, or a recognized named
+        // facility zone (e.g. "Central Chiller Plant").
+        if (!isValidRoomOrZone(roomOrZone)) {
+          const zoneErrorEl = this.container.querySelector('#defect-zone-error');
+          if (zoneErrorEl) {
+            zoneErrorEl.textContent = 'Affected Room / Zone must be Room 101-110/201-210/301-310, or a valid facility zone (e.g. Central Chiller Plant). No blanks or special characters allowed.';
+            zoneErrorEl.style.display = 'block';
+          } else {
+            alert('Affected Room / Zone must be Room 101-110/201-210/301-310, or a valid facility zone (e.g. Central Chiller Plant). No blanks or special characters allowed.');
+          }
+          zoneField.focus();
+          return;
+        }
+        if (!description) {
+          alert('Defect Description & Notes is required and cannot be blank.');
+          descField.focus();
+          return;
+        }
+
         const category = this.container.querySelector('#defect-category').value;
         const severity = this.container.querySelector('#defect-severity').value;
         const resourceType = this.container.querySelector('#defect-resource').value;
-        const description = this.container.querySelector('#defect-desc').value;
 
         const ticket = db.reportFacilityDefect({
           roomOrZone,

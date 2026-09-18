@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'models/models.dart';
 import 'services/hotel_database.dart';
@@ -555,14 +556,34 @@ class KitchenScreen extends StatefulWidget {
   State<KitchenScreen> createState() => _KitchenScreenState();
 }
 
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
+  }
+}
+
 class _KitchenScreenState extends State<KitchenScreen> {
-  int _tabIndex = 0; // 0 = Smart Prep (M3), 1 = Raw Inventory (M2), 2 = Plate Waste (M3)
+  int _tabIndex =
+      0; // 0 = Smart Prep (M3), 1 = Raw Inventory (M2), 2 = Plate Waste (M3)
   String _selectedStation = 'ALL';
   String _selectedShift = 'Breakfast';
 
+  // Module 2 - Inventory Search & Filter
+  String _inventorySearchQuery = '';
+  String _inventoryFilter = 'ALL';
+
   @override
   Widget build(BuildContext context) {
-    final urgentExpiring = widget.db.inventory.where((i) => i.daysUntilExpiry <= 2).toList();
+    final urgentExpiring = widget.db.inventory
+        .where((i) => i.daysUntilExpiry <= 2)
+        .toList();
     final dishes = widget.db.dishes;
 
     return Column(
@@ -576,13 +597,44 @@ class _KitchenScreenState extends State<KitchenScreen> {
               Expanded(
                 child: SegmentedButton<int>(
                   segments: const [
-                    ButtonSegment(value: 0, label: Text('🍳 Smart Prep (M3)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-                    ButtonSegment(value: 1, label: Text('📦 Stock (M2)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-                    ButtonSegment(value: 2, label: Text('🍽️ Plate Returns', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+                    ButtonSegment(
+                      value: 0,
+                      label: Text(
+                        '🍳 Smart Prep (M3)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ButtonSegment(
+                      value: 1,
+                      label: Text(
+                        '📦 Stock (M2)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    ButtonSegment(
+                      value: 2,
+                      label: Text(
+                        '🍽️ Plate Returns',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ],
                   selected: {_tabIndex},
-                  onSelectionChanged: (val) => setState(() => _tabIndex = val.first),
-                  style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap, visualDensity: VisualDensity.compact),
+                  onSelectionChanged: (val) =>
+                      setState(() => _tabIndex = val.first),
+                  style: const ButtonStyle(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ),
             ],
@@ -593,8 +645,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
           child: _tabIndex == 0
               ? _buildSmartPrepView(context, dishes)
               : _tabIndex == 1
-                  ? _buildInventoryView(context, urgentExpiring)
-                  : _buildPlateWasteView(context),
+              ? _buildInventoryView(context, urgentExpiring)
+              : _buildPlateWasteView(context),
         ),
       ],
     );
@@ -607,7 +659,11 @@ class _KitchenScreenState extends State<KitchenScreen> {
       filtered = filtered.where((d) => d.station == _selectedStation).toList();
     }
 
-    final totalDiners = _selectedShift == 'Breakfast' ? 268 : _selectedShift == 'Lunch' ? 165 : 235;
+    final totalDiners = _selectedShift == 'Breakfast'
+        ? 268
+        : _selectedShift == 'Lunch'
+        ? 165
+        : 235;
 
     return ListView(
       padding: const EdgeInsets.all(14),
@@ -617,7 +673,9 @@ class _KitchenScreenState extends State<KitchenScreen> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: const Color(0xFFF0FDF4),
-            border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+            border: Border.all(
+              color: const Color(0xFF059669).withValues(alpha: 0.3),
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
@@ -628,22 +686,49 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.psychology_outlined, size: 18, color: Color(0xFF059669)),
+                      const Icon(
+                        Icons.psychology_outlined,
+                        size: 18,
+                        color: Color(0xFF059669),
+                      ),
                       const SizedBox(width: 6),
-                      Text('48h Influx: $totalDiners Diners ($_selectedShift)', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF059669))),
+                      Text(
+                        '48h Influx: $totalDiners Diners ($_selectedShift)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
                     ],
                   ),
                   DropdownButton<String>(
                     value: _selectedShift,
                     isDense: true,
                     underline: const SizedBox(),
-                    items: ['Breakfast', 'Lunch', 'Dinner'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))).toList(),
+                    items: ['Breakfast', 'Lunch', 'Dinner']
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(
+                              s,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (val) => setState(() => _selectedShift = val!),
-                  )
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text('Synthesizing 70% MY/SG + 18% EU demographics, recipe yields & decayed plate returns.', style: TextStyle(fontSize: 10, color: Color(0xFF4B5563))),
+              const Text(
+                'Synthesizing 70% MY/SG + 18% EU demographics, recipe yields & decayed plate returns.',
+                style: TextStyle(fontSize: 10, color: Color(0xFF4B5563)),
+              ),
             ],
           ),
         ),
@@ -657,12 +742,17 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF059669),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
                 onPressed: () => _showLogPlateWasteDialog(context),
                 icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-                label: const Text('Log Plate Waste', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Log Plate Waste',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             const SizedBox(width: 6),
@@ -671,18 +761,33 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF18181B),
                   side: const BorderSide(color: Color(0xFFD4D4D8)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
                 onPressed: () => _showUserGuideSheet(context),
-                icon: const Icon(Icons.menu_book_outlined, size: 16, color: Color(0xFF059669)),
-                label: const Text('M3 Guide', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                icon: const Icon(
+                  Icons.menu_book_outlined,
+                  size: 16,
+                  color: Color(0xFF059669),
+                ),
+                label: const Text(
+                  'M3 Guide',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
             const SizedBox(width: 6),
             IconButton.filledTonal(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ Kitchen Prep Sheet synced with Back-of-House printer & QR tokens.')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      '✓ Kitchen Prep Sheet synced with Back-of-House printer & QR tokens.',
+                    ),
+                  ),
+                );
               },
               icon: const Icon(Icons.print_outlined, size: 16),
               tooltip: 'Sync Prep Sheet',
@@ -708,7 +813,11 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
         // Dish Recommendation Cards
         ...filtered.map((dish) {
-          final rawKg = (totalDiners * (dish.basePerGuestGrams / 1000.0) * dish.wasteMultiplier) / dish.cookingYield;
+          final rawKg =
+              (totalDiners *
+                  (dish.basePerGuestGrams / 1000.0) *
+                  dish.wasteMultiplier) /
+              dish.cookingYield;
           final targetKg = (rawKg + 1.2).toStringAsFixed(1);
           final wave1Kg = (double.parse(targetKg) * 0.55).toStringAsFixed(1);
           final wave2Kg = (double.parse(targetKg) * 0.35).toStringAsFixed(1);
@@ -717,8 +826,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
           Color statusColor = dish.prepStatus == 'Batch Ready'
               ? const Color(0xFF059669)
               : dish.prepStatus == 'Prepping Wave 1'
-                  ? const Color(0xFF2563EB)
-                  : const Color(0xFF71717A);
+              ? const Color(0xFF2563EB)
+              : const Color(0xFF71717A);
 
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
@@ -734,17 +843,42 @@ class _KitchenScreenState extends State<KitchenScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(dish.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            Text(
+                              dish.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 2),
-                            Text('${dish.station} • Base: ${dish.basePerGuestGrams}g • Multiplier: ${dish.wasteMultiplier.toStringAsFixed(2)}x', style: const TextStyle(fontSize: 10, color: Color(0xFF71717A))),
+                            Text(
+                              '${dish.station} • Base: ${dish.basePerGuestGrams}g • Multiplier: ${dish.wasteMultiplier.toStringAsFixed(2)}x',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF71717A),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text('$targetKg kg', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF059669))),
-                          const Text('Batch Target', style: TextStyle(fontSize: 9, color: Color(0xFF71717A))),
+                          Text(
+                            '$targetKg kg',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                          const Text(
+                            'Batch Target',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF71717A),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -755,9 +889,21 @@ class _KitchenScreenState extends State<KitchenScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildWavePill('W1 (55%)', '$wave1Kg kg', const Color(0xFF059669)),
-                      _buildWavePill('W2 (35%)', '$wave2Kg kg', const Color(0xFF2563EB)),
-                      _buildWavePill('W3 (10%)', '$wave3Kg kg', const Color(0xFFD97706)),
+                      _buildWavePill(
+                        'W1 (55%)',
+                        '$wave1Kg kg',
+                        const Color(0xFF059669),
+                      ),
+                      _buildWavePill(
+                        'W2 (35%)',
+                        '$wave2Kg kg',
+                        const Color(0xFF2563EB),
+                      ),
+                      _buildWavePill(
+                        'W3 (10%)',
+                        '$wave3Kg kg',
+                        const Color(0xFFD97706),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -771,35 +917,64 @@ class _KitchenScreenState extends State<KitchenScreen> {
                           String nextStatus = dish.prepStatus == 'Pending'
                               ? 'Prepping Wave 1'
                               : dish.prepStatus == 'Prepping Wave 1'
-                                  ? 'Batch Ready'
-                                  : 'Pending';
+                              ? 'Batch Ready'
+                              : 'Pending';
                           widget.db.updateDishPrepStatus(dish.id, nextStatus);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: statusColor.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.check_circle_outline, size: 12, color: statusColor),
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 12,
+                                color: statusColor,
+                              ),
                               const SizedBox(width: 4),
-                              Text('Status: ${dish.prepStatus}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+                              Text(
+                                'Status: ${dish.prepStatus}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: statusColor,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
                       TextButton.icon(
-                        style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
                         onPressed: () => _showChefOverrideDialog(context, dish),
-                        icon: const Icon(Icons.tune, size: 13, color: Color(0xFF71717A)),
-                        label: const Text('Chef Override', style: TextStyle(fontSize: 10, color: Color(0xFF71717A))),
-                      )
+                        icon: const Icon(
+                          Icons.tune,
+                          size: 13,
+                          color: Color(0xFF71717A),
+                        ),
+                        label: const Text(
+                          'Chef Override',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF71717A),
+                          ),
+                        ),
+                      ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -819,8 +994,22 @@ class _KitchenScreenState extends State<KitchenScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
-          Text(weight, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF18181B))),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          Text(
+            weight,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF18181B),
+            ),
+          ),
         ],
       ),
     );
@@ -831,7 +1020,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500)),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
         selected: isSelected,
         onSelected: (_) => setState(() => _selectedStation = id),
       ),
@@ -839,10 +1034,57 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   // --- RAW INVENTORY VIEW (MODULE 2) ---
-  Widget _buildInventoryView(BuildContext context, List<InventoryItem> urgentExpiring) {
+  Widget _buildInventoryView(
+    BuildContext context,
+    List<InventoryItem> urgentExpiring,
+  ) {
+    // Start with all inventory items.
+    List<InventoryItem> filteredInventory = List<InventoryItem>.from(
+      widget.db.inventory,
+    );
+
+    // -----------------------------
+    // 1. APPLY FILTER
+    // -----------------------------
+    if (_inventoryFilter == 'EXPIRING') {
+      filteredInventory = filteredInventory
+          .where((item) => item.daysUntilExpiry <= 4)
+          .toList();
+    } else if (_inventoryFilter != 'ALL') {
+      filteredInventory = filteredInventory
+          .where(
+            (item) => item.category.toLowerCase().contains(
+              _inventoryFilter.toLowerCase(),
+            ),
+          )
+          .toList();
+    }
+
+    // -----------------------------
+    // 2. APPLY SEARCH
+    // -----------------------------
+    final searchText = _inventorySearchQuery.trim().toLowerCase();
+
+    if (searchText.isNotEmpty) {
+      filteredInventory = filteredInventory.where((item) {
+        final name = item.name.toLowerCase();
+        final id = item.id.toLowerCase();
+        final batch = item.batchNumber.toLowerCase();
+        final location = item.storageLocation.toLowerCase();
+
+        return name.contains(searchText) ||
+            id.contains(searchText) ||
+            batch.contains(searchText) ||
+            location.contains(searchText);
+      }).toList();
+    }
+
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
+        // =====================================================
+        // SHELF-LIFE ALERT
+        // =====================================================
         if (urgentExpiring.isNotEmpty)
           Container(
             padding: const EdgeInsets.all(12),
@@ -857,82 +1099,1049 @@ class _KitchenScreenState extends State<KitchenScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFD97706)),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 18,
+                      color: Color(0xFFD97706),
+                    ),
                     SizedBox(width: 6),
-                    Text('Shelf-Life Risk Radar (Cook Today)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFD97706))),
+                    Text(
+                      'Shelf-Life Risk Radar (Cook Today)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFFD97706),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
+
                 Wrap(
                   spacing: 6,
-                  children: urgentExpiring.map((item) => Chip(
-                    label: Text('${item.name} (${item.quantity}${item.unit})', style: const TextStyle(fontSize: 11)),
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE4E4E7)),
-                    padding: EdgeInsets.zero,
-                  )).toList(),
-                )
+                  runSpacing: 6,
+                  children: urgentExpiring.map((item) {
+                    return Chip(
+                      label: Text(
+                        '${item.name} (${item.quantity}${item.unit})',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFFE4E4E7)),
+                      padding: EdgeInsets.zero,
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),
 
+        // =====================================================
+        // ACTION BUTTONS
+        // =====================================================
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF18181B), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF18181B),
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () => _showAddStockSheet(context),
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Log Stock Entry', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Log Stock Entry',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
+
             const SizedBox(width: 8),
+
             Expanded(
               child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF18181B)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF18181B),
+                ),
                 onPressed: () => _showLogSpoilageDialog(context),
                 icon: const Icon(Icons.delete_outline, size: 16),
-                label: const Text('Record Spoilage', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Record Food Waste',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
           ],
         ),
+
         const SizedBox(height: 14),
 
-        const Text('ACTIVE CHILLER & DRY INVENTORY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
-        const SizedBox(height: 6),
-        ...widget.db.inventory.map((item) => Card(
-          child: ListTile(
-            dense: true,
-            title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            subtitle: Text('SKU: ${item.id} • ${item.storageLocation} • Exp: ${item.expiryDate}', style: const TextStyle(fontSize: 11)),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('${item.quantity} ${item.unit}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF059669))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: item.daysUntilExpiry <= 2 ? const Color(0xFFFFF1F2) : const Color(0xFFF4F4F5),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    item.expiryStatus,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: item.daysUntilExpiry <= 2 ? const Color(0xFFE11D48) : const Color(0xFF71717A),
-                    ),
-                  ),
-                )
-              ],
+        // =====================================================
+        // SEARCH
+        // =====================================================
+        TextField(
+          onChanged: (value) {
+            setState(() {
+              _inventorySearchQuery = value;
+            });
+          },
+          decoration: InputDecoration(
+            hintText: 'Search ingredient, SKU, batch, or location...',
+            prefixIcon: const Icon(Icons.search, size: 19),
+            suffixIcon: _inventorySearchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      setState(() {
+                        _inventorySearchQuery = '';
+                      });
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE4E4E7)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE4E4E7)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(
+                color: Color(0xFF059669),
+                width: 1.5,
+              ),
             ),
           ),
-        )),
+        ),
+
+        const SizedBox(height: 10),
+
+        // =====================================================
+        // FILTER
+        // =====================================================
+        const Text(
+          'FILTER INVENTORY',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF71717A),
+            letterSpacing: 0.5,
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildInventoryFilterChip(label: 'All', value: 'ALL'),
+              _buildInventoryFilterChip(
+                label: 'Expiring ≤ 4d',
+                value: 'EXPIRING',
+              ),
+              _buildInventoryFilterChip(label: 'Meat & Poultry', value: 'Meat'),
+              _buildInventoryFilterChip(label: 'Seafood', value: 'Seafood'),
+              _buildInventoryFilterChip(label: 'Produce', value: 'Produce'),
+              _buildInventoryFilterChip(label: 'Grains & Dry', value: 'Grains'),
+              _buildInventoryFilterChip(label: 'Dairy & Eggs', value: 'Dairy'),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        // =====================================================
+        // INVENTORY TITLE
+        // =====================================================
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'ACTIVE CHILLER & DRY INVENTORY',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF71717A),
+              ),
+            ),
+
+            Text(
+              '${filteredInventory.length} item${filteredInventory.length == 1 ? '' : 's'}',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF71717A),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 6),
+
+        // =====================================================
+        // NO MATCHING RECORDS
+        // =====================================================
+        if (filteredInventory.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE4E4E7)),
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 28,
+                  color: Color(0xFF71717A),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'No matching inventory records',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Try a different search term or filter.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
+                ),
+              ],
+            ),
+          )
+        // =====================================================
+        // INVENTORY LIST
+        // =====================================================
+        else
+          ...filteredInventory.map(
+            (item) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Item name + quantity
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Text(
+                          '${item.quantity} ${item.unit}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    // SKU + category
+                    Text(
+                      'SKU: ${item.id} • ${item.category}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    // Batch + location
+                    Text(
+                      'Batch: ${item.batchNumber} • ${item.storageLocation}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    // Delivery + expiry
+                    Text(
+                      'Delivered: ${item.deliveryDate} • Expiry: ${item.expiryDate}',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+// Status + Edit Button
+Row(
+  children: [
+    Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: item.daysUntilExpiry <= 2
+            ? const Color(0xFFFFF1F2)
+            : item.daysUntilExpiry <= 4
+            ? const Color(0xFFFFFBEB)
+            : const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            item.daysUntilExpiry <= 2
+                ? Icons.warning_amber_rounded
+                : item.daysUntilExpiry <= 4
+                ? Icons.schedule
+                : Icons.check_circle_outline,
+            size: 12,
+            color: item.daysUntilExpiry <= 2
+                ? const Color(0xFFE11D48)
+                : item.daysUntilExpiry <= 4
+                ? const Color(0xFFD97706)
+                : const Color(0xFF059669),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            item.expiryStatus,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              color: item.daysUntilExpiry <= 2
+                  ? const Color(0xFFE11D48)
+                  : item.daysUntilExpiry <= 4
+                  ? const Color(0xFFD97706)
+                  : const Color(0xFF059669),
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    const Spacer(),
+
+    OutlinedButton.icon(
+      onPressed: () {
+        _showEditInventorySheet(context, item);
+      },
+      icon: const Icon(
+        Icons.edit_outlined,
+        size: 14,
+      ),
+      label: const Text(
+        'Edit',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF18181B),
+        side: const BorderSide(
+          color: Color(0xFFD4D4D8),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 9,
+          vertical: 5,
+        ),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    ),
+  ],
+),
+
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+        // =====================================================
+        // FOOD WASTE RECORDS
+        // =====================================================
+        const SizedBox(height: 18),
+
+        const Text(
+          'FOOD WASTE RECORDS',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF71717A),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        _buildFoodWasteRecords(),
       ],
     );
   }
+
+  // Module 2 - Food Waste Records
+  // Displays recorded Spoilage and Prep Waste entries.
+  Widget _buildFoodWasteRecords() {
+    final wasteLogs = widget.db.foodWasteLogs;
+
+    if (wasteLogs.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.delete_outline, size: 30, color: Colors.grey.shade400),
+              const SizedBox(height: 8),
+              const Text(
+                'No Food Waste Records',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Recorded food waste will appear here.',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: wasteLogs.reversed.map((log) {
+        final isSpoilage = log.type == 'Spoilage';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: isSpoilage
+                        ? const Color(0xFFFFF1F2)
+                        : const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    isSpoilage
+                        ? Icons.warning_amber_rounded
+                        : Icons.eco_outlined,
+                    size: 18,
+                    color: isSpoilage
+                        ? const Color(0xFFE11D48)
+                        : const Color(0xFF059669),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              log.item,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSpoilage
+                                  ? const Color(0xFFFFF1F2)
+                                  : const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              log.type,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: isSpoilage
+                                    ? const Color(0xFFE11D48)
+                                    : const Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Text(
+                        '${log.date} • ${log.mealPeriod}',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: Color(0xFF71717A),
+                        ),
+                      ),
+
+                      const SizedBox(height: 3),
+
+                      Text(
+                        'Reason: ${log.reason}',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: Color(0xFF52525B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Text(
+                  '${log.quantity} ${log.unit}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF18181B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // Module 2 - Inventory Filter Chip
+  // Displays selectable filter options for the inventory list.
+  Widget _buildInventoryFilterChip({
+    required String label,
+    required String value,
+  }) {
+    final isSelected = _inventoryFilter == value;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ChoiceChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        selected: isSelected,
+        onSelected: (_) {
+          setState(() {
+            _inventoryFilter = value;
+          });
+        },
+        selectedColor: const Color(0xFFD1FAE5),
+        backgroundColor: Colors.white,
+        side: BorderSide(
+          color: isSelected ? const Color(0xFF059669) : const Color(0xFFE4E4E7),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  // Module 2 - Edit Inventory
+void _showEditInventorySheet(
+  BuildContext context,
+  InventoryItem item,
+) {
+  final formKey = GlobalKey<FormState>();
+
+  final nameCtrl = TextEditingController(text: item.name);
+  final qtyCtrl = TextEditingController(
+    text: item.quantity.toString(),
+  );
+  final locationCtrl = TextEditingController(
+    text: item.storageLocation,
+  );
+
+  String category = item.category;
+  String unit = item.unit;
+
+  DateTime expiryDate = DateTime.parse(item.expiryDate);
+  final deliveryDate = DateTime.parse(item.deliveryDate);
+
+  String formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+
+  String toIsoDate(DateTime date) {
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(18),
+      ),
+    ),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialogState) {
+        Future<void> pickExpiryDate() async {
+          final picked = await showDatePicker(
+            context: ctx,
+            initialDate: expiryDate,
+            firstDate: deliveryDate,
+            lastDate: DateTime(2100),
+            helpText: 'Select Expiry Date',
+          );
+
+          if (picked != null) {
+            setDialogState(() {
+              expiryDate = picked;
+            });
+          }
+        }
+
+        void saveChanges() {
+          if (!formKey.currentState!.validate()) {
+            return;
+          }
+
+          final quantity =
+              double.tryParse(qtyCtrl.text.trim());
+
+          if (quantity == null || quantity < 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Quantity must be a valid number.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          if (expiryDate.isBefore(deliveryDate)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Expiry date cannot be earlier than delivery date.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          final updatedItem = InventoryItem(
+            id: item.id,
+            name: nameCtrl.text.trim(),
+            category: category,
+            quantity: quantity,
+            unit: unit,
+
+            // Keep original batch identifier
+            batchNumber: item.batchNumber,
+
+            storageLocation: locationCtrl.text.trim(),
+
+            // Keep original delivery date
+            deliveryDate: item.deliveryDate,
+
+            expiryDate: toIsoDate(expiryDate),
+          );
+
+          final index = widget.db.inventory.indexWhere(
+            (i) => i.id == item.id,
+          );
+
+          if (index == -1) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Inventory item not found.',
+                ),
+              ),
+            );
+            return;
+          }
+
+          // Replace the existing inventory record.
+          widget.db.inventory[index] = updatedItem;
+
+          // Refresh the Flutter UI.
+          widget.db.notifyListeners();
+
+          Navigator.pop(ctx);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Inventory "${updatedItem.name}" updated successfully.',
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              top: 18,
+              bottom:
+                  MediaQuery.of(ctx).viewInsets.bottom + 18,
+            ),
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+
+                    // Header
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Inventory (M2)',
+                              style: TextStyle(
+                                fontWeight:
+                                    FontWeight.w800,
+                                fontSize: 18,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Update kitchen inventory details',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    Color(0xFF71717A),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        IconButton(
+                          onPressed: () =>
+                              Navigator.pop(ctx),
+                          icon: const Icon(
+                            Icons.close,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    const Text(
+                      'ITEM DETAILS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration:
+                          const InputDecoration(
+                        labelText: 'Ingredient Name',
+                        prefixIcon: Icon(
+                          Icons.restaurant_outlined,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null ||
+                            value.trim().isEmpty) {
+                          return 'Ingredient name is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    DropdownButtonFormField<String>(
+                      value: category,
+                      decoration:
+                          const InputDecoration(
+                        labelText: 'Category',
+                        prefixIcon: Icon(
+                          Icons.category_outlined,
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Produce',
+                          child: Text(
+                            'Produce & Vegetables',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Meat & Poultry',
+                          child: Text(
+                            'Meat & Poultry',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Seafood',
+                          child: Text('Seafood'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Dairy & Eggs',
+                          child: Text(
+                            'Dairy & Eggs',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Grains & Dry',
+                          child: Text(
+                            'Grains & Dry Storage',
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            category = value;
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: qtyCtrl,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration:
+                                const InputDecoration(
+                              labelText: 'Quantity',
+                            ),
+                            validator: (value) {
+                              if (value == null ||
+                                  double.tryParse(
+                                          value) ==
+                                      null) {
+                                return 'Enter quantity.';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child:
+                              DropdownButtonFormField<String>(
+                            value: unit,
+                            decoration:
+                                const InputDecoration(
+                              labelText: 'Unit',
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'kg',
+                                child: Text('kg'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'units',
+                                child: Text('units'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'L',
+                                child: Text('L'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  unit = value;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      initialValue: item.batchNumber,
+                      readOnly: true,
+                      decoration:
+                          const InputDecoration(
+                        labelText: 'Batch Identifier',
+                        prefixIcon: Icon(
+                          Icons.qr_code_2,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      controller: locationCtrl,
+                      decoration:
+                          const InputDecoration(
+                        labelText: 'Storage Location',
+                        prefixIcon: Icon(
+                          Icons.location_on_outlined,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null ||
+                            value.trim().isEmpty) {
+                          return 'Storage location is required.';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextFormField(
+                      initialValue:
+                          formatDate(deliveryDate),
+                      readOnly: true,
+                      decoration:
+                          const InputDecoration(
+                        labelText: 'Delivery Date',
+                        prefixIcon: Icon(
+                          Icons.local_shipping_outlined,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    InkWell(
+                      onTap: pickExpiryDate,
+                      child: InputDecorator(
+                        decoration:
+                            const InputDecoration(
+                          labelText: 'Expiry Date',
+                          prefixIcon: Icon(
+                            Icons.event_outlined,
+                          ),
+                        ),
+                        child: Text(
+                          formatDate(expiryDate),
+                          style: const TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    const Text(
+                      'Batch Identifier and Delivery Date cannot be changed.',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: ElevatedButton(
+                            style:
+                                ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color(0xFF059669),
+                              foregroundColor:
+                                  Colors.white,
+                            ),
+                            onPressed: saveChanges,
+                            child: const Text(
+                              'Save Changes',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 
   // --- PLATE WASTE RETURNS VIEW (MODULE 3) ---
   Widget _buildPlateWasteView(BuildContext context) {
@@ -942,27 +2151,65 @@ class _KitchenScreenState extends State<KitchenScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('END-OF-SHIFT PLATE WASTE LEDGER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+            const Text(
+              'END-OF-SHIFT PLATE WASTE LEDGER',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF71717A),
+              ),
+            ),
             TextButton.icon(
               onPressed: () => _showLogPlateWasteDialog(context),
               icon: const Icon(Icons.add, size: 14),
-              label: const Text('Add Return', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-            )
+              label: const Text(
+                'Add Return',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 6),
-        ...widget.db.plateWasteLogs.map((log) => Card(
-          child: ListTile(
-            dense: true,
-            leading: CircleAvatar(
-              backgroundColor: log.isAnomaly ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
-              child: Icon(log.isAnomaly ? Icons.warning_amber_rounded : Icons.restaurant, size: 16, color: log.isAnomaly ? const Color(0xFFD97706) : const Color(0xFFE11D48)),
+        ...widget.db.plateWasteLogs.map(
+          (log) => Card(
+            child: ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                backgroundColor: log.isAnomaly
+                    ? const Color(0xFFFEF3C7)
+                    : const Color(0xFFFEE2E2),
+                child: Icon(
+                  log.isAnomaly
+                      ? Icons.warning_amber_rounded
+                      : Icons.restaurant,
+                  size: 16,
+                  color: log.isAnomaly
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFFE11D48),
+                ),
+              ),
+              title: Text(
+                log.dishName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                '${log.date} (${log.mealPeriod}) • ${log.isAnomaly ? "⚠️ Accident: ${log.anomalyReason}" : "Guest table leftover"}',
+                style: const TextStyle(fontSize: 11),
+              ),
+              trailing: Text(
+                '${log.discardedKg} kg',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: Color(0xFFE11D48),
+                ),
+              ),
             ),
-            title: Text(log.dishName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-            subtitle: Text('${log.date} (${log.mealPeriod}) • ${log.isAnomaly ? "⚠️ Accident: ${log.anomalyReason}" : "Guest table leftover"}', style: const TextStyle(fontSize: 11)),
-            trailing: Text('${log.discardedKg} kg', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFE11D48))),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -981,17 +2228,33 @@ class _KitchenScreenState extends State<KitchenScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          title: const Text('Log End-of-Shift Plate Waste', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          title: const Text(
+            'Log End-of-Shift Plate Waste',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Select Dish from Buffet Line', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                const Text(
+                  'Select Dish from Buffet Line',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                ),
                 DropdownButton<String>(
                   value: selectedDishId,
                   isExpanded: true,
-                  items: widget.db.dishes.map((d) => DropdownMenuItem(value: d.id, child: Text('${d.name} (${d.station})', style: const TextStyle(fontSize: 12)))).toList(),
+                  items: widget.db.dishes
+                      .map(
+                        (d) => DropdownMenuItem(
+                          value: d.id,
+                          child: Text(
+                            '${d.name} (${d.station})',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (val) => setDlg(() => selectedDishId = val!),
                 ),
                 const SizedBox(height: 8),
@@ -1001,7 +2264,17 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       child: DropdownButton<String>(
                         value: selectedShift,
                         isExpanded: true,
-                        items: ['Breakfast', 'Lunch', 'Dinner'].map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)))).toList(),
+                        items: ['Breakfast', 'Lunch', 'Dinner']
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (val) => setDlg(() => selectedShift = val!),
                       ),
                     ),
@@ -1010,7 +2283,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
                       child: TextField(
                         controller: weightCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Discarded kg', isDense: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Discarded kg',
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ],
@@ -1019,55 +2295,103 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 CheckboxListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Flag as Operational Accident (e.g. Dropped tray)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  title: const Text(
+                    'Flag as Operational Accident (e.g. Dropped tray)',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
                   value: isAnomaly,
                   onChanged: (v) => setDlg(() => isAnomaly = v!),
                 ),
                 if (isAnomaly) ...[
-                  TextField(controller: reasonCtrl, decoration: const InputDecoration(labelText: 'Accident Reason', isDense: true)),
+                  TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Accident Reason',
+                      isDense: true,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                 ],
                 OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                   onPressed: () {
                     setDlg(() => photoAttached = true);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('📸 Photo evidence attached: IMG_BOH_8892.jpg')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          '📸 Photo evidence attached: IMG_BOH_8892.jpg',
+                        ),
+                      ),
+                    );
                   },
-                  icon: Icon(photoAttached ? Icons.check_circle : Icons.camera_alt, size: 14, color: photoAttached ? const Color(0xFF059669) : null),
-                  label: Text(photoAttached ? 'Photo Attached (Verified)' : 'Attach Photo Evidence', style: const TextStyle(fontSize: 11)),
+                  icon: Icon(
+                    photoAttached ? Icons.check_circle : Icons.camera_alt,
+                    size: 14,
+                    color: photoAttached ? const Color(0xFF059669) : null,
+                  ),
+                  label: Text(
+                    photoAttached
+                        ? 'Photo Attached (Verified)'
+                        : 'Attach Photo Evidence',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ),
                 const SizedBox(height: 6),
-                TextField(controller: noteCtrl, decoration: const InputDecoration(labelText: 'Quality / Audit Note', isDense: true)),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Quality / Audit Note',
+                    isDense: true,
+                  ),
+                ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 final weight = double.tryParse(weightCtrl.text);
                 if (weight != null && weight > 0) {
-                  final targetDish = widget.db.dishes.firstWhere((d) => d.id == selectedDishId);
-                  widget.db.logPlateWaste(PlateWasteLog(
-                    id: 'PW-${Random().nextInt(900) + 100}',
-                    date: '2026-08-13',
-                    mealPeriod: selectedShift,
-                    dishId: selectedDishId,
-                    dishName: targetDish.name,
-                    discardedKg: weight,
-                    isAnomaly: isAnomaly,
-                    anomalyReason: isAnomaly ? reasonCtrl.text : '',
-                    photoAttached: photoAttached || isAnomaly,
-                    note: noteCtrl.text,
-                    loggedBy: 'Chef Zhen Bang (BOH)',
-                  ));
+                  final targetDish = widget.db.dishes.firstWhere(
+                    (d) => d.id == selectedDishId,
+                  );
+                  widget.db.logPlateWaste(
+                    PlateWasteLog(
+                      id: 'PW-${Random().nextInt(900) + 100}',
+                      date: '2026-08-13',
+                      mealPeriod: selectedShift,
+                      dishId: selectedDishId,
+                      dishName: targetDish.name,
+                      discardedKg: weight,
+                      isAnomaly: isAnomaly,
+                      anomalyReason: isAnomaly ? reasonCtrl.text : '',
+                      photoAttached: photoAttached || isAnomaly,
+                      note: noteCtrl.text,
+                      loggedBy: 'Chef Zhen Bang (BOH)',
+                    ),
+                  );
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Plate waste logged for ${targetDish.name}! EMA multiplier updated.')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Plate waste logged for ${targetDish.name}! EMA multiplier updated.',
+                      ),
+                    ),
+                  );
                 }
               },
               child: const Text('Save & Refine EMA'),
-            )
+            ),
           ],
         ),
       ),
@@ -1082,11 +2406,21 @@ class _KitchenScreenState extends State<KitchenScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          title: Text('Chef Multiplier Override: ${dish.name}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+          title: Text(
+            'Chef Multiplier Override: ${dish.name}',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Current Multiplier: ${currentVal.toStringAsFixed(2)}x', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF059669))),
+              Text(
+                'Current Multiplier: ${currentVal.toStringAsFixed(2)}x',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF059669),
+                ),
+              ),
               const SizedBox(height: 8),
               Slider(
                 value: currentVal,
@@ -1096,20 +2430,35 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 label: '${currentVal.toStringAsFixed(2)}x',
                 onChanged: (v) => setDlg(() => currentVal = v),
               ),
-              const Text('Adjust multiplier based on chef intuition, tour group size, or physical stock limits.', style: TextStyle(fontSize: 10, color: Color(0xFF71717A))),
+              const Text(
+                'Adjust multiplier based on chef intuition, tour group size, or physical stock limits.',
+                style: TextStyle(fontSize: 10, color: Color(0xFF71717A)),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 widget.db.updateDishMultiplier(dish.id, currentVal);
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Multiplier for ${dish.name} set to ${currentVal.toStringAsFixed(2)}x!')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Multiplier for ${dish.name} set to ${currentVal.toStringAsFixed(2)}x!',
+                    ),
+                  ),
+                );
               },
               child: const Text('Apply Override'),
-            )
+            ),
           ],
         ),
       ),
@@ -1117,131 +2466,1029 @@ class _KitchenScreenState extends State<KitchenScreen> {
   }
 
   void _showAddStockSheet(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+
     final nameCtrl = TextEditingController();
     final qtyCtrl = TextEditingController();
+
+    // Default values for the simulated project date.
+    // Keep this aligned with the date used elsewhere in your demo data.
+    final demoToday = DateTime(2026, 8, 13);
+
+    // User enters only the 2-letter ingredient code.
+    // Example: CK = Chicken, SL = Salmon, EG = Eggs.
+    final batchCodeCtrl = TextEditingController();
+
+    final locationCtrl = TextEditingController();
+
     String category = 'Produce';
     String unit = 'kg';
+
+    DateTime? deliveryDate = DateTime.now();
+    DateTime? expiryDate = DateTime.now().add(const Duration(days: 5));
+
+    String formatDate(DateTime? date) {
+      if (date == null) return 'Select date';
+      return '${date.day.toString().padLeft(2, '0')}/'
+          '${date.month.toString().padLeft(2, '0')}/'
+          '${date.year}';
+    }
+
+    String toIsoDate(DateTime date) {
+      return '${date.year}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 16, right: 16, top: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Log Incoming Stock (M2)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 12),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Ingredient Name')),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity'))),
-                const SizedBox(width: 8),
-                DropdownButton<String>(
-                  value: unit,
-                  items: ['kg', 'L', 'units'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                  onChanged: (val) => unit = val!,
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF18181B),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 44),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                if (nameCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                  widget.db.addInventoryItem(InventoryItem(
-                    id: 'ING-${Random().nextInt(900) + 100}',
-                    name: nameCtrl.text,
-                    category: category,
-                    quantity: double.tryParse(qtyCtrl.text) ?? 10.0,
-                    unit: unit,
-                    batchNumber: 'BCH-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-                    deliveryDate: '2026-08-13',
-                    expiryDate: '2026-08-18',
-                    storageLocation: 'Main Chiller',
-                  ));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stock item logged to Oracle SQL database!')));
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          Future<void> pickDeliveryDate() async {
+            final picked = await showDatePicker(
+              context: ctx,
+              initialDate: deliveryDate ?? demoToday,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2100),
+              helpText: 'Select Delivery Date',
+            );
+
+            if (picked != null) {
+              setDialogState(() {
+                deliveryDate = picked;
+
+                // Expiry date cannot be before delivery date.
+                if (expiryDate != null && expiryDate!.isBefore(picked)) {
+                  expiryDate = null;
                 }
-              },
-              child: const Text('Save to Stock Register'),
-            )
-          ],
-        ),
+              });
+            }
+          }
+
+          Future<void> pickExpiryDate() async {
+            final minimumDate = deliveryDate ?? demoToday;
+
+            final picked = await showDatePicker(
+              context: ctx,
+              initialDate:
+                  expiryDate != null && !expiryDate!.isBefore(minimumDate)
+                  ? expiryDate!
+                  : minimumDate,
+              firstDate: minimumDate,
+              lastDate: DateTime(2100),
+              helpText: 'Select Expiry Date',
+            );
+
+            if (picked != null) {
+              setDialogState(() {
+                expiryDate = picked;
+              });
+            }
+          }
+
+          void saveStock() {
+            if (!formKey.currentState!.validate()) {
+              return;
+            }
+
+            if (deliveryDate == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please select a delivery date.')),
+              );
+              return;
+            }
+
+            if (expiryDate == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please select an expiry date.')),
+              );
+              return;
+            }
+
+            if (expiryDate!.isBefore(deliveryDate!)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Expiry date cannot be earlier than the delivery date.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            final quantity = double.tryParse(qtyCtrl.text.trim());
+
+            if (quantity == null || quantity <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Quantity must be a valid number greater than 0.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            final newItem = InventoryItem(
+              id: 'ING-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+              name: nameCtrl.text.trim(),
+              category: category,
+              quantity: quantity,
+              unit: unit,
+              batchNumber:
+                  'BCH-${deliveryDate!.year}'
+                  '${deliveryDate!.month.toString().padLeft(2, '0')}'
+                  '${deliveryDate!.day.toString().padLeft(2, '0')}'
+                  '-${batchCodeCtrl.text.trim().toUpperCase()}',
+              storageLocation: locationCtrl.text.trim(),
+              deliveryDate: toIsoDate(deliveryDate!),
+              expiryDate: toIsoDate(expiryDate!),
+            );
+
+            widget.db.addInventoryItem(newItem);
+
+            Navigator.pop(ctx);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Stock "${newItem.name}" successfully added to the inventory.',
+                ),
+              ),
+            );
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 18,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Log Incoming Stock (M2)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Record newly received kitchen inventory',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF71717A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Section: Item Details
+                      const Text(
+                        'ITEM DETAILS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF71717A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextFormField(
+                        controller: nameCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Ingredient Name',
+                          hintText: 'e.g. Fresh Chicken Breast',
+                          prefixIcon: Icon(Icons.restaurant_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Ingredient name is required.';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      DropdownButtonFormField<String>(
+                        value: category,
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          prefixIcon: Icon(Icons.category_outlined),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Produce',
+                            child: Text('Produce & Vegetables'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Meat & Poultry',
+                            child: Text('Meat & Poultry'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Seafood',
+                            child: Text('Seafood'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Dairy & Eggs',
+                            child: Text('Dairy & Eggs'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Grains & Dry',
+                            child: Text('Grains & Dry Storage'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() {
+                              category = value;
+                            });
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: qtyCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: const InputDecoration(
+                                labelText: 'Quantity',
+                                hintText: 'e.g. 25.0',
+                                prefixIcon: Icon(Icons.scale_outlined),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Required';
+                                }
+
+                                final number = double.tryParse(value.trim());
+
+                                if (number == null) {
+                                  return 'Invalid number';
+                                }
+
+                                if (number <= 0) {
+                                  return 'Must be > 0';
+                                }
+
+                                return null;
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: unit,
+                              decoration: const InputDecoration(
+                                labelText: 'Unit',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'kg',
+                                  child: Text('kg'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'L',
+                                  child: Text('Litres'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'units',
+                                  child: Text('Units'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    unit = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Section: Batch & Storage
+                      const Text(
+                        'BATCH & STORAGE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF71717A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextFormField(
+                        controller: batchCodeCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        maxLength: 2,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'[A-Za-z]'),
+                          ),
+                          UpperCaseTextFormatter(),
+                          LengthLimitingTextInputFormatter(2),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Batch Identifier Number',
+                          hintText: 'e.g. CK',
+                          prefixIcon: const Icon(Icons.qr_code_2_outlined),
+
+                          // Automatically follows the selected delivery date.
+                          prefixText: deliveryDate == null
+                              ? 'BCH-'
+                              : 'BCH-${deliveryDate!.year}'
+                                    '${deliveryDate!.month.toString().padLeft(2, '0')}'
+                                    '${deliveryDate!.day.toString().padLeft(2, '0')}-',
+
+                          counterText: '',
+                        ),
+                        validator: (value) {
+                          final code = value?.trim() ?? '';
+
+                          if (code.isEmpty) {
+                            return 'Enter a 2-letter ingredient code.';
+                          }
+
+                          if (code.length != 2) {
+                            return 'Code must contain exactly 2 letters.';
+                          }
+
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        controller: locationCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Storage Location',
+                          hintText: 'e.g. Walk-in Chiller A',
+                          prefixIcon: Icon(Icons.inventory_2_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Storage location is required.';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Section: Shelf Life
+                      const Text(
+                        'SHELF LIFE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF71717A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: pickDeliveryDate,
+                              icon: const Icon(Icons.calendar_today_outlined),
+                              label: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Delivery Date',
+                                    style: TextStyle(fontSize: 9),
+                                  ),
+                                  Text(
+                                    formatDate(deliveryDate),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                alignment: Alignment.centerLeft,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: pickExpiryDate,
+                              icon: const Icon(Icons.event_available_outlined),
+                              label: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Expiry Date',
+                                    style: TextStyle(fontSize: 9),
+                                  ),
+                                  Text(
+                                    formatDate(expiryDate),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                alignment: Alignment.centerLeft,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      if (deliveryDate != null && expiryDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: Color(0xFF059669),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Expiry date must be on or after delivery date.',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      const SizedBox(height: 20),
+
+                      // Save
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: saveStock,
+                          icon: const Icon(Icons.save_outlined),
+                          label: const Text(
+                            'Save to Stock Register',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF18181B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   void _showLogSpoilageDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+
     final itemCtrl = TextEditingController();
     final qtyCtrl = TextEditingController();
-    String type = 'Spoilage';
+    final reasonCtrl = TextEditingController();
 
-    showDialog(
+    String type = 'Spoilage';
+    String selectedShift = 'Dinner Shift';
+    String selectedUnit = 'kg';
+
+    // Simulated project date.
+    final disposalDate = DateTime(2026, 8, 13);
+
+    String formatDate(DateTime date) {
+      return '${date.day.toString().padLeft(2, '0')}/'
+          '${date.month.toString().padLeft(2, '0')}/'
+          '${date.year}';
+    }
+
+    String toIsoDate(DateTime date) {
+      return '${date.year}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+    }
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Record Shift Food Waste (M2)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Spoilage (Loss)'),
-                    selected: type == 'Spoilage',
-                    onSelected: (_) => setDialogState(() => type = 'Spoilage'),
+        builder: (ctx, setDialogState) {
+          void saveWaste() {
+            if (!formKey.currentState!.validate()) {
+              return;
+            }
+
+            final quantity = double.tryParse(qtyCtrl.text.trim());
+
+            if (quantity == null || quantity <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Quantity must be a valid number greater than 0.',
                   ),
-                  const SizedBox(width: 6),
-                  ChoiceChip(
-                    label: const Text('Prep (Compost)'),
-                    selected: type == 'Prep Waste',
-                    onSelected: (_) => setDialogState(() => type = 'Prep Waste'),
-                  ),
-                ],
+                ),
+              );
+              return;
+            }
+
+            widget.db.addFoodWasteLog(
+              FoodWasteLog(
+                id: 'WST-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+                date: toIsoDate(disposalDate),
+                mealPeriod: selectedShift,
+                item: itemCtrl.text.trim(),
+                type: type,
+                reason: reasonCtrl.text.trim(),
+                quantity: quantity,
+                unit: selectedUnit,
+                costImpact: type == 'Spoilage' ? quantity * 18.5 : 0.0,
+                loggedBy: 'Mobile App User',
               ),
-              const SizedBox(height: 10),
-              TextField(controller: itemCtrl, decoration: const InputDecoration(labelText: 'Item Name')),
-              const SizedBox(height: 8),
-              TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Discarded kg')),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
-              onPressed: () {
-                if (itemCtrl.text.isNotEmpty && qtyCtrl.text.isNotEmpty) {
-                  final qty = double.tryParse(qtyCtrl.text) ?? 1.0;
-                  widget.db.addFoodWasteLog(FoodWasteLog(
-                    id: 'WST-${Random().nextInt(900) + 100}',
-                    date: '2026-08-13',
-                    mealPeriod: 'Dinner Shift',
-                    item: itemCtrl.text,
-                    type: type,
-                    reason: type == 'Spoilage' ? 'Expired / Damaged' : 'Peelings diverted to composter',
-                    quantity: qty,
-                    unit: 'kg',
-                    costImpact: type == 'Spoilage' ? qty * 18.5 : 0.0,
-                    loggedBy: 'Mobile App User',
-                  ));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food waste recorded!')));
-                }
-              },
-              child: const Text('Save Log'),
+            );
+
+            Navigator.pop(ctx);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${type == 'Spoilage' ? 'Spoilage' : 'Prep Waste'} record successfully saved.',
+                ),
+              ),
+            );
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 18,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+              ),
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Record Food Waste (M2)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Record discarded food from the current shift',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF71717A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Classification
+                      const Text(
+                        'WASTE CLASSIFICATION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF71717A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setDialogState(() {
+                                  type = 'Spoilage';
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: type == 'Spoilage'
+                                      ? const Color(0xFFFFF1F2)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: type == 'Spoilage'
+                                        ? const Color(0xFFE11D48)
+                                        : const Color(0xFFE4E4E7),
+                                    width: type == 'Spoilage' ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Color(0xFFE11D48),
+                                      size: 20,
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      'Spoilage',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Expired, rotten, or damaged raw items',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        color: Color(0xFF71717A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setDialogState(() {
+                                  type = 'Prep Waste';
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: type == 'Prep Waste'
+                                      ? const Color(0xFFECFDF5)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: type == 'Prep Waste'
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFE4E4E7),
+                                    width: type == 'Prep Waste' ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.eco_outlined,
+                                      color: Color(0xFF059669),
+                                      size: 20,
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      'Prep Waste',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Peelings, bones, and food trimmings',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        color: Color(0xFF71717A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Waste details
+                      const Text(
+                        'WASTE DETAILS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF71717A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextFormField(
+                        controller: itemCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Discarded Item Name',
+                          hintText: 'e.g. Fresh Farm Poultry',
+                          prefixIcon: Icon(Icons.restaurant_menu_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Item name is required.';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: selectedShift,
+                              decoration: const InputDecoration(
+                                labelText: 'Meal Shift',
+                                prefixIcon: Icon(Icons.schedule_outlined),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Breakfast Shift',
+                                  child: Text('Breakfast'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Lunch Shift',
+                                  child: Text('Lunch'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Dinner Shift',
+                                  child: Text('Dinner'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedShift = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: selectedUnit,
+                              decoration: const InputDecoration(
+                                labelText: 'Unit',
+                                prefixIcon: Icon(Icons.straighten_outlined),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'kg',
+                                  child: Text('kg'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'L',
+                                  child: Text('Litres'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'units',
+                                  child: Text('Units'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setDialogState(() {
+                                    selectedUnit = value;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        controller: qtyCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Quantity',
+                          hintText: 'e.g. 3.5',
+                          prefixIcon: Icon(Icons.scale_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Quantity is required.';
+                          }
+
+                          final number = double.tryParse(value.trim());
+
+                          if (number == null) {
+                            return 'Enter a valid number.';
+                          }
+
+                          if (number <= 0) {
+                            return 'Quantity must be greater than 0.';
+                          }
+
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        controller: reasonCtrl,
+                        textCapitalization: TextCapitalization.sentences,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Reason / Disposal Notes',
+                          hintText:
+                              'e.g. Expired due to incorrect storage temperature',
+                          prefixIcon: Icon(Icons.notes_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Disposal notes are required.';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Automatic disposal date
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F4F5),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE4E4E7)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.event_outlined,
+                              size: 18,
+                              color: Color(0xFF71717A),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Disposal Date',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF71717A),
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Recorded automatically',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              formatDate(disposalDate),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: saveWaste,
+                          icon: const Icon(Icons.save_outlined),
+                          label: const Text(
+                            'Save Waste Log',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1252,7 +3499,9 @@ class _KitchenScreenState extends State<KitchenScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.75,
         minChildSize: 0.5,
@@ -1269,26 +3518,82 @@ class _KitchenScreenState extends State<KitchenScreen> {
                   children: [
                     Text('📖', style: TextStyle(fontSize: 20)),
                     SizedBox(width: 8),
-                    Text('Module 3 Kitchen Quick Guide', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF18181B))),
+                    Text(
+                      'Module 3 Kitchen Quick Guide',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF18181B),
+                      ),
+                    ),
                   ],
                 ),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, size: 20)),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close, size: 20),
+                ),
               ],
             ),
-            const Text('Lead PIC: Zhen Bang • Predictive F&B Batch Optimization Engine', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
+            const Text(
+              'Lead PIC: Zhen Bang • Predictive F&B Batch Optimization Engine',
+              style: TextStyle(
+                fontSize: 11,
+                color: Color(0xFF059669),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const Divider(height: 20),
 
-            _buildGuideStep('1', 'Select 48h Window & Service Period', 'Check incoming diners and guest demographics calculated dynamically from Oracle SQL reservations.', const Color(0xFF059669)),
-            _buildGuideStep('2', 'Review Target Weights by Station', 'Filter by Hot Line, Live Counter, or Cold Pantry to view your station batch targets in kilograms.', const Color(0xFF2563EB)),
-            _buildGuideStep('3', 'Follow Staggered 3-Wave Prep Schedule', 'Cook Wave 1 (55%) for opening, Wave 2 (35%) for peak rush, and Wave 3 (10%) for on-demand top-up.', const Color(0xFF8B5CF6)),
-            _buildGuideStep('4', 'Update Live Prep Status', 'Tap the status pill to advance from "Pending" → "Prepping Wave 1" → "Batch Ready".', const Color(0xFFD97706)),
-            _buildGuideStep('5', 'Chef Multiplier Overrides', 'Tap "Chef Override" slider (0.50x - 1.20x) to adjust batch sizes for special tour groups or stock limits.', const Color(0xFFEC4899)),
-            _buildGuideStep('6', 'Log End-of-Shift Plate Returns', 'Record leftover food retrieved from guest tables to refine future Exponential Moving Average (EMA) demand.', const Color(0xFFE11D48)),
-            _buildGuideStep('7', 'Flag Accidents to Protect Demand Matrix', 'If food was spilled or dropped, check "Flag as Operational Accident" so future demand is not penalized.', const Color(0xFF10B981)),
+            _buildGuideStep(
+              '1',
+              'Select 48h Window & Service Period',
+              'Check incoming diners and guest demographics calculated dynamically from Oracle SQL reservations.',
+              const Color(0xFF059669),
+            ),
+            _buildGuideStep(
+              '2',
+              'Review Target Weights by Station',
+              'Filter by Hot Line, Live Counter, or Cold Pantry to view your station batch targets in kilograms.',
+              const Color(0xFF2563EB),
+            ),
+            _buildGuideStep(
+              '3',
+              'Follow Staggered 3-Wave Prep Schedule',
+              'Cook Wave 1 (55%) for opening, Wave 2 (35%) for peak rush, and Wave 3 (10%) for on-demand top-up.',
+              const Color(0xFF8B5CF6),
+            ),
+            _buildGuideStep(
+              '4',
+              'Update Live Prep Status',
+              'Tap the status pill to advance from "Pending" → "Prepping Wave 1" → "Batch Ready".',
+              const Color(0xFFD97706),
+            ),
+            _buildGuideStep(
+              '5',
+              'Chef Multiplier Overrides',
+              'Tap "Chef Override" slider (0.50x - 1.20x) to adjust batch sizes for special tour groups or stock limits.',
+              const Color(0xFFEC4899),
+            ),
+            _buildGuideStep(
+              '6',
+              'Log End-of-Shift Plate Returns',
+              'Record leftover food retrieved from guest tables to refine future Exponential Moving Average (EMA) demand.',
+              const Color(0xFFE11D48),
+            ),
+            _buildGuideStep(
+              '7',
+              'Flag Accidents to Protect Demand Matrix',
+              'If food was spilled or dropped, check "Flag as Operational Accident" so future demand is not penalized.',
+              const Color(0xFF10B981),
+            ),
 
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 44)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 44),
+              ),
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Understood, Ready to Cook!'),
             ),
@@ -1307,16 +3612,36 @@ class _KitchenScreenState extends State<KitchenScreen> {
           CircleAvatar(
             radius: 12,
             backgroundColor: color.withValues(alpha: 0.15),
-            child: Text(num, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+            child: Text(
+              num,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF18181B))),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF18181B),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF71717A))),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF71717A),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1347,8 +3672,12 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
       filtered = filtered.where((r) => r.floor == _selectedFloor).toList();
     }
 
-    final activeCount = widget.db.rooms.where((r) => r.cleaningStatus.contains('Active')).length;
-    final skippedCount = widget.db.rooms.where((r) => r.cleaningStatus.contains('Skipped')).length;
+    final activeCount = widget.db.rooms
+        .where((r) => r.cleaningStatus.contains('Active'))
+        .length;
+    final skippedCount = widget.db.rooms
+        .where((r) => r.cleaningStatus.contains('Skipped'))
+        .length;
 
     return ListView(
       padding: const EdgeInsets.all(14),
@@ -1360,9 +3689,21 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatColumn('Total Rooms', '${widget.db.rooms.length}', const Color(0xFF18181B)),
-                _buildStatColumn('Active Queue', '$activeCount', const Color(0xFF0284C7)),
-                _buildStatColumn('Opted-Out (Skipped)', '$skippedCount', const Color(0xFF059669)),
+                _buildStatColumn(
+                  'Total Rooms',
+                  '${widget.db.rooms.length}',
+                  const Color(0xFF18181B),
+                ),
+                _buildStatColumn(
+                  'Active Queue',
+                  '$activeCount',
+                  const Color(0xFF0284C7),
+                ),
+                _buildStatColumn(
+                  'Opted-Out (Skipped)',
+                  '$skippedCount',
+                  const Color(0xFF059669),
+                ),
               ],
             ),
           ),
@@ -1393,19 +3734,41 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
               dense: true,
               title: Row(
                 children: [
-                  Text('Room ${room.roomNumber}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                  Text(
+                    'Room ${room.roomNumber}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Text('(${room.guestName})', style: const TextStyle(fontSize: 11, color: Color(0xFF71717A))),
+                  Text(
+                    '(${room.guestName})',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
                 ],
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${room.type} • Floor ${room.floor}', style: const TextStyle(fontSize: 10.5)),
+                  Text(
+                    '${room.type} • Floor ${room.floor}',
+                    style: const TextStyle(fontSize: 10.5),
+                  ),
                   const SizedBox(height: 2),
                   Text(
-                    room.towelReuse ? '🌿 Guest Towel Reuse Active' : 'Standard Towel Change',
-                    style: TextStyle(fontSize: 10.5, color: room.towelReuse ? const Color(0xFF059669) : const Color(0xFF71717A)),
+                    room.towelReuse
+                        ? '🌿 Guest Towel Reuse Active'
+                        : 'Standard Towel Change',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: room.towelReuse
+                          ? const Color(0xFF059669)
+                          : const Color(0xFF71717A),
+                    ),
                   ),
                 ],
               ),
@@ -1414,9 +3777,16 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSkipped ? const Color(0xFFECFDF5) : isLight ? const Color(0xFFF0F9FF) : const Color(0xFFF4F4F5),
+                      color: isSkipped
+                          ? const Color(0xFFECFDF5)
+                          : isLight
+                          ? const Color(0xFFF0F9FF)
+                          : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1424,16 +3794,31 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: isSkipped ? const Color(0xFF059669) : isLight ? const Color(0xFF0284C7) : const Color(0xFF71717A),
+                        color: isSkipped
+                            ? const Color(0xFF059669)
+                            : isLight
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFF71717A),
                       ),
                     ),
                   ),
                   if (isSkipped)
                     GestureDetector(
-                      onTap: () => _showSupervisorOverrideDialog(context, room.roomNumber),
+                      onTap: () => _showSupervisorOverrideDialog(
+                        context,
+                        room.roomNumber,
+                      ),
                       child: const Padding(
                         padding: EdgeInsets.only(top: 3),
-                        child: Text('Override', style: TextStyle(fontSize: 10, color: Color(0xFFE11D48), fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
+                        child: Text(
+                          'Override',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE11D48),
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                 ],
@@ -1448,8 +3833,18 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
   Widget _buildStatColumn(String label, String value, Color valColor) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: valColor)),
-        Text(label, style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: valColor,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A)),
+        ),
       ],
     );
   }
@@ -1457,7 +3852,13 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
   Widget _buildFloorChip(int floor, String label) {
     final isSelected = _selectedFloor == floor;
     return FilterChip(
-      label: Text(label, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : const Color(0xFF18181B))),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          color: isSelected ? Colors.white : const Color(0xFF18181B),
+        ),
+      ),
       selected: isSelected,
       selectedColor: const Color(0xFF18181B),
       backgroundColor: Colors.white,
@@ -1472,24 +3873,47 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Supervisor Override: Room $roomNumber', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+        title: Text(
+          'Supervisor Override: Room $roomNumber',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Reinstate room to active cleaning queue:', style: TextStyle(fontSize: 12)),
+            const Text(
+              'Reinstate room to active cleaning queue:',
+              style: TextStyle(fontSize: 12),
+            ),
             const SizedBox(height: 8),
-            TextField(controller: reasonCtrl, decoration: const InputDecoration(labelText: 'Mandatory Reason (e.g. hygiene inspection)')),
+            TextField(
+              controller: reasonCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Mandatory Reason (e.g. hygiene inspection)',
+              ),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE11D48), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE11D48),
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               if (reasonCtrl.text.isNotEmpty) {
                 widget.db.supervisorOverride(roomNumber, reasonCtrl.text);
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Room $roomNumber reinstated to Active Clean List!')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Room $roomNumber reinstated to Active Clean List!',
+                    ),
+                  ),
+                );
               }
             },
             child: const Text('Confirm Override'),
@@ -1528,13 +3952,32 @@ class FacilitiesScreen extends StatelessWidget {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.crisis_alert, size: 18, color: Color(0xFFE11D48)),
+                    Icon(
+                      Icons.crisis_alert,
+                      size: 18,
+                      color: Color(0xFFE11D48),
+                    ),
                     SizedBox(width: 6),
-                    Text('15% Utility Anomaly Spikes Detected', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFFE11D48))),
+                    Text(
+                      'Utility Anomaly Spikes Detected',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFFE11D48),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                ...anomalies.map((a) => Text('• ${a.meterId} (${a.zone}): ${a.lastReading} vs ${a.baselineDaily} ${a.unit}', style: const TextStyle(fontSize: 11, color: Color(0xFF18181B)))),
+                ...anomalies.map(
+                  (a) => Text(
+                    '• ${a.meterId} (${a.zone}): ${a.lastReading} vs ${a.baselineDaily} ${a.unit}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF18181B),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1548,12 +3991,17 @@ class FacilitiesScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF18181B),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onPressed: () => _showMeterReadingDialog(context),
                 icon: const Icon(Icons.speed, size: 16),
-                label: const Text('Log Meter Reading', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Log Meter Reading',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -1562,12 +4010,17 @@ class FacilitiesScreen extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF18181B),
                   side: const BorderSide(color: Color(0xFFD4D4D8)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onPressed: () => _showReportDefectDialog(context),
                 icon: const Icon(Icons.report_problem_outlined, size: 16),
-                label: const Text('Report Defect', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Report Defect',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
           ],
@@ -1576,35 +4029,78 @@ class FacilitiesScreen extends StatelessWidget {
 
         // Zone Utility Sub-Meters — mirrors the Web Admin Dashboard's meter
         // table so ground staff can see & update every zone's reading here too.
-        const Text('ZONE UTILITY SUB-METERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+        const Text(
+          'ZONE UTILITY SUB-METERS',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF71717A),
+          ),
+        ),
         const SizedBox(height: 6),
         ...db.utilityMeters.map((meter) {
           return Card(
             child: ListTile(
               dense: true,
               leading: Icon(
-                meter.type == 'Water' ? Icons.water_drop_outlined : Icons.bolt_outlined,
-                color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF18181B),
+                meter.type == 'Water'
+                    ? Icons.water_drop_outlined
+                    : Icons.bolt_outlined,
+                color: meter.isAnomaly
+                    ? const Color(0xFFE11D48)
+                    : const Color(0xFF18181B),
               ),
-              title: Text('${meter.meterId} • ${meter.zone}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+              title: Text(
+                '${meter.meterId} • ${meter.zone}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                ),
+              ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Baseline: ${meter.baselineDaily} ${meter.unit} • Last inspected: ${meter.lastReadingTime}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+                  Text(
+                    'Baseline: ${meter.baselineDaily} ${meter.unit} • Last inspected: ${meter.lastReadingTime}',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
                   Row(
                     children: [
                       Text(
                         '${meter.lastReading} ${meter.unit}',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF18181B)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: meter.isAnomaly
+                              ? const Color(0xFFE11D48)
+                              : const Color(0xFF18181B),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
-                          color: meter.isAnomaly ? const Color(0xFFFFF1F2) : const Color(0xFFF0FDF4),
+                          color: meter.isAnomaly
+                              ? const Color(0xFFFFF1F2)
+                              : const Color(0xFFF0FDF4),
                           borderRadius: BorderRadius.circular(3),
                         ),
-                        child: Text(meter.status, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: meter.isAnomaly ? const Color(0xFFE11D48) : const Color(0xFF059669))),
+                        child: Text(
+                          meter.status,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: meter.isAnomaly
+                                ? const Color(0xFFE11D48)
+                                : const Color(0xFF059669),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1614,11 +4110,19 @@ class FacilitiesScreen extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF18181B),
                   side: const BorderSide(color: Color(0xFFD4D4D8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 0,
+                  ),
                   minimumSize: const Size(60, 30),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-                onPressed: () => _showMeterReadingDialog(context, initialMeterId: meter.meterId),
+                onPressed: () => _showMeterReadingDialog(
+                  context,
+                  initialMeterId: meter.meterId,
+                ),
                 child: const Text('Update', style: TextStyle(fontSize: 11)),
               ),
             ),
@@ -1627,7 +4131,63 @@ class FacilitiesScreen extends StatelessWidget {
         const SizedBox(height: 14),
 
         // Repair Tickets
-        const Text('DISPATCHED REPAIR WORK ORDERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'DISPATCHED REPAIR WORK ORDERS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF71717A),
+              ),
+            ),
+            if (db.repairTickets.isNotEmpty)
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFE11D48),
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text(
+                        'Delete all tickets?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      content: Text(
+                        'This will delete all ${db.repairTickets.length} repair ticket(s). This cannot be undone.',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text(
+                            'Delete All',
+                            style: TextStyle(color: Color(0xFFE11D48)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) db.clearAllRepairTickets();
+                },
+                child: const Text(
+                  'Clear All Tickets',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 6),
         if (db.repairTickets.isEmpty)
           Container(
@@ -1652,23 +4212,52 @@ class FacilitiesScreen extends StatelessWidget {
               dense: true,
               title: Row(
                 children: [
-                  Text(ticket.ticketNumber, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(
+                    ticket.ticketNumber,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
-                      color: ticket.priority == 'High' ? const Color(0xFFFFF1F2) : const Color(0xFFF4F4F5),
+                      color: ticket.priority == 'High'
+                          ? const Color(0xFFFFF1F2)
+                          : const Color(0xFFF4F4F5),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: Text(ticket.priority, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: ticket.priority == 'High' ? const Color(0xFFE11D48) : const Color(0xFF71717A))),
+                    child: Text(
+                      ticket.priority,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: ticket.priority == 'High'
+                            ? const Color(0xFFE11D48)
+                            : const Color(0xFF71717A),
+                      ),
+                    ),
                   ),
                 ],
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${ticket.defectCategory} • ${ticket.zone}', style: const TextStyle(fontSize: 11)),
-                  Text('Assigned to: ${ticket.assignedTechnician} • Loss: ${ticket.estimatedLossRate}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+                  Text(
+                    '${ticket.defectCategory} • ${ticket.zone}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  Text(
+                    'Assigned to: ${ticket.assignedTechnician} • Loss: ${ticket.estimatedLossRate}',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF71717A),
+                    ),
+                  ),
                 ],
               ),
               trailing: isCompleted
@@ -1679,11 +4268,26 @@ class FacilitiesScreen extends StatelessWidget {
                           IconButton(
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                            icon: const Icon(Icons.photo_outlined, size: 18, color: Color(0xFF18181B)),
-                            onPressed: () => _showPhotoDialog(context, ticket.photoDataUrl!),
+                            constraints: const BoxConstraints(
+                              minWidth: 30,
+                              minHeight: 30,
+                            ),
+                            icon: const Icon(
+                              Icons.photo_outlined,
+                              size: 18,
+                              color: Color(0xFF18181B),
+                            ),
+                            onPressed: () =>
+                                _showPhotoDialog(context, ticket.photoDataUrl!),
                           ),
-                        const Text('Fixed', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Fixed',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF059669),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     )
                   : Row(
@@ -1696,9 +4300,19 @@ class FacilitiesScreen extends StatelessWidget {
                             child: IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-                              icon: const Icon(Icons.photo_outlined, size: 18, color: Color(0xFF18181B)),
-                              onPressed: () => _showPhotoDialog(context, ticket.photoDataUrl!),
+                              constraints: const BoxConstraints(
+                                minWidth: 30,
+                                minHeight: 30,
+                              ),
+                              icon: const Icon(
+                                Icons.photo_outlined,
+                                size: 18,
+                                color: Color(0xFF18181B),
+                              ),
+                              onPressed: () => _showPhotoDialog(
+                                context,
+                                ticket.photoDataUrl!,
+                              ),
                             ),
                           ),
                         // Matches the Web Admin Dashboard's two-step Start -> Fix
@@ -1709,31 +4323,60 @@ class FacilitiesScreen extends StatelessWidget {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF18181B),
-                                side: const BorderSide(color: Color(0xFFD4D4D8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                side: const BorderSide(
+                                  color: Color(0xFFD4D4D8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 0,
+                                ),
                                 minimumSize: const Size(50, 28),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
                               onPressed: () {
-                                db.updateTicketStatus(ticket.id, 'In Progress', 'Technician arrived on site with repair tools.');
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked IN PROGRESS.')));
+                                db.updateTicketStatus(
+                                  ticket.id,
+                                  'In Progress',
+                                  'Technician arrived on site with repair tools.',
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Ticket ${ticket.ticketNumber} marked IN PROGRESS.',
+                                    ),
+                                  ),
+                                );
                               },
-                              child: const Text('Start', style: TextStyle(fontSize: 11)),
+                              child: const Text(
+                                'Start',
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                           ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 0,
+                            ),
                             minimumSize: const Size(50, 28),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           ),
-                          onPressed: () {
-                            db.updateTicketStatus(ticket.id, 'Completed', 'Defect verified resolved by ground technician.');
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ticket ${ticket.ticketNumber} marked FIXED!')));
-                          },
-                          child: const Text('Fix', style: TextStyle(fontSize: 11)),
+                          onPressed: () => _confirmFixTicket(
+                            context,
+                            ticket.id,
+                            ticket.ticketNumber,
+                          ),
+                          child: const Text(
+                            'Fix',
+                            style: TextStyle(fontSize: 11),
+                          ),
                         ),
                       ],
                     ),
@@ -1744,12 +4387,66 @@ class FacilitiesScreen extends StatelessWidget {
     );
   }
 
+  // Mirrors the Web Admin Dashboard's confirm() prompt before a repair
+  // ticket is marked COMPLETED, so both apps ask for the same confirmation
+  // before closing out a work order.
+  void _confirmFixTicket(
+    BuildContext context,
+    String ticketId,
+    String ticketNumber,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Confirm Repair Complete',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Confirm repair ticket $ticketNumber has been resolved and marked as COMPLETED?',
+          style: const TextStyle(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              db.updateTicketStatus(
+                ticketId,
+                'Completed',
+                'Defect verified resolved by ground technician.',
+              );
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: const Color(0xFF059669),
+                  content: Text(
+                    'Repair ticket $ticketNumber marked COMPLETED!',
+                  ),
+                ),
+              );
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPhotoDialog(BuildContext context, String photoDataUrl) {
     // photoDataUrl is a base64 data URL (e.g. "data:image/jpeg;base64,...."),
     // matching the format used by the Web Admin Dashboard's photo evidence field.
     Uint8List? bytes;
     try {
-      final base64Part = photoDataUrl.contains(',') ? photoDataUrl.split(',').last : photoDataUrl;
+      final base64Part = photoDataUrl.contains(',')
+          ? photoDataUrl.split(',').last
+          : photoDataUrl;
       bytes = base64Decode(base64Part);
     } catch (_) {
       bytes = null;
@@ -1768,9 +4465,18 @@ class FacilitiesScreen extends StatelessWidget {
                 children: [
                   const Padding(
                     padding: EdgeInsets.only(left: 6),
-                    child: Text('Defect Photo Evidence', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    child: Text(
+                      'Defect Photo Evidence',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
                 ],
               ),
               if (bytes != null)
@@ -1792,6 +4498,7 @@ class FacilitiesScreen extends StatelessWidget {
 
   void _showMeterReadingDialog(BuildContext context, {String? initialMeterId}) {
     final readingCtrl = TextEditingController();
+    final meterFormKey = GlobalKey<FormState>();
     String meterId = initialMeterId ?? db.utilityMeters.first.meterId;
 
     showDialog(
@@ -2903,18 +5610,45 @@ class ExecutiveScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                const Text('VM2026 SUSTAINABILITY COMPLIANCE SCORE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF71717A), letterSpacing: 0.5)),
+                const Text(
+                  'VM2026 SUSTAINABILITY COMPLIANCE SCORE',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF71717A),
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text('$score', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Color(0xFF059669))),
-                    const Text('/100', style: TextStyle(fontSize: 16, color: Color(0xFF71717A))),
+                    Text(
+                      '$score',
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF059669),
+                      ),
+                    ),
+                    const Text(
+                      '/100',
+                      style: TextStyle(fontSize: 16, color: Color(0xFF71717A)),
+                    ),
                   ],
                 ),
-                Text(score >= 90 ? 'Grade: A+ (Platinum VM2026 Certified)' : 'Grade: A (Compliant)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF059669))),
+                Text(
+                  score >= 90
+                      ? 'Grade: A+ (Platinum VM2026 Certified)'
+                      : 'Grade: A (Compliant)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF059669),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2922,51 +5656,64 @@ class ExecutiveScreen extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Environmental KPI Grid
-        Row(
-          children: [
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Food Saved', style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-                      Text('940 kg', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF059669))),
-                      Text('+18.4% YoY', style: TextStyle(fontSize: 9.5, color: Color(0xFF059669))),
-                    ],
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Food Saved',
+                  style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A)),
+                ),
+                Text(
+                  '940 kg',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF059669),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Water Saved', style: TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
-                      Text('122.0 kL', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0284C7))),
-                      Text('+14.2% Conformance', style: TextStyle(fontSize: 9.5, color: Color(0xFF0284C7))),
-                    ],
-                  ),
+                Text(
+                  '+18.4% YoY',
+                  style: TextStyle(fontSize: 9.5, color: Color(0xFF059669)),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
         const SizedBox(height: 12),
 
         // UC3: View Resource Consumption Analytics
         ..._buildResourceConsumptionSection(),
 
-        const Text('DEPARTMENTAL COMPLIANCE OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+        const Text(
+          'DEPARTMENTAL COMPLIANCE OVERVIEW',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF71717A),
+          ),
+        ),
         const SizedBox(height: 6),
-        _buildDeptTile('Culinary F&B Division', 'Sze Ping & Zhen Bang', '840 kg prep waste diverted', 'Target Met (A+)'),
-        _buildDeptTile('Housekeeping Division', 'Simon (Lead Supervisor)', '38% guest linen opt-out rate', 'Target Met (A+)'),
-        _buildDeptTile('Facilities & Engineering', 'Wan Ching (Lead Tech)', '2 active repairs in progress', 'Normal (A)'),
+        _buildDeptTile(
+          'Culinary F&B Division',
+          'Sze Ping & Zhen Bang',
+          '840 kg prep waste diverted',
+          'Target Met (A+)',
+        ),
+        _buildDeptTile(
+          'Housekeeping Division',
+          'Simon (Lead Supervisor)',
+          '38% guest linen opt-out rate',
+          'Target Met (A+)',
+        ),
+        _buildDeptTile(
+          'Facilities & Engineering',
+          'Wan Ching (Lead Tech)',
+          '2 active repairs in progress',
+          'Normal (A)',
+        ),
       ],
     );
   }
@@ -2982,9 +5729,22 @@ class ExecutiveScreen extends StatelessWidget {
     }
     final baselineTotal = meters.fold<double>(0, (a, m) => a + m.baselineDaily);
     final currentTotal = meters.fold<double>(0, (a, m) => a + m.lastReading);
-    final variancePct = baselineTotal > 0 ? ((currentTotal - baselineTotal) / baselineTotal) * 100 : 0.0;
+    final variancePct = baselineTotal > 0
+        ? ((currentTotal - baselineTotal) / baselineTotal) * 100
+        : 0.0;
     final anomalyZones = meters.where((m) => m.isAnomaly).toList();
-    final isAbnormal = variancePct >= 15 || anomalyZones.isNotEmpty;
+    // Status follows the same sign as the displayed color: negative variance
+    // (under baseline, shown in blue) is always Normal, even if an
+    // individual sub-meter is flagged. Only at/over-baseline (positive
+    // variance, shown in red) usage can be Abnormal — either because it
+    // crosses the +15% aggregate threshold or a zone is over its own baseline.
+    final isAbnormal =
+        variancePct >= 0 && (variancePct >= 15 || anomalyZones.isNotEmpty);
+    // Whether to show the "Abnormal consumption detected" warning block is
+    // independent of the badge/color status above: it appears whenever the
+    // aggregate crosses +15%, OR a specific zone is over its own baseline —
+    // even if the aggregate itself is still under baseline (blue/Normal).
+    final hasZoneWarning = variancePct >= 15 || anomalyZones.isNotEmpty;
     return {
       'hasData': true,
       'unit': meters.first.unit,
@@ -2993,6 +5753,7 @@ class ExecutiveScreen extends StatelessWidget {
       'baselineTotal': baselineTotal,
       'variancePct': variancePct,
       'status': isAbnormal ? 'Abnormal' : 'Normal',
+      'hasZoneWarning': hasZoneWarning,
       'anomalyZones': anomalyZones,
     };
   }
@@ -3000,24 +5761,42 @@ class ExecutiveScreen extends StatelessWidget {
   List<Widget> _buildResourceConsumptionSection() {
     final water = _computeResourceAnalytics('Water');
     final electricity = _computeResourceAnalytics('Electricity');
-    final hasMissingData = water['hasData'] != true || electricity['hasData'] != true;
-    final hasAbnormal = (water['hasData'] == true && water['status'] == 'Abnormal') ||
-        (electricity['hasData'] == true && electricity['status'] == 'Abnormal');
+    final hasMissingData =
+        water['hasData'] != true || electricity['hasData'] != true;
+    final hasAbnormal =
+        (water['hasData'] == true && water['hasZoneWarning'] == true) ||
+        (electricity['hasData'] == true &&
+            electricity['hasZoneWarning'] == true);
 
     return [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('RESOURCE CONSUMPTION ANALYTICS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF71717A))),
+          const Text(
+            'RESOURCE CONSUMPTION ANALYTICS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF71717A),
+            ),
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: hasAbnormal ? const Color(0xFFFEF2F2) : const Color(0xFFECFDF5),
+              color: hasAbnormal
+                  ? const Color(0xFFFEF2F2)
+                  : const Color(0xFFECFDF5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               hasAbnormal ? 'Abnormal Consumption Detected' : 'Within Baseline',
-              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: hasAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669)),
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: hasAbnormal
+                    ? const Color(0xFFE11D48)
+                    : const Color(0xFF0284C7),
+              ),
             ),
           ),
         ],
@@ -3026,11 +5805,30 @@ class ExecutiveScreen extends StatelessWidget {
       if (hasMissingData)
         const Padding(
           padding: EdgeInsets.only(bottom: 6),
-          child: Text('Consumption data unavailable for one or more resources — showing available analytics below.', style: TextStyle(fontSize: 10.5, color: Color(0xFFE11D48))),
+          child: Text(
+            'Consumption data unavailable for one or more resources — showing available analytics below.',
+            style: TextStyle(fontSize: 10.5, color: Color(0xFFE11D48)),
+          ),
         ),
-      _buildResourcePanel('Water Consumption', water),
-      const SizedBox(height: 8),
-      _buildResourcePanel('Electricity Consumption', electricity),
+      // Water & Electricity side by side, two columns in one row. Wrapped in
+      // IntrinsicHeight + stretch so both cards always match the height of
+      // whichever one is taller (e.g. when one has more anomaly zones listed),
+      // instead of each card only being as tall as its own content.
+      IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _buildResourcePanel('Water Consumption', water)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildResourcePanel(
+                'Electricity Consumption',
+                electricity,
+              ),
+            ),
+          ],
+        ),
+      ),
       const SizedBox(height: 12),
     ];
   }
@@ -3043,10 +5841,29 @@ class ExecutiveScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(height: 6),
-              const Text('Consumption data unavailable.', style: TextStyle(fontSize: 12, color: Color(0xFFE11D48), fontWeight: FontWeight.w600)),
-              Text('No ${label.toLowerCase()} meter readings are currently available for this property.', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+              const Text(
+                'Consumption data unavailable.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFE11D48),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'No ${label.toLowerCase()} meter readings are currently available for this property.',
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: Color(0xFF71717A),
+                ),
+              ),
             ],
           ),
         ),
@@ -3059,10 +5876,20 @@ class ExecutiveScreen extends StatelessWidget {
     final variancePct = data['variancePct'] as double;
     final meterCount = data['meterCount'] as int;
     final isAbnormal = data['status'] == 'Abnormal';
+    final hasZoneWarning = data['hasZoneWarning'] == true;
     final anomalyZones = data['anomalyZones'] as List<UtilityMeter>;
-    final barFraction = baselineTotal > 0 ? (currentTotal / baselineTotal).clamp(0.0, 1.0) : 0.0;
+    final barFraction = baselineTotal > 0
+        ? (currentTotal / baselineTotal).clamp(0.0, 1.0)
+        : 0.0;
     final varianceSign = variancePct >= 0 ? '+' : '';
-    final statusColor = isAbnormal ? const Color(0xFFE11D48) : const Color(0xFF059669);
+    // Color reflects whether the AGGREGATE reading exceeds baseline (the
+    // variance sign) — not whether any individual sub-meter is flagged.
+    // Negative variance (under baseline) is blue even if the "Abnormal"
+    // badge is still showing because a specific zone is over its own
+    // baseline; positive/zero variance (at/over baseline) is red.
+    final statusColor = variancePct >= 0
+        ? const Color(0xFFE11D48)
+        : const Color(0xFF0284C7);
 
     return Card(
       child: Padding(
@@ -3079,11 +5906,26 @@ class ExecutiveScreen extends StatelessWidget {
                   decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                   child: Text(data['status'] as String, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: statusColor)),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 6),
-            Text('${currentTotal.toStringAsFixed(0)} $unit current', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isAbnormal ? statusColor : const Color(0xFF18181B))),
-            Text('Baseline: ${baselineTotal.toStringAsFixed(0)} $unit across $meterCount sub-meter${meterCount == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF71717A))),
+            Text(
+              '${currentTotal.toStringAsFixed(0)} $unit',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: isAbnormal ? statusColor : const Color(0xFF18181B),
+              ),
+            ),
+            const Text(
+              'current',
+              style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Baseline: ${baselineTotal.toStringAsFixed(0)} $unit ($meterCount sub-meter${meterCount == 1 ? '' : 's'})',
+              style: const TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+            ),
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
@@ -3095,17 +5937,42 @@ class ExecutiveScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('Variance vs baseline: $varianceSign${variancePct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: isAbnormal ? statusColor : const Color(0xFF71717A))),
-            if (isAbnormal) ...[
-              const Divider(height: 16),
-              Text('⚠ Abnormal consumption detected.', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: statusColor)),
+            Text(
+              'Variance: $varianceSign${variancePct.toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isAbnormal ? statusColor : const Color(0xFF71717A),
+              ),
+            ),
+            if (hasZoneWarning) ...[
+              const Divider(height: 14),
+              const Text(
+                '⚠ Abnormal consumption detected.',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFE11D48),
+                ),
+              ),
               if (anomalyZones.isNotEmpty)
-                ...anomalyZones.map((z) => Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text('${z.zone} (${z.meterId}) — ${z.lastReading.toStringAsFixed(0)} ${z.unit} vs ${z.baselineDaily.toStringAsFixed(0)} ${z.unit} baseline', style: const TextStyle(fontSize: 10, color: Color(0xFF71717A))),
-                    ))
+                ...anomalyZones.map(
+                  (z) => Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      '${z.zone} — ${z.lastReading.toStringAsFixed(0)}/${z.baselineDaily.toStringAsFixed(0)} ${z.unit}',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        color: Color(0xFF71717A),
+                      ),
+                    ),
+                  ),
+                )
               else
-                const Text('Aggregate usage exceeds the +15% baseline threshold.', style: TextStyle(fontSize: 10, color: Color(0xFF71717A))),
+                const Text(
+                  'Aggregate usage exceeds the +15% baseline threshold.',
+                  style: TextStyle(fontSize: 9.5, color: Color(0xFF71717A)),
+                ),
             ],
           ],
         ),
@@ -3113,16 +5980,37 @@ class ExecutiveScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDeptTile(String title, String lead, String metric, String status) {
+  Widget _buildDeptTile(
+    String title,
+    String lead,
+    String metric,
+    String status,
+  ) {
     return Card(
       child: ListTile(
         dense: true,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-        subtitle: Text('Lead: $lead • $metric', style: const TextStyle(fontSize: 11)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
+        subtitle: Text(
+          'Lead: $lead • $metric',
+          style: const TextStyle(fontSize: 11),
+        ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(4)),
-          child: Text(status, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF059669))),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFDF5),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            status,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF059669),
+            ),
+          ),
         ),
       ),
     );

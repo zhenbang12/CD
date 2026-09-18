@@ -294,4 +294,4 @@ class UserModel {
     required this.department,
     required this.avatar,
   });
-}
+}

@@ -33,22 +33,10 @@ export class Module3BatchOptimizer {
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('plateWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('dishes', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('reservationForecast', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('inventory', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('plateWasteLogs', () => this.render());
+    db.subscribe('dishes', () => this.render());
+    db.subscribe('reservationForecast', () => this.render());
+    db.subscribe('inventory', () => this.render());
   }
 
   render() {

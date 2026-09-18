@@ -10,8 +10,6 @@ export class Module4GuestPWA {
   constructor(container) {
     this.container = container;
     this.floorFilter = 'ALL'; // 'ALL' | '1' | '2' | '3'
-    this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 

@@ -3,40 +3,24 @@ import { db } from '../db/storage.js';
 export class Module1Audit {
   constructor(container) {
     this.container = container;
-    this.auditFilters = { date: '', user: '', action: '', baseline: '' };
-    this.unsubs = [];
-    this.isDestroyed = false;
+    this.auditFilters = { date: '', user: '', action: '' };
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('userAudit', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
-    let auditLogs = [];
+    let userAudit = [];
     try {
-      const allLogs = db.get('auditLogs') || [];
-      auditLogs = allLogs.filter(log => {
+      const allLogs = db.get('userAudit') || [];
+      userAudit = allLogs.filter(log => {
         let matches = true;
         if (this.auditFilters.date && !(log.timestamp || '').includes(this.auditFilters.date) && !(log.effectiveDate || '').includes(this.auditFilters.date)) matches = false;
         if (this.auditFilters.user && !(log.userName || '').toLowerCase().includes(this.auditFilters.user.toLowerCase()) && !(log.userId || '').toLowerCase().includes(this.auditFilters.user.toLowerCase())) matches = false;
         if (this.auditFilters.action && !(log.action || '').toLowerCase().includes(this.auditFilters.action.toLowerCase())) matches = false;
-        if (this.auditFilters.baseline && !(log.targetKey || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase()) && !(log.transactionRef || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase())) matches = false;
         return matches;
       });
     } catch (error) {
@@ -137,7 +121,7 @@ export class Module1Audit {
           date: this.container.querySelector('#audit-filter-date').value,
           user: this.container.querySelector('#audit-filter-user').value,
           action: this.container.querySelector('#audit-filter-action').value,
-          baseline: this.container.querySelector('#audit-filter-baseline').value,
+          
         };
         this.render();
       };
