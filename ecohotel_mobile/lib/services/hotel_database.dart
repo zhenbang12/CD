@@ -71,13 +71,6 @@ class HotelDatabase extends ChangeNotifier {
             }
           }
         }
-        if (data['guestInteractions'] != null && data['guestInteractions'] is List) {
-          final List iList = data['guestInteractions'];
-          guestInteractions.clear();
-          for (final i in iList) {
-            guestInteractions.add(GuestInteraction.fromJson(i));
-          }
-        }
         isConnected = true;
         notifyListeners();
       }
@@ -93,33 +86,6 @@ class HotelDatabase extends ChangeNotifier {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(payload),
     ).catchError((_) => http.Response('', 500));
-  }
-
-  void _logInteraction({
-    required String roomNumber,
-    required String action,
-    required String details,
-    int pointsEarned = 0,
-  }) {
-    final now = DateTime.now();
-    final id = 'GIL-${now.millisecondsSinceEpoch.toString().substring(8)}';
-    final timestamp = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-
-    final interaction = GuestInteraction(
-      id: id,
-      roomNumber: roomNumber,
-      timestamp: timestamp,
-      action: action,
-      details: details,
-      pointsEarned: pointsEarned,
-      source: 'mobile',
-    );
-    guestInteractions.insert(0, interaction);
-    notifyListeners();
-
-    // Push to backend (backend also broadcasts via SSE to web dashboard)
-    _asyncPost('/api/interactions', interaction.toJson());
   }
 
   // Inventory (Module 2)
@@ -312,7 +278,7 @@ class HotelDatabase extends ChangeNotifier {
     EcoVoucher(code: 'VM26-TRP-4409', roomNumber: '202', guestName: 'Dr. Farouk Abdullah', rewardTitle: 'Langkawi Geopark Mangrove Pass', description: 'Zero-emission solar boat expedition', pointsCost: 30, expiryDate: '2026-08-25'),
   ];
 
-  // Guest Interaction Log (FR_12) - Shared ledger across Web & Mobile, synced from backend
+  // Guest Interaction Log (FR_12) - Shared ledger across Web & Mobile
   final List<GuestInteraction> guestInteractions = [
     GuestInteraction(id: 'GIL-001', roomNumber: '304', timestamp: '2026-08-13 08:30:00', action: 'PWA_SERVICE_SELECTION', details: 'Selected Opt-Out Daily Cleaning + Towel Reuse', pointsEarned: 20),
     GuestInteraction(id: 'GIL-002', roomNumber: '202', timestamp: '2026-08-12 16:30:15', action: 'VOUCHER_GENERATED', details: 'Milestone reached (30 pts) -> Voucher VM26-TRP-4409 generated', pointsEarned: 0),
@@ -569,14 +535,6 @@ class HotelDatabase extends ChangeNotifier {
         'choiceConfirmedAt': rooms[idx].choiceConfirmedAt,
         'isChoiceLocked': false,
       });
-
-      // Log guest interaction
-      _logInteraction(
-        roomNumber: roomNumber,
-        action: 'PWA_SERVICE_SELECTION',
-        details: 'Selected $pref${towel ? " + Towel Reuse" : ""}',
-        pointsEarned: todayPoints,
-      );
     }
   }
 
@@ -656,14 +614,6 @@ class HotelDatabase extends ChangeNotifier {
       'roomNumber': roomNumber,
       'tierKey': tierKey,
     });
-
-    // Log guest interaction for voucher claim
-    _logInteraction(
-      roomNumber: roomNumber,
-      action: 'VOUCHER_CLAIMED',
-      details: 'Claimed ${tier['title']} ($cost pts)',
-      pointsEarned: 0,
-    );
     return true;
   }
 

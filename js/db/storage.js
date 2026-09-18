@@ -144,16 +144,6 @@ class StorageEngine {
               if (m) Object.assign(m, event.payload);
               this.saveDatabase(this.data, false);
               this.notify('utilityMeters', this.data.utilityMeters);
-            } else if (event.type === 'interaction_created' && event.payload) {
-              this.data.guestInteractions = this.data.guestInteractions || [];
-              // Avoid duplicates
-              const exists = this.data.guestInteractions.some(i => i.id === event.payload.id);
-              if (!exists) {
-                this.data.guestInteractions.unshift(event.payload);
-                this.saveDatabase(this.data, false);
-                this.notify('guestInteractions', this.data.guestInteractions);
-                console.log('[SSE] Live guest interaction received:', event.payload.action, event.payload.roomNumber);
-              }
             }
           } catch (e) {
             // Ignore non-json heartbeats
