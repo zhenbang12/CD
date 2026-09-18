@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -3031,15 +3032,11 @@ void _showEditInventorySheet(
                           );
                         }
                       }
-                    } catch (_) {
-                      setDlg(() {
-                        photoAttached = true;
-                        photoBase64 = 'data:image/jpeg;base64,mockEvidence';
-                      });
+                    } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('📸 Photo evidence attached: IMG_BOH_8892.jpg'),
+                          SnackBar(
+                            content: Text('Camera/photo capture cancelled or unavailable: $e'),
                           ),
                         );
                       }
@@ -6004,6 +6001,47 @@ class GuestExperienceView extends StatefulWidget {
 
 class _GuestExperienceViewState extends State<GuestExperienceView> {
   int _guestTab = 0; // 0: Green Stay, 1: Rewards & Vouchers, 2: My Green Impact
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  bool _isWithin30Mins(String? confirmedAt) {
+    if (confirmedAt == null) return false;
+    try {
+      final dt = DateTime.parse(confirmedAt);
+      final elapsedSec = DateTime.now().difference(dt).inSeconds;
+      return elapsedSec < 1800 && !elapsedSec.isNegative;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _formatRemainingTime(String? confirmedAt) {
+    if (confirmedAt == null) return '30:00';
+    try {
+      final dt = DateTime.parse(confirmedAt);
+      final elapsedSec = DateTime.now().difference(dt).inSeconds;
+      final remainingSec = 1800 - elapsedSec;
+      if (remainingSec <= 0) return '00:00';
+      final m = remainingSec ~/ 60;
+      final s = remainingSec % 60;
+      return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '30:00';
+    }
+  }
 
   void _showVoucherPassDialog(BuildContext context, EcoVoucher v) {
     showDialog(
@@ -6263,9 +6301,159 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
   }
 
   Widget _buildGreenStayTab(RoomModel room) {
+    final bool isLocked = room.isChoiceLocked;
+    final bool within30 = _isWithin30Mins(room.choiceConfirmedAt);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Success & Confirmation Panel with 30-Minute Adjustment Grace Window (Requirement 4)
+        if (room.choiceConfirmedAt != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFECFDF5), Color(0xFFF0FDF4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF059669).withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF059669),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check, color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isLocked ? 'Choices Confirmed & Locked' : 'Choices Confirmed (Adjusting)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13.5,
+                                    color: Color(0xFF065F46),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const Text(
+                                  'Housekeeping route synchronized in real-time',
+                                  style: TextStyle(fontSize: 10.5, color: Color(0xFF047857)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isLocked) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF047857),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.lock, color: Colors.white, size: 11),
+                            SizedBox(width: 3),
+                            Text(
+                              'LOCKED',
+                              style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: Color(0xFFA7F3D0)),
+                const SizedBox(height: 10),
+                // 30-Minute Grace Window Strip
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            within30 ? Icons.timer_outlined : Icons.lock_clock,
+                            size: 16,
+                            color: within30 ? const Color(0xFF047857) : const Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              within30
+                                  ? 'Adjustment window: ${_formatRemainingTime(room.choiceConfirmedAt)} remaining'
+                                  : '30-min window closed. Routes finalized.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: within30 ? const Color(0xFF065F46) : const Color(0xFF64748B),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (within30 && isLocked) ...[
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF065F46),
+                          side: const BorderSide(color: Color(0xFF059669)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: const Size(60, 28),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        icon: const Icon(Icons.edit_note, size: 14),
+                        label: const Text('Adjust Choices', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                        onPressed: () {
+                          widget.db.unlockForAdjustment(room.roomNumber);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: Color(0xFF059669),
+                              content: Text('Preferences unlocked for adjustment! Remember to re-confirm when done.'),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+
         // Points Balance & Milestone Card
         Card(
           child: Padding(
@@ -6315,7 +6503,7 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: (room.ecoPointsEarned / 50.0).clamp(0.0, 1.0),
+                    value: (room.ecoPointsEarned / 45.0).clamp(0.0, 1.0),
                     minHeight: 6,
                     backgroundColor: const Color(0xFFE2E8F0),
                     valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF059669)),
@@ -6324,8 +6512,8 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                 const SizedBox(height: 6),
                 Text(
                   room.ecoPointsEarned >= 25
-                      ? '✓ Milestone reached: 15% dining voucher unlocked!'
-                      : '${25 - room.ecoPointsEarned} more points to unlock your 15% Eco-Dining Voucher.',
+                      ? '✓ Milestone reached: 15% dining voucher unlocked (no deduction)!'
+                      : '${25 - room.ecoPointsEarned} more points to reach your next reward milestone.',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],
@@ -6335,9 +6523,24 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
         const SizedBox(height: 14),
 
         // Section: Daily Choices
-        const Text(
-          'TODAY’S HOUSEKEEPING PREFERENCE',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'TODAY’S HOUSEKEEPING PREFERENCE',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isLocked) ...[
+              const SizedBox(width: 8),
+              const Text(
+                '🔒 Choices Locked',
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 8),
 
@@ -6346,21 +6549,63 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
           points: '+15 Pts',
           subtitle: 'Saves water & chemical runoff. Housekeeping skips your room today.',
           isSelected: room.servicePreference == 'OPT_OUT_CLEANING',
-          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'OPT_OUT_CLEANING', room.towelReuse),
+          isLocked: isLocked,
+          onTap: isLocked
+              ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 2),
+                      content: Text(
+                        within30
+                            ? 'Choices are locked. Tap "Adjust Choices" above to modify preferences.'
+                            : 'Housekeeping routes finalized. Selections are locked for today.',
+                      ),
+                    ),
+                  );
+                }
+              : () => widget.db.setGuestSelection(room.roomNumber, 'OPT_OUT_CLEANING', room.towelReuse),
         ),
         _buildRadioCard(
           title: 'Delay Bed Linen Change',
           points: '+10 Pts',
           subtitle: 'Keep existing bed linen for 2 more days. Room is tidied.',
           isSelected: room.servicePreference == 'LINEN_DELAY',
-          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'LINEN_DELAY', room.towelReuse),
+          isLocked: isLocked,
+          onTap: isLocked
+              ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 2),
+                      content: Text(
+                        within30
+                            ? 'Choices are locked. Tap "Adjust Choices" above to modify preferences.'
+                            : 'Housekeeping routes finalized. Selections are locked for today.',
+                      ),
+                    ),
+                  );
+                }
+              : () => widget.db.setGuestSelection(room.roomNumber, 'LINEN_DELAY', room.towelReuse),
         ),
         _buildRadioCard(
           title: 'Standard Daily Service',
           points: '0 Pts',
           subtitle: 'Standard full room turnover and fresh linen replacement.',
           isSelected: room.servicePreference == 'STANDARD',
-          onTap: () => widget.db.setGuestSelection(room.roomNumber, 'STANDARD', room.towelReuse),
+          isLocked: isLocked,
+          onTap: isLocked
+              ? () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 2),
+                      content: Text(
+                        within30
+                            ? 'Choices are locked. Tap "Adjust Choices" above to modify preferences.'
+                            : 'Housekeeping routes finalized. Selections are locked for today.',
+                      ),
+                    ),
+                  );
+                }
+              : () => widget.db.setGuestSelection(room.roomNumber, 'STANDARD', room.towelReuse),
         ),
 
         const SizedBox(height: 10),
@@ -6395,15 +6640,35 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
             subtitle: const Text('I will hang towels to reuse them today.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
             value: room.towelReuse,
             activeColor: const Color(0xFF059669),
-            onChanged: (val) => widget.db.setGuestSelection(room.roomNumber, room.servicePreference, val ?? false),
+            onChanged: isLocked
+                ? (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        duration: const Duration(seconds: 2),
+                        content: Text(
+                          within30
+                              ? 'Choices are locked. Tap "Adjust Choices" above to modify preferences.'
+                              : 'Housekeeping routes finalized. Selections are locked for today.',
+                        ),
+                      ),
+                    );
+                  }
+                : (val) => widget.db.setGuestSelection(room.roomNumber, room.servicePreference, val ?? false),
           ),
         ),
 
         const SizedBox(height: 14),
 
         // Primary Confirm Button
-        ElevatedButton(
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isLocked ? const Color(0xFF64748B) : const Color(0xFF059669),
+            foregroundColor: Colors.white,
+          ),
+          icon: Icon(isLocked ? Icons.lock_outline : Icons.check_circle, size: 18),
+          label: Text(isLocked ? 'Choices Locked (Housekeeping Dispatched)' : 'Confirm Today’s Green Choices'),
           onPressed: () {
+            widget.db.confirmGuestSelection(room.roomNumber);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: const Color(0xFF059669),
@@ -6419,7 +6684,6 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
               ),
             );
           },
-          child: const Text('Confirm Today’s Green Choices'),
         ),
       ],
     );
@@ -6431,9 +6695,10 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
     required String subtitle,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isLocked = false,
   }) {
     return Card(
-      color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
+      color: isSelected ? const Color(0xFFF0FDF4) : (isLocked ? const Color(0xFFF8FAFC) : Colors.white),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
@@ -6446,8 +6711,12 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
         onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         leading: Icon(
-          isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-          color: isSelected ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+          isSelected
+              ? Icons.radio_button_checked
+              : (isLocked ? Icons.lock_outline : Icons.radio_button_off),
+          color: isSelected
+              ? const Color(0xFF059669)
+              : (isLocked ? const Color(0xFFCBD5E1) : const Color(0xFF94A3B8)),
           size: 20,
         ),
         title: Row(
@@ -6459,7 +6728,7 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  color: isSelected ? const Color(0xFF059669) : const Color(0xFF0F172A),
+                  color: isSelected ? const Color(0xFF059669) : (isLocked ? const Color(0xFF475569) : const Color(0xFF0F172A)),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -6690,6 +6959,8 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
     required IconData icon,
   }) {
     final canClaim = room.ecoPointsEarned >= cost;
+    final isClaimed = room.claimedTiers.contains(tierKey);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -6698,10 +6969,16 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: canClaim ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+                color: isClaimed
+                    ? const Color(0xFFECFDF5)
+                    : (canClaim ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9)),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: canClaim ? const Color(0xFF059669) : const Color(0xFF94A3B8), size: 22),
+              child: Icon(
+                icon,
+                color: (isClaimed || canClaim) ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -6715,52 +6992,73 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: isClaimed ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text('$cost Eco-Points', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669))),
+                    child: Text(
+                      isClaimed ? 'Milestone Unlocked (No pts deducted)' : '$cost Eco-Points Milestone',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isClaimed ? const Color(0xFF059669) : const Color(0xFF64748B),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canClaim ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
-                foregroundColor: canClaim ? Colors.white : const Color(0xFF94A3B8),
-                elevation: canClaim ? 1 : 0,
-                minimumSize: const Size(76, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-              ),
-              onPressed: canClaim
-                  ? () {
-                      final success = widget.db.claimRewardTier(room.roomNumber, tierKey);
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF059669),
-                            content: Row(
-                              children: [
-                                const Icon(Icons.celebration, color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text('🎉 Claimed $title! Tap voucher to view QR pass.')),
-                              ],
+            if (isClaimed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                ),
+                child: const Text(
+                  '✓ Unlocked',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+                ),
+              )
+            else
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canClaim ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+                  foregroundColor: canClaim ? Colors.white : const Color(0xFF94A3B8),
+                  elevation: canClaim ? 1 : 0,
+                  minimumSize: const Size(76, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: canClaim
+                    ? () {
+                        final success = widget.db.claimRewardTier(room.roomNumber, tierKey);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFF059669),
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.celebration, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text('🎉 Unlocked $title! Points balance preserved without deduction.')),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       }
-                    }
-                  : null,
-              child: Text(
-                canClaim ? 'Claim' : '${cost - room.ecoPointsEarned} short',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: canClaim ? Colors.white : const Color(0xFF64748B),
+                    : null,
+                child: Text(
+                  canClaim ? 'Claim Milestone' : '${cost - room.ecoPointsEarned} pts short',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: canClaim ? Colors.white : const Color(0xFF64748B),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -6889,30 +7187,31 @@ class _GuestExperienceViewState extends State<GuestExperienceView> {
   }) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                Icon(icon, size: 16, color: iconColor),
+                Icon(icon, size: 15, color: iconColor),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               val,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.5),
             ),
             const SizedBox(height: 2),
-            Text(detail, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
+            Text(detail, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)), overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

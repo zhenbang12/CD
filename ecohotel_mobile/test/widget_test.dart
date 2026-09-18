@@ -85,16 +85,40 @@ void main() {
     expect(find.textContaining('Choices confirmed for Room 304!'), findsOneWidget);
   });
 
-  test('Test HotelDatabase syncFromBackend and API methods', () async {
+  test('Test HotelDatabase 10 rooms catalog, milestone non-deduction, and choice locks', () {
     final db = HotelDatabase(apiBaseUrl: 'http://localhost:8000');
-    await db.syncFromBackend();
-    expect(db.rooms.isNotEmpty, isTrue);
+    
+    // 1. Verify all 10 rooms exist
+    expect(db.rooms.length, 10);
+    final roomNums = db.rooms.map((r) => r.roomNumber).toSet();
+    expect(roomNums.containsAll({'101', '102', '103', '201', '202', '203', '301', '302', '303', '304'}), isTrue);
 
-    // Update preference on room 101
-    db.setGuestSelection('101', 'OPT_OUT_CLEANING', true);
-    final r101 = db.rooms.firstWhere((r) => r.roomNumber == '101');
-    expect(r101.servicePreference, 'OPT_OUT_CLEANING');
-    expect(r101.cleaningStatus, 'Skipped (Opt-Out)');
+    // 2. Test Choice Locking & 30-Min Adjustment
+    final r304 = db.rooms.firstWhere((r) => r.roomNumber == '304');
+    expect(r304.isChoiceLocked, isFalse);
+    db.confirmGuestSelection('304');
+    expect(r304.isChoiceLocked, isTrue);
+    expect(r304.choiceConfirmedAt, isNotNull);
+
+    // Unlock for adjustment
+    db.unlockForAdjustment('304');
+    expect(r304.isChoiceLocked, isFalse);
+
+    // 3. Test Milestone Rewards Without Point Deduction
+    final r202 = db.rooms.firstWhere((r) => r.roomNumber == '202');
+    final initialPoints = r202.ecoPointsEarned;
+    expect(initialPoints, greaterThanOrEqualTo(25));
+
+    // Claim dining voucher milestone
+    final claimed = db.claimRewardTier('202', 'tier-dining');
+    expect(claimed, isTrue);
+    // CRITICAL: Points must NOT be deducted in milestone system!
+    expect(r202.ecoPointsEarned, equals(initialPoints));
+    expect(r202.claimedTiers.contains('tier-dining'), isTrue);
+
+    // Prevent duplicate claims
+    final doubleClaim = db.claimRewardTier('202', 'tier-dining');
+    expect(doubleClaim, isFalse);
   });
 }
 
