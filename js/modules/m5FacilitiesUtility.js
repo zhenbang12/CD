@@ -127,6 +127,7 @@ export class Module5Facilities {
                   <th class="col-number">Baseline Target</th>
                   <th class="col-number">Current Reading</th>
                   <th>Last Inspected</th>
+                  <th class="col-number">Variance</th>
                   <th>Status</th>
                   <th class="col-action">Action</th>
                 </tr>
@@ -137,6 +138,8 @@ export class Module5Facilities {
                   const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
                   const flagRed = isAnomaly || overBaseline;
                   const displayStatus = isAnomaly ? 'Spike Anomaly' : (overBaseline ? 'Above Baseline' : 'Normal');
+                  const hasVariance = typeof m.lastReading === 'number' && typeof m.baselineDaily === 'number' && m.baselineDaily !== 0;
+                  const variancePct = hasVariance ? ((m.lastReading - m.baselineDaily) / m.baselineDaily) * 100 : null;
                   return `
                     <tr class="zone-pin-card" data-meter-id="${m.meterId}" style="cursor: pointer;">
                       <td><code>${m.meterId}</code></td>
@@ -150,6 +153,17 @@ export class Module5Facilities {
                         <span style="font-size: 11px; color: var(--text-muted);">${m.unit}</span>
                       </td>
                       <td><span style="font-size: 12px; color: var(--text-muted);">${m.lastReadingTime}</span></td>
+                      <td class="col-number">
+                        ${variancePct === null ? `
+                          <span style="font-size: 11px; color: var(--text-muted);">-</span>
+                        ` : `
+                          <span style="font-weight: 600; color: ${variancePct > 0 ? 'var(--danger)' : (variancePct < 0 ? 'var(--primary)' : 'var(--text-muted)')};">
+                            ${variancePct > 0 ? '▲ +' : (variancePct < 0 ? '▼ -' : '')}${Math.abs(variancePct).toFixed(1)}%
+                          </span>
+                          <br/>
+                          <span style="font-size: 11px; color: var(--text-muted);">${variancePct > 0 ? 'increase' : (variancePct < 0 ? 'decrease' : 'on baseline')}</span>
+                        `}
+                      </td>
                       <td>
                         <span class="status-dot-wrap" style="color: ${flagRed ? 'var(--danger)' : 'var(--primary)'};">
                           <span class="status-dot ${flagRed ? 'danger' : 'success'}"></span>
