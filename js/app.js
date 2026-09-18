@@ -6,7 +6,7 @@ if (!localStorage.getItem('eco_session')) {
  * Sustainable Hospitality Operating System.
  */
 
-import { db } from './db/storage.js?v=3.1';
+import { db } from './db/storage.js?v=3.3';
 import { Module1Dashboard } from './modules/m1Dashboard.js?v=3.1';
 import { Module1Department } from './modules/m1Department.js?v=3.1';
 import { Module1Baselines } from './modules/m1Baselines.js?v=3.1';
@@ -148,6 +148,12 @@ class App {
             ${((typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || system.theme) === 'dark' ? '☀️' : '🌙'}
           </button>
 
+          <!-- Refresh Database Button (Available for all) -->
+          <button id="btn-global-refresh-db" class="btn btn-xs btn-primary" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 11.5px; font-weight: 600;" title="Refresh and sync all database records with live backend">
+            <svg id="icon-global-refresh" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <span id="text-global-refresh">Refresh DB</span>
+          </button>
+
           <!-- Reset Database Button (Available for everyone) -->
           <button id="btn-global-reset-db" class="btn btn-xs btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 11.5px;" title="Reset database to factory defaults">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -237,6 +243,34 @@ class App {
         db.setTheme(nextTheme);
         this.applyInitialTheme();
         window.showGlobalToast?.(`Theme updated to ${nextTheme} mode!`, 'info');
+      };
+    }
+
+    const refreshBtn = document.getElementById('btn-global-refresh-db');
+    if (refreshBtn) {
+      refreshBtn.onclick = async () => {
+        const icon = document.getElementById('icon-global-refresh');
+        const text = document.getElementById('text-global-refresh');
+        if (icon) icon.classList.add('spin-animation');
+        if (text) text.textContent = 'Syncing...';
+        refreshBtn.disabled = true;
+
+        try {
+          const res = await db.refreshDatabase();
+          if (res && res.success) {
+            this.loadActiveModule();
+            this.updateAlertBadges();
+            window.showGlobalToast?.('Database refreshed & synchronized with live backend for all!', 'success');
+          } else {
+            window.showGlobalToast?.(`Local sync completed (Backend status: ${res?.error || 'offline'})`, 'warning');
+          }
+        } catch (e) {
+          window.showGlobalToast?.('Sync error: ' + e.message, 'error');
+        } finally {
+          if (icon) icon.classList.remove('spin-animation');
+          if (text) text.textContent = 'Refresh DB';
+          refreshBtn.disabled = false;
+        }
       };
     }
 

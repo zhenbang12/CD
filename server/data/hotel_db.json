@@ -737,7 +737,7 @@
         "Herbs"
       ],
       "historicalWasteRate": 0.14,
-      "wasteMultiplier": 0.91,
+      "wasteMultiplier": 0.86,
       "costTier": "High"
     },
     {
@@ -779,7 +779,7 @@
         "Dressing"
       ],
       "historicalWasteRate": 0.18,
-      "wasteMultiplier": 0.94,
+      "wasteMultiplier": 0.82,
       "costTier": "Low"
     },
     {
@@ -1026,26 +1026,10 @@
       "towelReuse": true,
       "cleaningStatus": "Skipped (Opt-Out)",
       "ecoPointsEarned": 25,
-      "qrToken": "RM304-SEC-426",
-      "claimedTiers": [
-        "tier-dining"
-      ],
-      "choiceConfirmedAt": "2026-08-13 08:30:00",
-      "isChoiceLocked": true
+      "qrToken": "RM304-SEC-426"
     }
   ],
   "ecoVouchers": [
-    {
-      "code": "VM26-ECO-1076",
-      "roomNumber": "304",
-      "guestName": "Simon Wong",
-      "rewardTitle": "15% Farm-to-Table Dining Voucher",
-      "description": "Valid at Ocean Reef Bistro.",
-      "pointsCost": 25,
-      "issueDate": "2026-09-19 03:41",
-      "expiryDate": "2026-08-25",
-      "isRedeemed": false
-    },
     {
       "code": "VM26-ECO-7821",
       "roomNumber": "304",
@@ -1071,20 +1055,11 @@
   ],
   "guestInteractions": [
     {
-      "id": "GIL-99386",
-      "roomNumber": "304",
-      "timestamp": "2026-09-19 03:41:39",
-      "action": "PWA_SERVICE_SELECTION",
-      "details": "Selected Opt Out Cleaning + Towel Reuse",
-      "pointsEarned": 20
-    },
-    {
-      "id": "GIL-97357",
-      "roomNumber": "304",
-      "timestamp": "2026-09-19 03:41:37",
-      "action": "VOUCHER_UNLOCKED",
-      "details": "Milestone reached (25 pts) -> Voucher VM26-ECO-1076 unlocked (15% Farm-to-Table Dining Voucher)",
-      "pointsEarned": 0
+      "roomNumber": "101",
+      "action": "AUDIT_TEST",
+      "details": "Full sync verification",
+      "id": "GIL-61441",
+      "timestamp": "2026-09-19 04:46:01"
     },
     {
       "id": "GIL-001",
@@ -1128,7 +1103,7 @@
       "baselineDaily": 1800,
       "unit": "L/day",
       "lastReading": 1650,
-      "lastReadingTime": "2026-08-12 18:00",
+      "lastReadingTime": "2026-09-19 04:46",
       "status": "Normal",
       "icon": "\ud83d\udca7"
     },
@@ -1379,8 +1354,8 @@
       "id": "TECH-01",
       "name": "Faizal Rahim",
       "specialty": "Plumbing & Hydraulics",
-      "status": "Busy (Kitchen)",
-      "activeTickets": 3,
+      "status": "Available",
+      "activeTickets": 0,
       "phone": "+60 12-441 9021"
     },
     {
@@ -1419,15 +1394,18 @@
       "zone": "Kitchen",
       "defectCategory": "Shower Valve Pressure Leak",
       "description": "Reported by ground team.",
-      "severity": "Normal",
+      "severity": "High",
       "estimatedLossRate": "120 Liters / day",
+      "estimatedDailyLossNum": 120,
       "resourceType": "Water",
       "priority": "High",
       "assignedTechnician": "Faizal Rahim",
-      "status": "In Progress",
+      "status": "Completed",
       "createdAt": "2026-08-13 08:30",
+      "completedAt": "2026-08-13 08:30",
       "photoAttached": false,
-      "notes": "Technician arrived on site with repair tools."
+      "photoDataUrl": null,
+      "notes": "Defect verified resolved by ground technician."
     },
     {
       "id": "TCK-8959",
@@ -1437,13 +1415,16 @@
       "description": "Reported by ground team.",
       "severity": "High",
       "estimatedLossRate": "280 Liters / day",
+      "estimatedDailyLossNum": 280,
       "resourceType": "Water",
       "priority": "High",
       "assignedTechnician": "Faizal Rahim",
-      "status": "In Progress",
+      "status": "Completed",
       "createdAt": "2026-08-13 08:30",
+      "completedAt": "2026-08-13 08:30",
       "photoAttached": false,
-      "notes": "Technician arrived on site with repair tools."
+      "photoDataUrl": null,
+      "notes": "Defect verified resolved by ground technician."
     },
     {
       "id": "TCK-8801",
@@ -1458,10 +1439,12 @@
       "priority": "High",
       "queuePosition": 1,
       "assignedTechnician": "Faizal Rahim",
-      "status": "In Progress",
+      "status": "Completed",
       "createdAt": "2026-08-12 11:20",
-      "notes": "Inspected silent flapper seal leak; replacing silicone diaphragm.",
-      "photoDataUrl": null
+      "completedAt": "2026-08-13 08:30",
+      "photoAttached": false,
+      "photoDataUrl": null,
+      "notes": "Inspected silent flapper seal leak; replacing silicone diaphragm. | Defect verified resolved by ground technician."
     },
     {
       "id": "TCK-8803",
@@ -1479,8 +1462,48 @@
       "status": "Completed",
       "createdAt": "2026-08-10 14:00",
       "completedAt": "2026-08-10 16:30",
-      "notes": "Replaced internal ceramic cartridge. Leak fully halted.",
-      "photoDataUrl": null
+      "photoAttached": false,
+      "photoDataUrl": null,
+      "notes": "Replaced internal ceramic cartridge. Leak fully halted. | Defect verified resolved by ground technician."
+    },
+    {
+      "id": "TCK-9885",
+      "ticketNumber": "TK-2026-09-18-001",
+      "zone": "Room 202",
+      "defectCategory": "Bathroom Toilet Flapper Leak",
+      "description": "Reported by ground team.",
+      "severity": "High",
+      "estimatedLossRate": "280 Liters / day",
+      "estimatedDailyLossNum": 280,
+      "resourceType": "Water",
+      "priority": "High",
+      "assignedTechnician": "Ramesh Kumar",
+      "status": "Completed",
+      "createdAt": "2026-09-18 20:30",
+      "completedAt": "2026-08-13 08:30",
+      "photoAttached": false,
+      "photoDataUrl": null,
+      "notes": "Defect verified resolved by ground technician. | Verified test"
+    },
+    {
+      "id": "TCK-9886",
+      "ticketNumber": "TK-2026-09-18-001",
+      "zone": "Room 101",
+      "defectCategory": "HVAC / Aircon Thermostat Stuck",
+      "description": "No AC",
+      "severity": "High",
+      "estimatedLossRate": "25 kWh / day",
+      "estimatedDailyLossNum": 25,
+      "resourceType": "Electricity",
+      "priority": "High",
+      "queuePosition": 1,
+      "assignedTechnician": "Faizal Rahim",
+      "status": "Completed",
+      "createdAt": "2026-09-18 20:33",
+      "completedAt": "2026-08-13 08:30",
+      "photoAttached": false,
+      "photoDataUrl": null,
+      "notes": "Reported by Housekeeping ground team during room inspection. | Defect verified resolved by ground technician."
     }
   ],
   "userAudit": [

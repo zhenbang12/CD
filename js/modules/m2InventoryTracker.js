@@ -366,7 +366,7 @@ export class Module2Inventory {
       id="stock-batch-prefix"
       value=""
       readonly
-      style="border-radius: 6px 0 0 6px; background: #f4f4f5; width: 180px;"
+      style="border-radius: 6px 0 0 6px; background: var(--bg-card-subtle); width: 180px;"
     />
 
     <input

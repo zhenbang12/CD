@@ -148,6 +148,10 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             self.handle_voucher_redeem(body)
         elif path == '/api/defects':
             self.handle_create_defect(body)
+        elif path == '/api/defects/status':
+            self.handle_update_defect_status(body)
+        elif path == '/api/defects/clear':
+            self.handle_clear_defects(body)
         elif path == '/api/meters/reading':
             self.handle_meter_reading(body)
         elif path == '/api/interactions':
@@ -452,17 +456,88 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
 
         self.send_json_response(200, {"success": True, "voucher": voucher})
 
+    def _sync_technicians_from_tickets(self):
+        """Helper to recompute technician workloads and status from current repairTickets."""
+        tickets = db_state.setdefault('repairTickets', [])
+        techs = db_state.setdefault('technicians', [])
+        for tech in techs:
+            name = tech.get('name')
+            active = [t for t in tickets if t.get('assignedTechnician') == name and t.get('status') != 'Completed']
+            tech['activeTickets'] = len(active)
+            if len(active) == 0:
+                tech['status'] = 'Available'
+            else:
+                tech['status'] = f"Busy ({active[0].get('zone', 'Zone')})"
+
     def handle_create_defect(self, body):
         with db_lock:
             tickets = db_state.setdefault('repairTickets', [])
-            ticket = dict(body)
-            if 'id' not in ticket:
-                ticket['id'] = f"TKT-{int(time.time() * 1000) % 100000}"
-            tickets.insert(0, ticket)
+            ticket_id = body.get('id')
+            ticket_num = body.get('ticketNumber')
+            existing = next((t for t in tickets if (ticket_id and t.get('id') == ticket_id) or (ticket_num and t.get('ticketNumber') == ticket_num)), None)
+            if existing:
+                existing.update(body)
+                ticket = existing
+                event_name = 'defect_updated'
+            else:
+                ticket = dict(body)
+                if 'id' not in ticket:
+                    ticket['id'] = f"TCK-{int(time.time() * 1000) % 100000}"
+                tickets.insert(0, ticket)
+                event_name = 'defect_created'
+
+            self._sync_technicians_from_tickets()
             save_db()
-            broadcast_event('defect_created', ticket)
+            broadcast_event(event_name, ticket)
+            broadcast_event('technicians_updated', db_state.get('technicians', []))
 
         self.send_json_response(200, {"success": True, "ticket": ticket})
+
+    def handle_update_defect_status(self, body):
+        ticket_id = body.get('id')
+        ticket_num = body.get('ticketNumber')
+        new_status = body.get('status')
+        notes = body.get('notes', '')
+        completed_at = body.get('completedAt')
+
+        with db_lock:
+            tickets = db_state.setdefault('repairTickets', [])
+            ticket = next((t for t in tickets if (ticket_id and t.get('id') == ticket_id) or (ticket_num and t.get('ticketNumber') == ticket_num)), None)
+            if not ticket:
+                ticket = dict(body)
+                if 'id' not in ticket:
+                    ticket['id'] = ticket_id or f"TCK-{int(time.time() * 1000) % 100000}"
+                tickets.insert(0, ticket)
+            else:
+                if new_status:
+                    ticket['status'] = new_status
+                if notes:
+                    existing_notes = ticket.get('notes', '')
+                    if existing_notes and notes not in existing_notes:
+                        ticket['notes'] = f"{existing_notes} | {notes}"
+                    elif not existing_notes:
+                        ticket['notes'] = notes
+                if completed_at:
+                    ticket['completedAt'] = completed_at
+                elif new_status == 'Completed' and 'completedAt' not in ticket:
+                    ticket['completedAt'] = time.strftime('%Y-%m-%d %H:%M')
+
+            self._sync_technicians_from_tickets()
+            save_db()
+            broadcast_event('defect_updated', ticket)
+            broadcast_event('technicians_updated', db_state.get('technicians', []))
+
+        self.send_json_response(200, {"success": True, "ticket": ticket})
+
+    def handle_clear_defects(self, body):
+        with db_lock:
+            db_state['repairTickets'] = []
+            self._sync_technicians_from_tickets()
+            save_db()
+            broadcast_event('defects_cleared', {})
+            broadcast_event('technicians_updated', db_state.get('technicians', []))
+
+        self.send_json_response(200, {"success": True})
 
     def handle_meter_reading(self, body):
         meter_id = str(body.get('meterId', ''))

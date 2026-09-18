@@ -12,9 +12,9 @@ class HotelDatabase extends ChangeNotifier {
     syncFromBackend();
   }
 
-  Future<void> syncFromBackend() async {
+  Future<bool> syncFromBackend() async {
     try {
-      final res = await http.get(Uri.parse('$apiBaseUrl/api/db')).timeout(const Duration(seconds: 3));
+      final res = await http.get(Uri.parse('$apiBaseUrl/api/db')).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(res.body);
         if (data['rooms'] != null && data['rooms'] is List) {
@@ -41,7 +41,10 @@ class HotelDatabase extends ChangeNotifier {
           final List vList = data['ecoVouchers'];
           for (final v in vList) {
             final code = v['code']?.toString() ?? '';
-            if (code.isNotEmpty && !ecoVouchers.any((ex) => ex.code == code)) {
+            final exIdx = ecoVouchers.indexWhere((ex) => ex.code == code);
+            if (exIdx != -1) {
+              ecoVouchers[exIdx].isRedeemed = v['isRedeemed'] ?? ecoVouchers[exIdx].isRedeemed;
+            } else if (code.isNotEmpty) {
               ecoVouchers.add(EcoVoucher(
                 code: code,
                 roomNumber: v['roomNumber']?.toString() ?? '',
@@ -71,13 +74,183 @@ class HotelDatabase extends ChangeNotifier {
             }
           }
         }
+        if (data['repairTickets'] != null && data['repairTickets'] is List) {
+          final List tList = data['repairTickets'];
+          for (final item in tList) {
+            final id = item['id']?.toString() ?? '';
+            final ticketNum = item['ticketNumber']?.toString() ?? id;
+            final exIdx = repairTickets.indexWhere((t) => (id.isNotEmpty && t.id == id) || (ticketNum.isNotEmpty && t.ticketNumber == ticketNum));
+            if (exIdx != -1) {
+              repairTickets[exIdx].status = item['status']?.toString() ?? repairTickets[exIdx].status;
+              repairTickets[exIdx].assignedTechnician = item['assignedTechnician']?.toString() ?? repairTickets[exIdx].assignedTechnician;
+              if (item['completedAt'] != null) {
+                repairTickets[exIdx].completedAt = item['completedAt'].toString();
+              }
+              if (item['notes'] != null) {
+                repairTickets[exIdx].notes = item['notes'].toString();
+              }
+            } else if (id.isNotEmpty || ticketNum.isNotEmpty) {
+              final dailyLoss = item['estimatedDailyLossNum'] is num
+                  ? (item['estimatedDailyLossNum'] as num).toDouble()
+                  : (double.tryParse(item['estimatedDailyLossNum']?.toString() ?? '') ?? 0.0);
+              repairTickets.add(RepairTicket(
+                id: id.isNotEmpty ? id : 'TCK-${ticketNum.hashCode.abs() % 10000}',
+                ticketNumber: ticketNum,
+                zone: item['zone']?.toString() ?? 'General',
+                defectCategory: item['defectCategory']?.toString() ?? 'General',
+                description: item['description']?.toString() ?? '',
+                severity: item['severity']?.toString() ?? 'Medium',
+                estimatedLossRate: item['estimatedLossRate']?.toString() ?? '0',
+                estimatedDailyLossNum: dailyLoss,
+                resourceType: item['resourceType']?.toString() ?? 'Water',
+                priority: item['priority']?.toString() ?? 'Medium',
+                assignedTechnician: item['assignedTechnician']?.toString() ?? 'Unassigned',
+                status: item['status']?.toString() ?? 'Open',
+                createdAt: item['createdAt']?.toString() ?? '',
+                completedAt: item['completedAt']?.toString(),
+                notes: item['notes']?.toString() ?? '',
+              ));
+            }
+          }
+          // Push any local tickets that backend lacks
+          for (final localTicket in repairTickets) {
+            final inBackend = tList.any((it) => (it['id'] != null && it['id'].toString() == localTicket.id) || (it['ticketNumber'] != null && it['ticketNumber'].toString() == localTicket.ticketNumber));
+            if (!inBackend) {
+              _asyncPost('/api/defects', {
+                'id': localTicket.id,
+                'ticketNumber': localTicket.ticketNumber,
+                'zone': localTicket.zone,
+                'defectCategory': localTicket.defectCategory,
+                'description': localTicket.description,
+                'severity': localTicket.severity,
+                'estimatedLossRate': localTicket.estimatedLossRate,
+                'estimatedDailyLossNum': localTicket.estimatedDailyLossNum,
+                'resourceType': localTicket.resourceType,
+                'priority': localTicket.priority,
+                'assignedTechnician': localTicket.assignedTechnician,
+                'status': localTicket.status,
+                'createdAt': localTicket.createdAt,
+                'completedAt': localTicket.completedAt,
+                'photoAttached': localTicket.photoAttached,
+                'notes': localTicket.notes,
+              });
+            }
+          }
+        }
+        if (data['technicians'] != null && data['technicians'] is List) {
+          final List techList = data['technicians'];
+          for (final item in techList) {
+            final name = item['name']?.toString();
+            final idx = technicians.indexWhere((tc) => tc.name == name);
+            if (idx != -1) {
+              if (item['status'] != null) technicians[idx].status = item['status'].toString();
+              if (item['activeTickets'] != null) {
+                technicians[idx].activeTickets = (item['activeTickets'] is num)
+                    ? (item['activeTickets'] as num).toInt()
+                    : (int.tryParse(item['activeTickets'].toString()) ?? technicians[idx].activeTickets);
+              }
+            }
+          }
+        }
+        if (data['utilityMeters'] != null && data['utilityMeters'] is List) {
+          final List mList = data['utilityMeters'];
+          for (final item in mList) {
+            final meterId = item['meterId']?.toString();
+            final idx = utilityMeters.indexWhere((u) => u.meterId == meterId);
+            if (idx != -1) {
+              final reading = item['lastReading'] ?? item['currentReading'];
+              if (reading != null) {
+                utilityMeters[idx].lastReading = (reading is num) ? reading.toDouble() : (double.tryParse(reading.toString()) ?? utilityMeters[idx].lastReading);
+              }
+              if (item['lastReadingTime'] != null) {
+                utilityMeters[idx].lastReadingTime = item['lastReadingTime'].toString();
+              }
+              if (item['status'] != null) {
+                utilityMeters[idx].status = item['status'].toString();
+              }
+            }
+          }
+        }
+        if (data['inventory'] != null && data['inventory'] is List) {
+          final List invList = data['inventory'];
+          for (final item in invList) {
+            final id = item['id']?.toString() ?? '';
+            final idx = inventory.indexWhere((i) => i.id == id);
+            if (idx != -1) {
+              if (item['quantity'] != null) {
+                inventory[idx].quantity = (item['quantity'] is num) ? (item['quantity'] as num).toDouble() : (double.tryParse(item['quantity'].toString()) ?? inventory[idx].quantity);
+              }
+            } else if (id.isNotEmpty) {
+              inventory.add(InventoryItem.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
+        if (data['foodWasteLogs'] != null && data['foodWasteLogs'] is List) {
+          final List fwList = data['foodWasteLogs'];
+          for (final item in fwList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty && !foodWasteLogs.any((f) => f.id == id)) {
+              foodWasteLogs.insert(0, FoodWasteLog.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
+        if (data['dishes'] != null && data['dishes'] is List) {
+          final List dList = data['dishes'];
+          for (final item in dList) {
+            final id = item['id']?.toString() ?? '';
+            final idx = dishes.indexWhere((d) => d.id == id);
+            if (idx != -1) {
+              if (item['wasteMultiplier'] != null) {
+                dishes[idx].wasteMultiplier = (item['wasteMultiplier'] is num) ? (item['wasteMultiplier'] as num).toDouble() : (double.tryParse(item['wasteMultiplier'].toString()) ?? dishes[idx].wasteMultiplier);
+              }
+              if (item['prepStatus'] != null) {
+                dishes[idx].prepStatus = item['prepStatus'].toString();
+              }
+            } else if (id.isNotEmpty) {
+              dishes.add(DishItem.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
+        if (data['plateWasteLogs'] != null && data['plateWasteLogs'] is List) {
+          final List pwList = data['plateWasteLogs'];
+          for (final item in pwList) {
+            final id = item['id']?.toString() ?? '';
+            if (id.isNotEmpty && !plateWasteLogs.any((p) => p.id == id)) {
+              plateWasteLogs.insert(0, PlateWasteLog.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
+        if (data['prepRecommendations'] != null && data['prepRecommendations'] is List) {
+          final List prList = data['prepRecommendations'];
+          for (final item in prList) {
+            final id = item['id']?.toString() ?? '';
+            final idx = prepRecommendations.indexWhere((p) => p.id == id);
+            if (idx != -1) {
+              prepRecommendations[idx] = PrepRecommendation.fromJson(Map<String, dynamic>.from(item));
+            } else if (id.isNotEmpty) {
+              prepRecommendations.add(PrepRecommendation.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
+        if (data['defectCategories'] != null && data['defectCategories'] is List) {
+          final List dcList = data['defectCategories'];
+          for (final item in dcList) {
+            final id = item['id']?.toString() ?? '';
+            final label = item['label']?.toString() ?? '';
+            if (id.isNotEmpty && !defectCategories.any((c) => c.id == id || c.label == label)) {
+              defectCategories.add(DefectCategory.fromJson(Map<String, dynamic>.from(item)));
+            }
+          }
+        }
         isConnected = true;
         notifyListeners();
+        return true;
       }
     } catch (_) {
       // Backend offline or unreachable, smoothly fallback to in-memory state
       isConnected = false;
     }
+    return false;
   }
 
   void _asyncPost(String endpoint, Map<String, dynamic> payload) {
@@ -316,12 +489,12 @@ class HotelDatabase extends ChangeNotifier {
   // Defect Category Catalog (Module 5) — read-only here.
   // Kept in sync with the Web Admin Dashboard's default catalog; only the
   // web dashboard can add new categories (see js/db/storage.js addDefectCategory).
-  final List<DefectCategory> defectCategories = const [
-    DefectCategory(id: 'cat-toilet-flapper', label: 'Bathroom Toilet Flapper Leak', resourceType: 'Water', hint: '~280 L/day'),
-    DefectCategory(id: 'cat-basin-faucet', label: 'Dripping Basin Faucet', resourceType: 'Water', hint: '~45 L/day'),
-    DefectCategory(id: 'cat-hvac-thermostat', label: 'HVAC / Aircon Thermostat Stuck', resourceType: 'Electricity', hint: '~25 kWh/day'),
-    DefectCategory(id: 'cat-shower-valve', label: 'Shower Valve Pressure Leak', resourceType: 'Water', hint: '~120 L/day'),
-    DefectCategory(id: 'cat-coldroom-gasket', label: 'Cold Room Door Gasket Seal', resourceType: 'Electricity', hint: '~35 kWh/day'),
+  final List<DefectCategory> defectCategories = [
+    const DefectCategory(id: 'cat-toilet-flapper', label: 'Bathroom Toilet Flapper Leak', resourceType: 'Water', hint: '~280 L/day'),
+    const DefectCategory(id: 'cat-basin-faucet', label: 'Dripping Basin Faucet', resourceType: 'Water', hint: '~45 L/day'),
+    const DefectCategory(id: 'cat-hvac-thermostat', label: 'HVAC / Aircon Thermostat Stuck', resourceType: 'Electricity', hint: '~25 kWh/day'),
+    const DefectCategory(id: 'cat-shower-valve', label: 'Shower Valve Pressure Leak', resourceType: 'Water', hint: '~120 L/day'),
+    const DefectCategory(id: 'cat-coldroom-gasket', label: 'Cold Room Door Gasket Seal', resourceType: 'Electricity', hint: '~35 kWh/day'),
   ];
 
   // Utility Meters (Module 5) — kept in sync with the Web Admin Dashboard's
@@ -379,6 +552,9 @@ class HotelDatabase extends ChangeNotifier {
   void addInventoryItem(InventoryItem item) {
     inventory.insert(0, item);
     notifyListeners();
+    _asyncPost('/api/sync', {
+      'inventory': inventory.map((i) => i.toJson()).toList(),
+    });
   }
 
   void updateInventoryQty(String id, double newQty) {
@@ -386,6 +562,9 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       inventory[idx].quantity = max(0, newQty);
       notifyListeners();
+      _asyncPost('/api/sync', {
+        'inventory': inventory.map((i) => i.toJson()).toList(),
+      });
     }
   }
 
@@ -393,12 +572,18 @@ class HotelDatabase extends ChangeNotifier {
     if (index >= 0 && index < inventory.length) {
       inventory[index] = item;
       notifyListeners();
+      _asyncPost('/api/sync', {
+        'inventory': inventory.map((i) => i.toJson()).toList(),
+      });
     }
   }
 
   void addFoodWasteLog(FoodWasteLog log) {
     foodWasteLogs.insert(0, log);
     notifyListeners();
+    _asyncPost('/api/sync', {
+      'foodWasteLogs': foodWasteLogs.map((f) => f.toJson()).toList(),
+    });
   }
 
   // ================= MODULE 3 METHODS =================
@@ -417,6 +602,10 @@ class HotelDatabase extends ChangeNotifier {
       }
     }
     notifyListeners();
+    _asyncPost('/api/sync', {
+      'plateWasteLogs': plateWasteLogs.map((p) => p.toJson()).toList(),
+      'dishes': dishes.map((d) => d.toJson()).toList(),
+    });
   }
 
   void finalizePrepSheet(String mealPeriod, String chefName, List<DishItem> currentDishes, int diners) {
@@ -449,6 +638,9 @@ class HotelDatabase extends ChangeNotifier {
       );
     }
     notifyListeners();
+    _asyncPost('/api/sync', {
+      'prepRecommendations': prepRecommendations.map((p) => p.toJson()).toList(),
+    });
   }
 
   List<PlateWasteLog> checkOverPrepAlerts() {
@@ -460,6 +652,9 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       dishes[idx].wasteMultiplier = newMultiplier;
       notifyListeners();
+      _asyncPost('/api/sync', {
+        'dishes': dishes.map((d) => d.toJson()).toList(),
+      });
     }
   }
 
@@ -468,6 +663,9 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       dishes[idx].prepStatus = status;
       notifyListeners();
+      _asyncPost('/api/sync', {
+        'dishes': dishes.map((d) => d.toJson()).toList(),
+      });
     }
   }
 
@@ -838,6 +1036,14 @@ class HotelDatabase extends ChangeNotifier {
         }
       }
       notifyListeners();
+
+      _asyncPost('/api/defects/status', {
+        'id': t.id,
+        'ticketNumber': t.ticketNumber,
+        'status': newStatus,
+        'notes': notes,
+        'completedAt': t.completedAt,
+      });
     }
   }
 
@@ -851,6 +1057,7 @@ class HotelDatabase extends ChangeNotifier {
       tech.status = 'Available';
     }
     notifyListeners();
+    _asyncPost('/api/defects/clear', {});
   }
 
   // ================= EXECUTIVE SCORE =================

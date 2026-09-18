@@ -53,42 +53,7 @@ class StorageEngine {
 
   // Connect with Python Backend API & Real-time SSE Stream
   async initBackendSync() {
-    try {
-      // 1. Initial Fetch from backend
-      const res = await fetch(getBackendUrl('/api/db'), { cache: 'no-store' });
-      if (res.ok) {
-        const backendData = await res.json();
-        if (backendData && typeof backendData === 'object') {
-          // Merge collections from backend
-          const syncKeys = [
-            'rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory',
-            'foodWasteLogs', 'plateWasteLogs', 'baselines', 'userAudit', 'users',
-            'dishes', 'technicians', 'defectCategories', 'prepRecommendations', 'reservationForecast',
-            'guestInteractions'
-          ];
-          let changed = false;
-          for (const key of syncKeys) {
-            if (Array.isArray(backendData[key]) && backendData[key].length > 0) {
-              this.data[key] = backendData[key];
-              changed = true;
-            }
-          }
-          if (changed) {
-            this.saveDatabase(this.data, false);
-            this.notify('all', this.data);
-            this.notify('rooms', this.data.rooms);
-            this.notify('ecoVouchers', this.data.ecoVouchers);
-            this.notify('baselines', this.data.baselines);
-            this.notify('repairTickets', this.data.repairTickets);
-            this.notify('utilityMeters', this.data.utilityMeters);
-            this.notify('guestInteractions', this.data.guestInteractions);
-            console.log('[Backend Sync] Synchronized initial state with Python backend');
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[Backend Sync] Backend not reachable, running offline with localStorage:', err.message);
-    }
+    await this.refreshDatabase();
 
     // 2. Real-time Server-Sent Events (SSE) Listener
     if (typeof EventSource !== 'undefined') {
@@ -147,14 +112,47 @@ class StorageEngine {
               this.notify('ecoVouchers', this.data.ecoVouchers);
             } else if (event.type === 'defect_created' && event.payload) {
               this.data.repairTickets = this.data.repairTickets || [];
-              this.data.repairTickets.unshift(event.payload);
+              const payload = event.payload;
+              const idx = this.data.repairTickets.findIndex(t => t.id === payload.id || t.ticketNumber === payload.ticketNumber);
+              if (idx !== -1) {
+                Object.assign(this.data.repairTickets[idx], payload);
+              } else {
+                this.data.repairTickets.unshift(payload);
+              }
+              this.syncTechnicianStatuses();
               this.saveDatabase(this.data, false);
               this.notify('repairTickets', this.data.repairTickets);
+              this.notify('technicians', this.data.technicians);
+            } else if (event.type === 'defect_updated' && event.payload) {
+              this.data.repairTickets = this.data.repairTickets || [];
+              const payload = event.payload;
+              const idx = this.data.repairTickets.findIndex(t => t.id === payload.id || t.ticketNumber === payload.ticketNumber);
+              if (idx !== -1) {
+                Object.assign(this.data.repairTickets[idx], payload);
+              } else {
+                this.data.repairTickets.unshift(payload);
+              }
+              this.syncTechnicianStatuses();
+              this.saveDatabase(this.data, false);
+              this.notify('repairTickets', this.data.repairTickets);
+              this.notify('technicians', this.data.technicians);
+            } else if (event.type === 'defects_cleared') {
+              this.data.repairTickets = [];
+              this.syncTechnicianStatuses();
+              this.saveDatabase(this.data, false);
+              this.notify('repairTickets', this.data.repairTickets);
+              this.notify('technicians', this.data.technicians);
+            } else if (event.type === 'technicians_updated' && Array.isArray(event.payload)) {
+              this.data.technicians = event.payload;
+              this.saveDatabase(this.data, false);
+              this.notify('technicians', this.data.technicians);
             } else if (event.type === 'meter_updated' && event.payload) {
               const m = (this.data.utilityMeters || []).find(x => x.meterId === event.payload.meterId);
               if (m) Object.assign(m, event.payload);
               this.saveDatabase(this.data, false);
               this.notify('utilityMeters', this.data.utilityMeters);
+            } else if (event.type === 'bulk_synced') {
+              this.refreshDatabase();
             } else if (event.type === 'interaction_created' && event.payload) {
               this.data.guestInteractions = this.data.guestInteractions || [];
               // Avoid duplicates
@@ -176,6 +174,50 @@ class StorageEngine {
       } catch (e) {
         console.warn('[SSE] EventSource init failed:', e);
       }
+    }
+  }
+
+  // Explicitly fetch latest state from Python backend and notify all active views
+  async refreshDatabase() {
+    try {
+      // 1. Fetch live snapshot from backend
+      const res = await fetch(getBackendUrl('/api/db'), { cache: 'no-store' });
+      if (res.ok) {
+        const backendData = await res.json();
+        if (backendData && typeof backendData === 'object') {
+          // Merge all collections from backend
+          const syncKeys = [
+            'rooms', 'ecoVouchers', 'repairTickets', 'utilityMeters', 'inventory',
+            'foodWasteLogs', 'plateWasteLogs', 'baselines', 'userAudit', 'users',
+            'dishes', 'technicians', 'defectCategories', 'prepRecommendations', 'reservationForecast',
+            'guestInteractions'
+          ];
+          let changed = false;
+          for (const key of syncKeys) {
+            if (Array.isArray(backendData[key])) {
+              this.data[key] = backendData[key];
+              changed = true;
+            } else if (backendData[key] && typeof backendData[key] === 'object') {
+              this.data[key] = backendData[key];
+              changed = true;
+            }
+          }
+          this.syncTechnicianStatuses();
+          if (changed) {
+            this.saveDatabase(this.data, false);
+            this.notify('all', this.data);
+            for (const key of syncKeys) {
+              this.notify(key, this.data[key]);
+            }
+            console.log('[Backend Sync] Synchronized all collections with Python backend');
+          }
+          return { success: true, count: Object.keys(backendData).length };
+        }
+      }
+      return { success: false, error: 'HTTP ' + res.status };
+    } catch (err) {
+      console.warn('[Backend Sync] Backend not reachable, running offline with localStorage:', err.message);
+      return { success: false, error: err.message };
     }
   }
 
@@ -1559,6 +1601,13 @@ updateInventoryItem(id, updates) {
     this.saveDatabase();
     this.notify('repairTickets', this.data.repairTickets);
     this.notify('technicians', this.data.technicians);
+
+    fetch(getBackendUrl('/api/defects'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTicket)
+    }).catch(() => {});
+
     return newTicket;
   }
 
@@ -1576,11 +1625,18 @@ updateInventoryItem(id, updates) {
     this.saveDatabase();
     this.notify('repairTickets', this.data.repairTickets);
     this.notify('technicians', this.data.technicians);
+
+    fetch(getBackendUrl('/api/defects/clear'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }).catch(() => {});
+
     return true;
   }
 
   updateTicketStatus(ticketId, newStatus, repairNotes = '') {
-    const ticket = this.data.repairTickets.find(t => t.id === ticketId);
+    const ticket = this.data.repairTickets.find(t => t.id === ticketId || t.ticketNumber === ticketId);
     if (!ticket) return false;
 
     ticket.status = newStatus;
@@ -1596,6 +1652,19 @@ updateInventoryItem(id, updates) {
     this.saveDatabase();
     this.notify('repairTickets', this.data.repairTickets);
     this.notify('technicians', this.data.technicians);
+
+    fetch(getBackendUrl('/api/defects/status'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: newStatus,
+        notes: repairNotes,
+        completedAt: ticket.completedAt
+      })
+    }).catch(() => {});
+
     return true;
   }
 }
