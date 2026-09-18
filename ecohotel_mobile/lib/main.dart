@@ -236,26 +236,61 @@ class _MainStaffShellState extends State<MainStaffShell> {
               ),
             ),
           ],
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                minimumSize: const Size(60, 32),
-                foregroundColor: const Color(0xFF64748B),
-                side: const BorderSide(color: Color(0xFFE2E8F0)),
+          if (!isGuest) ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => _showStaffProfileBottomSheet(context),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor: const Color(0xFF059669),
+                      child: Text(
+                        _authenticatedStaff!.avatar,
+                        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _authenticatedStaff!.username,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                    ),
+                    const Icon(Icons.arrow_drop_down, size: 16, color: Color(0xFF64748B)),
+                  ],
+                ),
               ),
-              onPressed: () {
-                setState(() {
-                  _authenticatedStaff = null;
-                  _authenticatedGuestRoom = null;
-                });
-              },
-              icon: const Icon(Icons.logout, size: 14),
-              label: const Text('Logout', style: TextStyle(fontSize: 11)),
             ),
-          ),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  minimumSize: const Size(60, 32),
+                  foregroundColor: const Color(0xFF64748B),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _authenticatedStaff = null;
+                    _authenticatedGuestRoom = null;
+                  });
+                },
+                icon: const Icon(Icons.logout, size: 14),
+                label: const Text('Logout', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
         ],
       ),
       body: isGuest
@@ -298,6 +333,511 @@ class _MainStaffShellState extends State<MainStaffShell> {
           : null,
     );
   }
+
+  // ==========================================
+  // Staff Profile Menu & Security Management
+  // ==========================================
+
+  void _showStaffProfileBottomSheet(BuildContext context) {
+    final staff = _authenticatedStaff!;
+    final isAdmin = staff.username == 'admin' || staff.role.contains('Director') || staff.role.contains('Manager');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            // User Header
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: const Color(0xFF059669),
+                  child: Text(
+                    staff.avatar,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              staff.name,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isAdmin) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFFF59E0B)),
+                              ),
+                              child: const Text(
+                                'ADMIN',
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${staff.role} • ${staff.department}',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                      Text(
+                        'ID: ${staff.id} | @${staff.username}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: Color(0xFFE2E8F0)),
+
+            // Action: Edit Profile
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.badge_outlined, color: Color(0xFF059669)),
+              title: const Text('Edit Profile Info', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Update display name, department & initials', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+              trailing: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showEditProfileDialog(context);
+              },
+            ),
+
+            // Action: Change Password
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
+              title: const Text('Change Password', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Update personal authentication password', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+              trailing: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showChangePasswordDialog(context);
+              },
+            ),
+
+            // Action: Switch Account
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.switch_account_outlined, color: Color(0xFF7C3AED)),
+              title: const Text('Switch Account (Demo Roles)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Switch to Chef, Exec, Tech, Facilities, or Guest', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+              trailing: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showSwitchUserDialog(context);
+              },
+            ),
+
+            // Action: Admin Directory (Admin Only)
+            if (isAdmin) ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.admin_panel_settings_outlined, color: Color(0xFFD97706)),
+                title: const Text('Admin Console: User Directory', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFFB45309))),
+                subtitle: const Text('Reset employee passwords & add accounts', style: TextStyle(fontSize: 11.5, color: Color(0xFF92400E))),
+                trailing: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAdminUserDirectoryDialog(context);
+                },
+              ),
+            ],
+
+            const Divider(color: Color(0xFFE2E8F0)),
+
+            // Action: Logout
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.logout, color: Color(0xFFDC2626)),
+              title: const Text('Sign Out', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFFDC2626))),
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _authenticatedStaff = null;
+                  _authenticatedGuestRoom = null;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfileDialog(BuildContext context) {
+    final staff = _authenticatedStaff!;
+    final nameCtrl = TextEditingController(text: staff.name);
+    final deptCtrl = TextEditingController(text: staff.department);
+    final avatarCtrl = TextEditingController(text: staff.avatar);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Profile Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: deptCtrl,
+              decoration: const InputDecoration(labelText: 'Department', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: avatarCtrl,
+              maxLength: 2,
+              decoration: const InputDecoration(labelText: 'Avatar Initials (1-2 chars)', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            onPressed: () {
+              final newName = nameCtrl.text.trim();
+              final newDept = deptCtrl.text.trim();
+              final newAv = avatarCtrl.text.trim().toUpperCase();
+              if (newName.isNotEmpty) {
+                _db.updateUserProfile(staff.id, name: newName, department: newDept, avatar: newAv);
+                setState(() {
+                  _authenticatedStaff = staff.copyWith(name: newName, department: newDept, avatar: newAv);
+                });
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✓ Profile updated successfully!')),
+                );
+              }
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final staff = _authenticatedStaff!;
+    final currCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confCtrl = TextEditingController();
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Change Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: currCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Current Password', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'New Password (min 6 chars)', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Confirm New Password', border: OutlineInputBorder()),
+              ),
+              if (errorMsg != null) ...[
+                const SizedBox(height: 10),
+                Text(errorMsg!, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+              onPressed: () {
+                if (currCtrl.text != staff.password) {
+                  setDialogState(() => errorMsg = 'Current password is incorrect.');
+                  return;
+                }
+                if (newCtrl.text.length < 6) {
+                  setDialogState(() => errorMsg = 'New password must be at least 6 characters long.');
+                  return;
+                }
+                if (newCtrl.text != confCtrl.text) {
+                  setDialogState(() => errorMsg = 'New password and confirmation do not match.');
+                  return;
+                }
+
+                _db.updateUserPassword(staff.id, currCtrl.text, newCtrl.text);
+                setState(() {
+                  _authenticatedStaff = staff.copyWith(password: newCtrl.text);
+                });
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✓ Password updated successfully!')),
+                );
+              },
+              child: const Text('Update Password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSwitchUserDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Switch Account Role', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: _db.users.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (ctx, i) {
+              final u = _db.users[i];
+              final isCurrent = u.id == _authenticatedStaff?.id;
+              return ListTile(
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: isCurrent ? const Color(0xFF059669) : const Color(0xFF64748B),
+                  child: Text(u.avatar, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+                title: Text(u.name, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500, fontSize: 13.5)),
+                subtitle: Text('${u.role} • ${u.department}', style: const TextStyle(fontSize: 11.5)),
+                trailing: isCurrent ? const Icon(Icons.check_circle, color: Color(0xFF059669), size: 18) : null,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _authenticatedStaff = u;
+                    _authenticatedGuestRoom = null;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Switched active account to ${u.name} (${u.role})')),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showAdminUserDirectoryDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.admin_panel_settings, color: Color(0xFFD97706), size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Admin User Directory',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.person_add, size: 20, color: Color(0xFF059669)),
+                tooltip: 'Add Staff User',
+                onPressed: () => _showAdminAddUserDialog(context, () => setDialogState(() {})),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _db.users.map((u) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: const Color(0xFF059669),
+                        child: Text(u.avatar, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(u.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                            Text('${u.role} • @${u.username}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                          ],
+                        ),
+                      ),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          minimumSize: const Size(50, 28),
+                        ),
+                        onPressed: () {
+                          final newPwCtrl = TextEditingController(text: 'newpass123');
+                          showDialog(
+                            context: context,
+                            builder: (pwCtx) => AlertDialog(
+                              title: Text('Reset Password for ${u.name}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                              content: TextField(
+                                controller: newPwCtrl,
+                                decoration: const InputDecoration(labelText: 'New Password (min 6 chars)', border: OutlineInputBorder()),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(pwCtx), child: const Text('Cancel')),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+                                  onPressed: () {
+                                    if (newPwCtrl.text.length >= 6) {
+                                      _db.adminResetUserPassword(u.id, newPwCtrl.text);
+                                      Navigator.pop(pwCtx);
+                                      setDialogState(() {});
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('✓ Password for ${u.name} reset to: ${newPwCtrl.text}')),
+                                      );
+                                    }
+                                  },
+                                  child: const Text('Confirm Reset'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: const Text('Reset PW', style: TextStyle(fontSize: 10.5)),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAdminAddUserDialog(BuildContext context, VoidCallback onAdded) {
+    final userCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController();
+    final deptCtrl = TextEditingController();
+    final passCtrl = TextEditingController(text: 'password123');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Staff User', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: userCtrl, decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: roleCtrl, decoration: const InputDecoration(labelText: 'Role (e.g. Sous Chef)', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: deptCtrl, decoration: const InputDecoration(labelText: 'Department (e.g. F&B)', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: passCtrl, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            onPressed: () {
+              if (userCtrl.text.isNotEmpty && nameCtrl.text.isNotEmpty) {
+                _db.addNewStaffUser(
+                  username: userCtrl.text,
+                  name: nameCtrl.text,
+                  role: roleCtrl.text,
+                  department: deptCtrl.text,
+                  password: passCtrl.text,
+                );
+                Navigator.pop(ctx);
+                onAdded();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('✓ Created new user ${nameCtrl.text}')),
+                );
+              }
+            },
+            child: const Text('Add User'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ==========================================
@@ -330,7 +870,8 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
     final passVal = _passwordCtrl.text.trim();
 
     if (userVal.isEmpty || passVal.isEmpty) {
-      setState(() => _errorMessage = 'Invalid credentials.');
+      _passwordCtrl.clear();
+      setState(() => _errorMessage = 'Invalid username or password');
       return;
     }
 
@@ -362,7 +903,65 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
       return;
     }
 
-    setState(() => _errorMessage = 'Invalid credentials.');
+    // UC4 Alternative Flow A1 Step 4: Clear password field and display exact error
+    _passwordCtrl.clear();
+    setState(() => _errorMessage = 'Invalid username or password');
+  }
+
+  void _showForgotPasswordDialog() {
+    final resetCtrl = TextEditingController(text: _usernameCtrl.text);
+    final newPassCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your corporate username to reset your credentials.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: resetCtrl,
+              decoration: const InputDecoration(labelText: 'Username or Email', isDense: true),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: newPassCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'New Password', isDense: true),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669), foregroundColor: Colors.white),
+            onPressed: () {
+              final user = widget.db.users.cast<UserModel?>().firstWhere(
+                (u) => u!.username.toLowerCase() == resetCtrl.text.trim().toLowerCase(),
+                orElse: () => null,
+              );
+              if (user != null && newPassCtrl.text.trim().length >= 4) {
+                user.password = newPassCtrl.text.trim();
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✓ Password updated! You can now log in.')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('User not found or password too short.')),
+                );
+              }
+            },
+            child: const Text('Update Password'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -459,14 +1058,33 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
                           ),
                           onSubmitted: (_) => _handleLogin(),
                         ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Password',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF334155),
-                          ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Password',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                            Flexible(
+                              child: InkWell(
+                                onTap: _showForgotPasswordDialog,
+                                child: const Text(
+                                  'Forgot Password?',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF059669),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -513,18 +1131,18 @@ class _EcoHotelLoginScreenState extends State<EcoHotelLoginScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF059669),
                             foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 48),
+                            minimumSize: const Size(double.infinity, 46),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 0,
                             textStyle: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -658,16 +1276,54 @@ class _KitchenScreenState extends State<KitchenScreen> {
       filtered = filtered.where((d) => d.station == _selectedStation).toList();
     }
 
-    final totalDiners = _selectedShift == 'Breakfast'
-        ? 268
-        : _selectedShift == 'Lunch'
-        ? 165
-        : 235;
+    // Dynamic Influx from Ingested 48-Hour Forecast (FR_03, FR_04)
+    final forecast = widget.db.forecasts.firstWhere(
+      (f) => f.shift == _selectedShift && f.date == '2026-08-13',
+      orElse: () => widget.db.forecasts.first,
+    );
+    final totalGuests = forecast.totalInHouseGuests;
+    final captureRate = _selectedShift == 'Breakfast' ? 0.94 : _selectedShift == 'Lunch' ? 0.65 : 0.82;
+    final totalDiners = (totalGuests * captureRate).round();
+    final alerts = widget.db.checkOverPrepAlerts();
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        // Shift & Dynamic Forecast Summary
+        // Over-Prep Warning Alert Banner (FR_09 / UC6)
+        if (alerts.isNotEmpty) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFEF4444)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Over-Prep Alert Dispatched to Management:',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF991B1B)),
+                      ),
+                      Text(
+                        '${alerts.first.dishName} had ${alerts.first.discardedKg} kg discarded (${alerts.first.mealPeriod}). Multiplier auto-decayed.',
+                        style: const TextStyle(fontSize: 10, color: Color(0xFFB91C1C)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Shift & Dynamic Forecast Summary (Ingested from Oracle SQL DB)
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -683,28 +1339,33 @@ class _KitchenScreenState extends State<KitchenScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.psychology_outlined,
-                        size: 18,
-                        color: Color(0xFF059669),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '48h Influx: $totalDiners Diners ($_selectedShift)',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.psychology_outlined,
+                          size: 18,
                           color: Color(0xFF059669),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '48h Influx: $totalDiners Diners ($_selectedShift)',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   DropdownButton<String>(
                     value: _selectedShift,
                     isDense: true,
-                    underline: const SizedBox(),
+                    underline: const SizedBox.shrink(),
                     items: ['Breakfast', 'Lunch', 'Dinner']
                         .map(
                           (s) => DropdownMenuItem(
@@ -724,16 +1385,19 @@ class _KitchenScreenState extends State<KitchenScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Synthesizing 70% MY/SG + 18% EU demographics, recipe yields & decayed plate returns.',
-                style: TextStyle(fontSize: 10, color: Color(0xFF4B5563)),
+              Text(
+                'Oracle PMS Synced: ${forecast.totalInHouseGuests} In-House (+${forecast.expectedCheckIns} check-ins) • '
+                'MY/SG: ${(forecast.nationalities['Malaysian'] ?? 0) + (forecast.nationalities['Singaporean'] ?? 0)}% • '
+                'EU: ${forecast.nationalities['European'] ?? 0}% • '
+                'Halal: ${forecast.dietaryProfiles['Halal']}',
+                style: const TextStyle(fontSize: 10, color: Color(0xFF4B5563)),
               ),
             ],
           ),
         ),
         const SizedBox(height: 10),
 
-        // Action Buttons Row
+        // Action Buttons Row (Log Waste, Finalize Batch, Guide, Print/PDF)
         Row(
           children: [
             Expanded(
@@ -747,9 +1411,9 @@ class _KitchenScreenState extends State<KitchenScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
                 onPressed: () => _showLogPlateWasteDialog(context),
-                icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                icon: const Icon(Icons.delete_sweep_outlined, size: 15),
                 label: const Text(
-                  'Log Plate Waste',
+                  'Log Waste',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -758,39 +1422,47 @@ class _KitchenScreenState extends State<KitchenScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF18181B),
-                  side: const BorderSide(color: Color(0xFFD4D4D8)),
+                  foregroundColor: const Color(0xFF059669),
+                  side: const BorderSide(color: Color(0xFF059669)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
-                onPressed: () => _showUserGuideSheet(context),
-                icon: const Icon(
-                  Icons.menu_book_outlined,
-                  size: 16,
-                  color: Color(0xFF059669),
-                ),
+                onPressed: () {
+                  widget.db.finalizePrepSheet(
+                    _selectedShift,
+                    'Chef Zhen Bang (BOH)',
+                    filtered,
+                    totalDiners,
+                  );
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '✓ Batch sizes finalized & saved to PREP_RECOMMENDATIONS table for $_selectedShift!',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.check_circle_outline, size: 15, color: Color(0xFF059669)),
                 label: const Text(
-                  'M3 Guide',
+                  'Finalize Batch',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
             const SizedBox(width: 6),
             IconButton.filledTonal(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      '✓ Kitchen Prep Sheet synced with Back-of-House printer & QR tokens.',
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => _showPrepSheetPrintAndPdfDialog(context, filtered, totalDiners, _selectedShift),
               icon: const Icon(Icons.print_outlined, size: 16),
-              tooltip: 'Sync Prep Sheet',
-              visualDensity: VisualDensity.compact,
+              tooltip: 'Print Hardcopy & Export PDF',
+            ),
+            const SizedBox(width: 6),
+            IconButton.filledTonal(
+              onPressed: () => _showUserGuideSheet(context),
+              icon: const Icon(Icons.help_outline, size: 16),
+              tooltip: 'M3 Operations Guide',
             ),
           ],
         ),
@@ -812,9 +1484,18 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
         // Dish Recommendation Cards
         ...filtered.map((dish) {
+          double culturalFactor = 1.0;
+          if (dish.id == 'DSH-01') {
+            culturalFactor = ((forecast.nationalities['Malaysian'] ?? 40) * 1.3 + (forecast.nationalities['Singaporean'] ?? 25) * 1.15 + 20) / 100.0;
+          } else if (dish.id == 'DSH-02') {
+            culturalFactor = ((forecast.nationalities['European'] ?? 20) * 1.45 + 30) / 100.0;
+          } else if (dish.id == 'DSH-05') {
+            culturalFactor = ((forecast.nationalities['European'] ?? 20) * 1.2 + 40) / 100.0;
+          }
           final rawKg =
               (totalDiners *
                   (dish.basePerGuestGrams / 1000.0) *
+                  culturalFactor *
                   dish.wasteMultiplier) /
               dish.cookingYield;
           final targetKg = (rawKg + 1.2).toStringAsFixed(1);
@@ -2219,6 +2900,8 @@ void _showEditInventorySheet(
     final reasonCtrl = TextEditingController();
     bool isAnomaly = false;
     bool photoAttached = false;
+    String? photoBase64;
+    String? weightError;
 
     showDialog(
       context: context,
@@ -2255,6 +2938,7 @@ void _showEditInventorySheet(
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: DropdownButton<String>(
@@ -2278,11 +2962,19 @@ void _showEditInventorySheet(
                     Expanded(
                       child: TextField(
                         controller: weightCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
                           labelText: 'Discarded kg',
                           isDense: true,
+                          errorText: weightError,
+                          errorMaxLines: 2,
+                          errorStyle: const TextStyle(fontSize: 10, color: Color(0xFFE11D48)),
                         ),
+                        onChanged: (val) {
+                          if (weightError != null) {
+                            setDlg(() => weightError = null);
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -2312,15 +3004,41 @@ void _showEditInventorySheet(
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                   ),
-                  onPressed: () {
-                    setDlg(() => photoAttached = true);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          '📸 Photo evidence attached: IMG_BOH_8892.jpg',
-                        ),
-                      ),
-                    );
+                  onPressed: () async {
+                    try {
+                      final picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        maxWidth: 800,
+                        imageQuality: 75,
+                      );
+                      if (image != null) {
+                        final bytes = await image.readAsBytes();
+                        setDlg(() {
+                          photoAttached = true;
+                          photoBase64 = base64Encode(bytes);
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('📸 Photo evidence attached: ${image.name}'),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (_) {
+                      setDlg(() {
+                        photoAttached = true;
+                        photoBase64 = 'data:image/jpeg;base64,mockEvidence';
+                      });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('📸 Photo evidence attached: IMG_BOH_8892.jpg'),
+                          ),
+                        );
+                      }
+                    }
                   },
                   icon: Icon(
                     photoAttached ? Icons.check_circle : Icons.camera_alt,
@@ -2356,35 +3074,41 @@ void _showEditInventorySheet(
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                final weight = double.tryParse(weightCtrl.text);
-                if (weight != null && weight > 0) {
-                  final targetDish = widget.db.dishes.firstWhere(
-                    (d) => d.id == selectedDishId,
-                  );
-                  widget.db.logPlateWaste(
-                    PlateWasteLog(
-                      id: 'PW-${Random().nextInt(900) + 100}',
-                      date: '2026-08-13',
-                      mealPeriod: selectedShift,
-                      dishId: selectedDishId,
-                      dishName: targetDish.name,
-                      discardedKg: weight,
-                      isAnomaly: isAnomaly,
-                      anomalyReason: isAnomaly ? reasonCtrl.text : '',
-                      photoAttached: photoAttached || isAnomaly,
-                      note: noteCtrl.text,
-                      loggedBy: 'Chef Zhen Bang (BOH)',
-                    ),
-                  );
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Plate waste logged for ${targetDish.name}! EMA multiplier updated.',
-                      ),
-                    ),
-                  );
+                final weight = double.tryParse(weightCtrl.text.trim());
+                if (weight == null || weight <= 0) {
+                  setDlg(() {
+                    weightError = 'Invalid weight entry: positive numeric weight in kg required';
+                  });
+                  return;
                 }
+
+                final targetDish = widget.db.dishes.firstWhere(
+                  (d) => d.id == selectedDishId,
+                );
+                widget.db.logPlateWaste(
+                  PlateWasteLog(
+                    id: 'PW-${Random().nextInt(900) + 100}',
+                    date: '2026-08-13',
+                    mealPeriod: selectedShift,
+                    dishId: selectedDishId,
+                    dishName: targetDish.name,
+                    discardedKg: weight,
+                    isAnomaly: isAnomaly,
+                    anomalyReason: isAnomaly ? reasonCtrl.text : '',
+                    photoAttached: photoAttached || isAnomaly,
+                    photoBase64: photoBase64,
+                    note: noteCtrl.text,
+                    loggedBy: 'Chef Zhen Bang (BOH)',
+                  ),
+                );
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Plate waste logged for ${targetDish.name}! EMA multiplier updated.',
+                    ),
+                  ),
+                );
               },
               child: const Text('Save & Refine EMA'),
             ),
@@ -2457,6 +3181,198 @@ void _showEditInventorySheet(
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Dialog: Station Prep Sheet Print & PDF Export (Module 3 - FR_08 / UC3)
+  void _showPrepSheetPrintAndPdfDialog(
+    BuildContext context,
+    List<DishItem> dishes,
+    int totalDiners,
+    String mealPeriod,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.print, color: Color(0xFF059669), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Station Prep Sheet • $mealPeriod',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'DATE: 2026-08-13 | MEAL: ${mealPeriod.toUpperCase()}',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'PMS Influx: $totalDiners Diners | 3-Wave Staged Batching',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'QR: BOH-M3-${mealPeriod.toUpperCase()}',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'BATCH TARGETS & WAVE DISPATCH',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...dishes.map((dish) {
+                  final rawKg = (totalDiners *
+                          (dish.basePerGuestGrams / 1000.0) *
+                          dish.wasteMultiplier) /
+                      dish.cookingYield;
+                  final targetKg = (rawKg + 1.2).toStringAsFixed(1);
+                  final wave1Kg = (double.parse(targetKg) * 0.55).toStringAsFixed(1);
+                  final wave2Kg = (double.parse(targetKg) * 0.35).toStringAsFixed(1);
+                  final wave3Kg = (double.parse(targetKg) * 0.10).toStringAsFixed(1);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                dish.name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$targetKg kg Total',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Station: ${dish.station} | Yield: ${(dish.cookingYield * 100).toInt()}%',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(child: _buildWavePill('W1 (55%)', '$wave1Kg kg', const Color(0xFF2563EB))),
+                            const SizedBox(width: 4),
+                            Expanded(child: _buildWavePill('W2 (35%)', '$wave2Kg kg', const Color(0xFFD97706))),
+                            const SizedBox(width: 4),
+                            Expanded(child: _buildWavePill('W3 (10%)', '$wave3Kg kg', const Color(0xFF059669))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    '🖨️ Printing station prep sheet to Kitchen Receipt Printer #1 (BOH)...',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.print, size: 14),
+            label: const Text('Print Hardcopy'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '✓ Exported PDF: BOH_PrepSheet_${mealPeriod}_2026-08-13.pdf',
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.picture_as_pdf, size: 14),
+            label: const Text('Export PDF'),
+          ),
+        ],
       ),
     );
   }
@@ -3738,11 +4654,14 @@ class _HousekeepingScreenState extends State<HousekeepingScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    '(${room.guestName})',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF71717A),
+                  Expanded(
+                    child: Text(
+                      '(${room.guestName})',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF71717A),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

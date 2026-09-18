@@ -139,6 +139,15 @@ export const INITIAL_DATA = {
     { id: "PW-105", department: "housekeeping", departmentId: "housekeeping", roomNumber: "112", wasteKg: 0.4, discardedKg: 0.4, timestamp: "2026-08-12 10:30", date: "2026-08-12", mealPeriod: "Room Service" }
   ],
 
+  // Module 3: Finalized Prep Recommendations Table (UC2 Step 7)
+  prepRecommendations: [
+    { id: "PR-001", date: "2026-08-13", mealPeriod: "Breakfast", dishId: "DSH-01", dishName: "Traditional Nasi Lemak w/ Rendang", station: "Hot Line", recommendedKg: 41.2, wave1Kg: 22.7, wave2Kg: 14.4, wave3Kg: 4.1, status: "Finalized", overridden: false, finalizedBy: "Chef Zhen Bang", timestamp: "2026-08-12 21:00" },
+    { id: "PR-002", date: "2026-08-13", mealPeriod: "Breakfast", dishId: "DSH-02", dishName: "Grilled Herb Butter Atlantic Salmon", station: "Hot Line", recommendedKg: 28.5, wave1Kg: 15.7, wave2Kg: 10.0, wave3Kg: 2.8, status: "Finalized", overridden: false, finalizedBy: "Chef Zhen Bang", timestamp: "2026-08-12 21:00" },
+    { id: "PR-003", date: "2026-08-13", mealPeriod: "Breakfast", dishId: "DSH-03", dishName: "Live Omelette & Scrambled Egg Station", station: "Live Counter", recommendedKg: 24.0, wave1Kg: 13.2, wave2Kg: 8.4, wave3Kg: 2.4, status: "Finalized", overridden: false, finalizedBy: "Chef Zhen Bang", timestamp: "2026-08-12 21:00" },
+    { id: "PR-004", date: "2026-08-13", mealPeriod: "Breakfast", dishId: "DSH-04", dishName: "Wok-Tossed Tiger Prawn Mee Mamak", station: "Live Counter", recommendedKg: 33.8, wave1Kg: 18.6, wave2Kg: 11.8, wave3Kg: 3.4, status: "Finalized", overridden: false, finalizedBy: "Chef Zhen Bang", timestamp: "2026-08-12 21:00" },
+    { id: "PR-005", date: "2026-08-13", mealPeriod: "Breakfast", dishId: "DSH-05", dishName: "Crispy Organic Garden Salad Bar", station: "Cold Pantry", recommendedKg: 18.2, wave1Kg: 10.0, wave2Kg: 6.4, wave3Kg: 1.8, status: "Finalized", overridden: false, finalizedBy: "Chef Zhen Bang", timestamp: "2026-08-12 21:00" }
+  ],
+
   // Module 4: Hotel Rooms & Master Housekeeping Schedule
   rooms: [
     { roomNumber: "101", floor: 1, type: "Deluxe Ocean Suite", guestName: "Tan Sri Jeffrey Cheah", status: "Occupied", servicePreference: "STANDARD", optOutDays: 0, linenDelayDays: 0, towelReuse: false, cleaningStatus: "Active Clean List", ecoPointsEarned: 0, qrToken: "RM101-SEC-771" },

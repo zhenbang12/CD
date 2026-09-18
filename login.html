@@ -84,11 +84,42 @@
           <input type="text" id="username" class="form-input" required placeholder="Enter your username">
         </div>
         <div class="form-group">
-          <label class="form-label">Password</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">Password</label>
+            <a href="#" id="link-forgot-password" style="font-size: 12px; color: #059669; text-decoration: none; font-weight: 500;">Forgot Password?</a>
+          </div>
           <input type="password" id="password" class="form-input" required placeholder="Enter your password">
         </div>
-        <div id="error-msg" class="text-danger" style="margin-bottom: 15px; display: none;">Invalid credentials.</div>
+        <div id="error-msg" class="text-danger" style="margin-bottom: 15px; display: none; color: #dc2626; font-size: 13px; font-weight: 500;">Invalid username or password</div>
         <button type="submit" class="btn-login">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Password Reset Protocol Modal (UC4 Step 6) -->
+  <div id="reset-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; padding: 30px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 700;">Reset Password</h3>
+        <button id="btn-close-reset" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 18px;">
+        Enter your employee username or corporate email to initiate the secure recovery protocol.
+      </p>
+      <form id="reset-form">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 13px; font-weight: 600; color: #334155;">Corporate Email or Username</label>
+          <input type="text" id="reset-identity" class="form-input" required placeholder="e.g. chef@ecohotel.com or chef" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 13px; font-weight: 600; color: #334155;">New Password</label>
+          <input type="password" id="reset-new-pass" class="form-input" required placeholder="Enter new password (min 6 chars)" minlength="6" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;">
+        </div>
+        <div id="reset-status" style="display: none; font-size: 12.5px; margin-bottom: 14px;"></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" id="btn-cancel-reset" style="padding: 9px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 8px; cursor: pointer; font-size: 13px;">Cancel</button>
+          <button type="submit" style="padding: 9px 16px; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">Update Password</button>
+        </div>
       </form>
     </div>
   </div>
@@ -96,15 +127,20 @@
   <script type="module">
     import { db } from './js/db/storage.js';
 
-    document.getElementById('login-form').addEventListener('submit', (e) => {
+    const loginForm = document.getElementById('login-form');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const errorMsg = document.getElementById('error-msg');
+
+    // Standard Credentials Login (UC4 Step 1-4, Alternative Flow A1)
+    loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const userVal = document.getElementById('username').value.trim();
-      const passVal = document.getElementById('password').value.trim();
+      const userVal = usernameInput.value.trim();
+      const passVal = passwordInput.value.trim();
       
-      let users = db.get('users');
+      let users = db.get('users') || [];
       
-      // Fallback if browser cached the old initialData.js missing the users array
-      if (!users || users.length === 0) {
+      if (users.length === 0) {
         users = [
           { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
           { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
@@ -118,12 +154,65 @@
       const foundUser = users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
 
       if (foundUser) {
+        errorMsg.style.display = 'none';
         localStorage.setItem('eco_session', foundUser.id);
         window.location.href = 'index.html';
       } else {
-        document.getElementById('error-msg').style.display = 'block';
+        // UC4 Alternative Flow A1 Step 4:
+        // System displays "Invalid username or password" error, clears the password field, and remains on login screen
+        errorMsg.textContent = 'Invalid username or password';
+        errorMsg.style.display = 'block';
+        passwordInput.value = '';
+        passwordInput.focus();
       }
     });
+
+
+    // Password Reset Protocol (UC4 Step 6 / FR_10)
+    const resetModal = document.getElementById('reset-modal');
+    const resetForm = document.getElementById('reset-form');
+    const resetStatus = document.getElementById('reset-status');
+    const linkForgot = document.getElementById('link-forgot-password');
+    const btnCloseReset = document.getElementById('btn-close-reset');
+    const btnCancelReset = document.getElementById('btn-cancel-reset');
+
+    linkForgot.onclick = (e) => {
+      e.preventDefault();
+      resetModal.style.display = 'flex';
+      resetStatus.style.display = 'none';
+      document.getElementById('reset-identity').value = usernameInput.value || '';
+    };
+
+    const closeReset = () => { resetModal.style.display = 'none'; };
+    btnCloseReset.onclick = closeReset;
+    btnCancelReset.onclick = closeReset;
+
+    resetForm.onsubmit = (e) => {
+      e.preventDefault();
+      const identity = document.getElementById('reset-identity').value.trim();
+      const newPass = document.getElementById('reset-new-pass').value.trim();
+      
+      let users = db.get('users') || [];
+      const userIdx = users.findIndex(u => u.username.toLowerCase() === identity.toLowerCase() || u.name.toLowerCase() === identity.toLowerCase());
+
+      if (userIdx !== -1) {
+        users[userIdx].password = newPass;
+        db.saveDatabase();
+        resetStatus.style.display = 'block';
+        resetStatus.style.color = '#059669';
+        resetStatus.textContent = '✓ Password updated successfully! You can now log in.';
+        setTimeout(() => {
+          closeReset();
+          usernameInput.value = users[userIdx].username;
+          passwordInput.value = '';
+          passwordInput.focus();
+        }, 1200);
+      } else {
+        resetStatus.style.display = 'block';
+        resetStatus.style.color = '#dc2626';
+        resetStatus.textContent = 'Account not found. Please verify your employee username.';
+      }
+    };
   </script>
 </body>
 </html>

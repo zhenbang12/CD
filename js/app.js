@@ -26,6 +26,8 @@ class App {
 
     this.activeTab = hash || pageParam || 'm1-dashboard';
     this.isAlertsFlyoutOpen = false;
+    this.isProfileMenuOpen = false;
+    this.activeProfileTab = 'profile';
     this.activeAlertFilter = 'all';
     this.init();
   }
@@ -53,12 +55,21 @@ class App {
 
   applyInitialTheme() {
     const sys = db.getSystem();
-    if (sys.theme === 'dark') {
+    const theme = (typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || sys?.theme || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+      document.documentElement.classList.remove('theme-light');
       document.body.classList.add('theme-dark');
       document.body.classList.remove('theme-light');
     } else {
+      document.documentElement.classList.remove('theme-dark');
+      document.documentElement.classList.add('theme-light');
       document.body.classList.remove('theme-dark');
       document.body.classList.add('theme-light');
+    }
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    if (themeBtn) {
+      themeBtn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
     }
   }
 
@@ -130,7 +141,7 @@ class App {
 
           <!-- Light / Dark Theme Switcher -->
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
-            ${system.theme === 'dark' ? '☀️' : '🌙'}
+            ${((typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || system.theme) === 'dark' ? '☀️' : '🌙'}
           </button>
 
           <!-- Reset Database Button (Available for everyone) -->
@@ -139,13 +150,18 @@ class App {
             Reset
           </button>
 
-          <!-- Streamlined User Profile & Logout -->
-          <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
+          <!-- Interactive User Profile Menu Trigger -->
+          <div class="user-profile-btn" id="btn-user-profile-menu" title="Account settings & user profile">
+            <div class="user-avatar-circle">
               ${system.activeUser?.avatar || 'SC'}
             </div>
-            <span style="font-size: 13px; font-weight: 500; color: var(--text-main);">${system.activeUser?.name || 'Sarah Chen'}</span>
-            <button id="btn-logout" class="btn btn-xs btn-outline" style="margin-left: 4px; padding: 2px 6px;">Logout</button>
+            <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.15;">
+              <span class="user-profile-name">${system.activeUser?.name || 'Sarah Chen'}</span>
+              <span style="font-size: 10px; color: var(--text-muted); font-weight: 500;">
+                ${system.activeUser?.role || 'Operations Director'}
+              </span>
+            </div>
+            <span style="font-size: 9px; color: var(--text-muted); margin-left: 2px;">▼</span>
           </div>
         </div>
       </header>
@@ -184,6 +200,12 @@ class App {
 
       <!-- Operational Incident & Alert Flyout Container -->
       <div id="alerts-flyout-container"></div>
+
+      <!-- User Profile Menu Flyout Container -->
+      <div id="profile-menu-container"></div>
+
+      <!-- User Profile Settings Modal Container -->
+      <div id="profile-modal-container"></div>
     `;
   }
 
@@ -206,12 +228,11 @@ class App {
     const themeBtn = document.getElementById('btn-theme-toggle');
     if (themeBtn) {
       themeBtn.onclick = () => {
-        const currentTheme = db.getSystem().theme || 'dark';
+        const currentTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || db.getSystem().theme || 'light';
         const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
         db.setTheme(nextTheme);
         this.applyInitialTheme();
-        themeBtn.innerHTML = nextTheme === 'light' ? '🌙' : '☀️';
-        window.showGlobalToast?.(`Theme updated!`, 'info');
+        window.showGlobalToast?.(`Theme updated to ${nextTheme} mode!`, 'info');
       };
     }
 
@@ -227,11 +248,12 @@ class App {
       };
     }
 
-    const logoutBtn = document.getElementById('btn-logout');
-    if (logoutBtn) {
-      logoutBtn.onclick = () => {
-        localStorage.removeItem('eco_session');
-        window.location.href = 'login.html';
+    // Profile menu trigger
+    const profileBtn = document.getElementById('btn-user-profile-menu');
+    if (profileBtn) {
+      profileBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.toggleProfileMenu();
       };
     }
 
@@ -244,7 +266,7 @@ class App {
       };
     }
 
-    // Global listener to close flyout on outside click
+    // Global listener to close flyouts on outside click
     document.addEventListener('click', (e) => {
       if (this.isAlertsFlyoutOpen) {
         const flyout = document.getElementById('alerts-flyout');
@@ -253,13 +275,24 @@ class App {
           this.closeAlertsFlyout();
         }
       }
+      if (this.isProfileMenuOpen) {
+        const profileFlyout = document.getElementById('profile-menu-flyout');
+        const profileTrigger = document.getElementById('btn-user-profile-menu');
+        if (profileFlyout && !profileFlyout.contains(e.target) && !profileTrigger?.contains(e.target)) {
+          this.closeProfileMenu();
+        }
+      }
     });
 
     // Close on Escape key
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.isAlertsFlyoutOpen) {
-        this.closeAlertsFlyout();
+      if (e.key === 'Escape') {
+        if (this.isAlertsFlyoutOpen) this.closeAlertsFlyout();
+        if (this.isProfileMenuOpen) this.closeProfileMenu();
+        const profileModal = document.getElementById('modal-overlay-profile');
+        if (profileModal) this.closeProfileModal();
       }
+    });
     });
   }
 
@@ -633,6 +666,468 @@ class App {
         }
       }
     }, 200);
+  }
+
+  // ==========================================
+  // Profile Menu & Account Settings Modal
+  // ==========================================
+
+  toggleProfileMenu() {
+    if (this.isProfileMenuOpen) {
+      this.closeProfileMenu();
+    } else {
+      this.closeAlertsFlyout();
+      this.openProfileMenu();
+    }
+  }
+
+  openProfileMenu() {
+    this.isProfileMenuOpen = true;
+    this.renderProfileMenu();
+  }
+
+  closeProfileMenu() {
+    this.isProfileMenuOpen = false;
+    const container = document.getElementById('profile-menu-container');
+    if (container) container.innerHTML = '';
+  }
+
+  renderProfileMenu() {
+    const container = document.getElementById('profile-menu-container');
+    if (!container) return;
+
+    const system = db.getSystem();
+    const user = system.activeUser || {
+      id: 'USR-100',
+      username: 'admin',
+      name: 'Sarah Chen',
+      role: 'Operations Director',
+      department: 'Executive Board',
+      avatar: 'SC',
+      email: 'admin@ecohotel.com'
+    };
+
+    const isAdmin = (user.username === 'admin' || user.role.toLowerCase().includes('director') || user.role.toLowerCase().includes('manager'));
+    const allUsers = db.getAllUsers();
+
+    container.innerHTML = `
+      <div class="profile-menu-flyout" id="profile-menu-flyout">
+        <!-- Header -->
+        <div class="profile-menu-header">
+          <div class="profile-avatar-lg">${user.avatar || 'SC'}</div>
+          <div class="profile-meta">
+            <div class="profile-meta-name">${user.name}</div>
+            <div class="profile-meta-role">
+              ${isAdmin ? '<span class="badge badge-warning" style="font-size: 10px; padding: 1px 6px;">Admin</span>' : ''}
+              <span>${user.role}</span>
+            </div>
+            <div class="profile-meta-dept">${user.department || 'Staff'} • <code>${user.id}</code></div>
+          </div>
+        </div>
+
+        <!-- Body Menu Items -->
+        <div class="profile-menu-body">
+          <button class="profile-menu-item" id="btn-menu-edit-profile">
+            <span style="font-size: 15px;">⚙️</span>
+            <div>
+              <div style="font-weight: 600;">Edit Profile & Password</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Change personal info & security credentials</div>
+            </div>
+          </button>
+
+          ${isAdmin ? `
+            <button class="profile-menu-item" id="btn-menu-admin-users" style="background: rgba(245, 158, 11, 0.08); color: #d97706;">
+              <span style="font-size: 15px;">🛡️</span>
+              <div>
+                <div style="font-weight: 700; color: #b45309;">Admin Console: User Directory</div>
+                <div style="font-size: 11px; color: #92400e;">Manage employee passwords & roles</div>
+              </div>
+            </button>
+          ` : ''}
+
+          <div class="profile-menu-divider"></div>
+
+          <!-- Quick Role Impersonation / Switch User -->
+          <div style="padding: 4px 12px 2px; font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+            Switch Account (Demo Roles)
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; max-height: 130px; overflow-y: auto; padding: 0 4px;">
+            ${allUsers.map(u => `
+              <button class="profile-menu-item btn-switch-user-quick" data-user-id="${u.id}" style="padding: 6px 8px; font-size: 12px; ${u.id === user.id ? 'background: var(--bg-card-subtle); font-weight: 700;' : ''}">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">
+                  ${u.avatar || u.name.slice(0, 2)}
+                </div>
+                <span style="flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${u.name} <span style="font-size: 10.5px; color: var(--text-muted);">(${u.role})</span>
+                </span>
+                ${u.id === user.id ? '<span style="color: var(--primary); font-size: 12px;">✓</span>' : ''}
+              </button>
+            `).join('')}
+          </div>
+
+          <div class="profile-menu-divider"></div>
+
+          <!-- Logout -->
+          <button class="profile-menu-item danger-item" id="btn-profile-menu-logout">
+            <span style="font-size: 15px;">🚪</span>
+            <span style="font-weight: 600;">Sign Out</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Bind event listeners
+    const editProfileBtn = container.querySelector('#btn-menu-edit-profile');
+    if (editProfileBtn) {
+      editProfileBtn.onclick = () => {
+        this.closeProfileMenu();
+        this.openProfileModal('profile');
+      };
+    }
+
+    const adminUsersBtn = container.querySelector('#btn-menu-admin-users');
+    if (adminUsersBtn) {
+      adminUsersBtn.onclick = () => {
+        this.closeProfileMenu();
+        this.openProfileModal('admin');
+      };
+    }
+
+    container.querySelectorAll('.btn-switch-user-quick').forEach(btn => {
+      btn.onclick = () => {
+        const targetUserId = btn.dataset.userId;
+        const res = db.switchActiveUser(targetUserId);
+        if (res.success) {
+          window.showGlobalToast?.(`Switched active user to ${res.user.name} (${res.user.role})`, 'success');
+          this.closeProfileMenu();
+          this.renderShell();
+          this.attachGlobalEvents();
+          this.loadActiveModule();
+        }
+      };
+    });
+
+    const logoutBtn = container.querySelector('#btn-profile-menu-logout');
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        localStorage.removeItem('eco_session');
+        window.location.href = 'login.html';
+      };
+    }
+  }
+
+  openProfileModal(initialTab = 'profile') {
+    this.activeProfileTab = initialTab;
+    this.renderProfileModal();
+  }
+
+  closeProfileModal() {
+    const container = document.getElementById('profile-modal-container');
+    if (container) container.innerHTML = '';
+  }
+
+  renderProfileModal() {
+    const container = document.getElementById('profile-modal-container');
+    if (!container) return;
+
+    const system = db.getSystem();
+    const user = system.activeUser || db.getAllUsers()[0];
+    const isAdmin = (user.username === 'admin' || user.role.toLowerCase().includes('director') || user.role.toLowerCase().includes('manager'));
+    const allUsers = db.getAllUsers();
+
+    container.innerHTML = `
+      <div class="modal-overlay-custom" id="modal-overlay-profile">
+        <div class="modal-dialog-custom">
+          <!-- Modal Header -->
+          <div class="modal-header-custom">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 18px;">👤</span>
+              <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-main);">Account & Security Settings</h3>
+            </div>
+            <button class="modal-close" id="btn-close-profile-modal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted);">&times;</button>
+          </div>
+
+          <!-- Tabs Nav -->
+          <div class="profile-tabs-nav" style="padding: 0 20px; margin-top: 12px; margin-bottom: 0;">
+            <button class="profile-tab-btn ${this.activeProfileTab === 'profile' ? 'active' : ''}" data-tab="profile">
+              My Profile
+            </button>
+            <button class="profile-tab-btn ${this.activeProfileTab === 'password' ? 'active' : ''}" data-tab="password">
+              Change Password
+            </button>
+            ${isAdmin ? `
+              <button class="profile-tab-btn ${this.activeProfileTab === 'admin' ? 'active' : ''}" data-tab="admin" style="color: #d97706; ${this.activeProfileTab === 'admin' ? 'border-bottom-color: #d97706;' : ''}">
+                🛡️ Admin User Directory (${allUsers.length})
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Body -->
+          <div class="modal-body-custom">
+            ${this.activeProfileTab === 'profile' ? `
+              <form id="form-edit-profile">
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 12px; background: var(--bg-card-subtle); border-radius: 10px;">
+                  <div class="profile-avatar-lg">${user.avatar || 'SC'}</div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px;">${user.name}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Employee ID: <code>${user.id}</code> | Username: <code>${user.username}</code></div>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Full Name</label>
+                  <input type="text" id="input-profile-name" class="form-input" value="${user.name}" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Department</label>
+                  <input type="text" id="input-profile-dept" class="form-input" value="${user.department || ''}" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Corporate Email</label>
+                  <input type="email" id="input-profile-email" class="form-input" value="${user.email || user.username + '@ecohotel.com'}" required style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Avatar Initials (1-2 Characters)</label>
+                  <input type="text" id="input-profile-avatar" class="form-input" maxlength="2" value="${user.avatar || 'SC'}" required style="width: 80px; text-transform: uppercase; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main); font-weight: bold; text-align: center;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                  <button type="button" class="btn btn-outline btn-close-modal-action">Cancel</button>
+                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Save Profile Changes</button>
+                </div>
+              </form>
+            ` : this.activeProfileTab === 'password' ? `
+              <form id="form-change-password">
+                <div style="margin-bottom: 16px; padding: 10px 14px; background: var(--bg-card-subtle); border-radius: 8px; font-size: 12px; color: var(--text-muted);">
+                  🔑 To update your password, enter your current password followed by a new password (min. 6 characters).
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Current Password</label>
+                  <input type="password" id="input-curr-pass" class="form-input" required placeholder="Enter current password" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">New Password</label>
+                  <input type="password" id="input-new-pass" class="form-input" required minlength="6" placeholder="Enter new password (min 6 characters)" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">Confirm New Password</label>
+                  <input type="password" id="input-confirm-pass" class="form-input" required minlength="6" placeholder="Re-enter new password" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-medium); border-radius: 6px; background: var(--bg-card); color: var(--text-main);">
+                </div>
+
+                <div id="password-change-error" style="display: none; margin-bottom: 12px; color: var(--danger); font-size: 12px; font-weight: 600;"></div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                  <button type="button" class="btn btn-outline btn-close-modal-action">Cancel</button>
+                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px;">Update Password</button>
+                </div>
+              </form>
+            ` : `
+              <!-- Admin User Directory Tab -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                  <div>
+                    <h4 style="margin: 0; font-size: 13.5px; font-weight: 700;">System Employee Directory</h4>
+                    <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Administrators can reset any user's password directly or create new staff accounts.</p>
+                  </div>
+                  <button id="btn-admin-add-user-toggle" class="btn btn-xs btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;">
+                    + Add New Staff
+                  </button>
+                </div>
+
+                <!-- Add User Form (hidden by default) -->
+                <div id="admin-add-user-box" style="display: none; padding: 14px; background: var(--bg-card-subtle); border-radius: 8px; margin-bottom: 16px; border: 1px dashed var(--border-medium);">
+                  <div style="font-weight: 700; font-size: 12.5px; margin-bottom: 10px;">Create New Hotel Staff Account</div>
+                  <form id="form-admin-add-user" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                      <label style="font-size: 11px; font-weight: 600;">Username</label>
+                      <input type="text" id="admin-new-username" required placeholder="e.g. jdoe" style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-medium); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div>
+                      <label style="font-size: 11px; font-weight: 600;">Full Name</label>
+                      <input type="text" id="admin-new-name" required placeholder="e.g. John Doe" style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-medium); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div>
+                      <label style="font-size: 11px; font-weight: 600;">Role</label>
+                      <input type="text" id="admin-new-role" required placeholder="e.g. Sous Chef" style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-medium); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div>
+                      <label style="font-size: 11px; font-weight: 600;">Department</label>
+                      <input type="text" id="admin-new-dept" required placeholder="e.g. F&B" style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-medium); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div>
+                      <label style="font-size: 11px; font-weight: 600;">Initial Password</label>
+                      <input type="password" id="admin-new-pass" required minlength="6" value="password123" style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-medium); background: var(--bg-card); color: var(--text-main);">
+                    </div>
+                    <div style="display: flex; align-items: flex-end; gap: 6px;">
+                      <button type="submit" class="btn btn-xs btn-primary" style="padding: 7px 12px; font-size: 11.5px;">Save User</button>
+                      <button type="button" id="btn-cancel-add-user" class="btn btn-xs btn-outline" style="padding: 7px 10px; font-size: 11.5px;">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- User Cards List -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  ${allUsers.map(u => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-card-subtle); border-radius: 8px; border: 1px solid var(--border-subtle);">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px;">
+                          ${u.avatar || u.name.slice(0, 2)}
+                        </div>
+                        <div>
+                          <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">
+                            ${u.name} <span style="font-size: 11px; color: var(--text-muted);">(@${u.username})</span>
+                          </div>
+                          <div style="font-size: 11px; color: var(--text-muted);">
+                            ${u.role} • ${u.department} • <code>${u.id}</code>
+                          </div>
+                        </div>
+                      </div>
+                      <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-xs btn-outline btn-admin-reset-pw" data-user-id="${u.id}" data-user-name="${u.name}" style="padding: 4px 8px; font-size: 11px;" title="Reset this user's password">
+                          🔑 Reset Password
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Modal Interaction Binds
+    const closeBtn = container.querySelector('#btn-close-profile-modal');
+    if (closeBtn) closeBtn.onclick = () => this.closeProfileModal();
+
+    container.querySelectorAll('.btn-close-modal-action').forEach(b => {
+      b.onclick = () => this.closeProfileModal();
+    });
+
+    const overlay = container.querySelector('#modal-overlay-profile');
+    if (overlay) {
+      overlay.onclick = (e) => {
+        if (e.target === overlay) this.closeProfileModal();
+      };
+    }
+
+    // Tab switching in modal
+    container.querySelectorAll('.profile-tab-btn').forEach(b => {
+      b.onclick = () => {
+        this.activeProfileTab = b.dataset.tab;
+        this.renderProfileModal();
+      };
+    });
+
+    // Form: Edit Profile
+    const formProfile = container.querySelector('#form-edit-profile');
+    if (formProfile) {
+      formProfile.onsubmit = (e) => {
+        e.preventDefault();
+        const name = container.querySelector('#input-profile-name').value;
+        const dept = container.querySelector('#input-profile-dept').value;
+        const email = container.querySelector('#input-profile-email').value;
+        const avatar = container.querySelector('#input-profile-avatar').value;
+
+        const res = db.updateUserProfile(user.id, { name, department: dept, email, avatar });
+        if (res.success) {
+          window.showGlobalToast?.('Profile updated successfully!', 'success');
+          this.closeProfileModal();
+          this.renderShell();
+          this.attachGlobalEvents();
+          this.loadActiveModule();
+        }
+      };
+    }
+
+    // Form: Change Password
+    const formPassword = container.querySelector('#form-change-password');
+    if (formPassword) {
+      formPassword.onsubmit = (e) => {
+        e.preventDefault();
+        const currPass = container.querySelector('#input-curr-pass').value;
+        const newPass = container.querySelector('#input-new-pass').value;
+        const confPass = container.querySelector('#input-confirm-pass').value;
+        const errBox = container.querySelector('#password-change-error');
+
+        if (newPass !== confPass) {
+          errBox.textContent = 'New password and confirmation do not match.';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const res = db.changeUserPassword(user.id, currPass, newPass);
+        if (res.success) {
+          window.showGlobalToast?.('Password changed successfully!', 'success');
+          this.closeProfileModal();
+        } else {
+          errBox.textContent = res.error || 'Failed to update password.';
+          errBox.style.display = 'block';
+        }
+      };
+    }
+
+    // Admin: Toggle Add User Box
+    const addToggle = container.querySelector('#btn-admin-add-user-toggle');
+    const addBox = container.querySelector('#admin-add-user-box');
+    if (addToggle && addBox) {
+      addToggle.onclick = () => {
+        addBox.style.display = addBox.style.display === 'none' ? 'block' : 'none';
+      };
+    }
+    const cancelAdd = container.querySelector('#btn-cancel-add-user');
+    if (cancelAdd && addBox) {
+      cancelAdd.onclick = () => { addBox.style.display = 'none'; };
+    }
+
+    // Admin: Submit Add User
+    const formAddUser = container.querySelector('#form-admin-add-user');
+    if (formAddUser) {
+      formAddUser.onsubmit = (e) => {
+        e.preventDefault();
+        const username = container.querySelector('#admin-new-username').value;
+        const name = container.querySelector('#admin-new-name').value;
+        const role = container.querySelector('#admin-new-role').value;
+        const dept = container.querySelector('#admin-new-dept').value;
+        const password = container.querySelector('#admin-new-pass').value;
+
+        const res = db.adminAddUser({ username, name, role, department: dept, password });
+        if (res.success) {
+          window.showGlobalToast?.(`Created user account for ${name} (@${username})`, 'success');
+          this.renderProfileModal();
+        } else {
+          alert(res.error || 'Failed to create user');
+        }
+      };
+    }
+
+    // Admin: Reset Password for user
+    container.querySelectorAll('.btn-admin-reset-pw').forEach(btn => {
+      btn.onclick = () => {
+        const targetId = btn.dataset.userId;
+        const targetName = btn.dataset.userName;
+        const newPass = prompt(`Enter new password for ${targetName}:`, 'password123');
+        if (newPass) {
+          if (newPass.length < 6) {
+            alert('Password must be at least 6 characters long.');
+            return;
+          }
+          const res = db.adminResetUserPassword(targetId, newPass);
+          if (res.success) {
+            window.showGlobalToast?.(`Password for ${targetName} reset successfully!`, 'success');
+          } else {
+            alert(res.error || 'Failed to reset password.');
+          }
+        }
+      };
+    });
   }
 }
 

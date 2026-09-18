@@ -107,6 +107,7 @@ class PlateWasteLog {
   final bool isAnomaly;
   final String anomalyReason;
   final bool photoAttached;
+  final String? photoBase64;
   final String note;
   final String loggedBy;
 
@@ -120,6 +121,7 @@ class PlateWasteLog {
     required this.isAnomaly,
     this.anomalyReason = '',
     this.photoAttached = false,
+    this.photoBase64,
     this.note = '',
     required this.loggedBy,
   });
@@ -279,13 +281,13 @@ class Technician {
 class UserModel {
   final String id;
   final String username;
-  final String password;
-  final String name;
-  final String role;
-  final String department;
-  final String avatar;
+  String password;
+  String name;
+  String role;
+  String department;
+  String avatar;
 
-  const UserModel({
+  UserModel({
     required this.id,
     required this.username,
     required this.password,
@@ -293,5 +295,75 @@ class UserModel {
     required this.role,
     required this.department,
     required this.avatar,
+  });
+
+  UserModel copyWith({
+    String? password,
+    String? name,
+    String? role,
+    String? department,
+    String? avatar,
+  }) {
+    return UserModel(
+      id: id,
+      username: username,
+      password: password ?? this.password,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      department: department ?? this.department,
+      avatar: avatar ?? this.avatar,
+    );
+  }
+}
+
+class ReservationForecast {
+  final String date;
+  final String shift;
+  final int expectedCheckIns;
+  final int totalInHouseGuests;
+  final Map<String, int> nationalities;
+  final Map<String, int> dietaryProfiles;
+
+  const ReservationForecast({
+    required this.date,
+    required this.shift,
+    required this.expectedCheckIns,
+    required this.totalInHouseGuests,
+    required this.nationalities,
+    required this.dietaryProfiles,
+  });
+}
+
+class PrepRecommendation {
+  final String id;
+  final String date;
+  final String mealPeriod;
+  final String dishId;
+  final String dishName;
+  final String station;
+  final double recommendedKg;
+  final double wave1Kg;
+  final double wave2Kg;
+  final double wave3Kg;
+  final String status;
+  final bool overridden;
+  final String finalizedBy;
+  final String timestamp;
+
+  const PrepRecommendation({
+    required this.id,
+    required this.date,
+    required this.mealPeriod,
+    required this.dishId,
+    required this.dishName,
+    required this.station,
+    required this.recommendedKg,
+    required this.wave1Kg,
+    required this.wave2Kg,
+    required this.wave3Kg,
+    this.status = 'Finalized',
+    this.overridden = false,
+    required this.finalizedBy,
+    required this.timestamp,
   });
 }

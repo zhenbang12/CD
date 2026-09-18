@@ -12,6 +12,22 @@
     if (!localStorage.getItem('eco_session')) {
       window.location.href = 'login.html';
     }
+    (function() {
+      try {
+        var t = localStorage.getItem('ecohotel_theme');
+        if (!t) {
+          var db = JSON.parse(localStorage.getItem('ECOHOTEL_OS_DATABASE_VM2026_PROD') || '{}');
+          t = (db.system && db.system.theme) ? db.system.theme : 'light';
+        }
+        if (t === 'dark') {
+          document.documentElement.classList.add('theme-dark');
+          document.documentElement.classList.remove('theme-light');
+        } else {
+          document.documentElement.classList.remove('theme-dark');
+          document.documentElement.classList.add('theme-light');
+        }
+      } catch (e) {}
+    })();
   </script>
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">

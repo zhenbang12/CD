@@ -15,6 +15,27 @@ class StorageEngine {
     this.lastDatabaseError = null;
     this.data = this.loadDatabase();
     this.ensureDataIntegrity();
+    this.applyCurrentTheme();
+  }
+
+  applyCurrentTheme() {
+    if (typeof document === 'undefined') return;
+    const theme = this.data?.system?.theme || (typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || 'light';
+    if (theme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+      document.documentElement.classList.remove('theme-light');
+      if (document.body) {
+        document.body.classList.add('theme-dark');
+        document.body.classList.remove('theme-light');
+      }
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+      document.documentElement.classList.add('theme-light');
+      if (document.body) {
+        document.body.classList.remove('theme-dark');
+        document.body.classList.add('theme-light');
+      }
+    }
   }
 
   // Load from LocalStorage or seed defaults
@@ -41,8 +62,21 @@ class StorageEngine {
         this.data[key] = JSON.parse(JSON.stringify(defaults[key]));
       }
     }
-    if (!this.data.system.theme || this.data.system.theme === 'dark') {
-      this.data.system.theme = 'light';
+    // Ensure user-selected theme is strictly preserved across refresh
+    try {
+      const savedTheme = typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null;
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        this.data.system.theme = savedTheme;
+      } else if (!this.data.system.theme) {
+        this.data.system.theme = INITIAL_DATA.system?.theme || 'light';
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('ecohotel_theme', this.data.system.theme);
+        }
+      } else if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('ecohotel_theme', this.data.system.theme);
+      }
+    } catch (e) {
+      if (!this.data.system.theme) this.data.system.theme = 'light';
     }
     if (!this.data.guestInteractions) {
       this.data.guestInteractions = [];
@@ -60,7 +94,7 @@ class StorageEngine {
     }
 
     // Force sync new items from INITIAL_DATA without overwriting existing data (Idempotent)
-    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'userAudit', 'complianceLogs'];
+    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'userAudit', 'complianceLogs', 'prepRecommendations'];
     mergeArrays.forEach(key => {
       if (INITIAL_DATA[key]) {
         if (!this.data[key]) this.data[key] = [];
@@ -208,19 +242,9 @@ class StorageEngine {
 
   getSystem() {
     const sys = this.data.system || {};
-    const sessionId = localStorage.getItem('eco_session');
+    const sessionId = (typeof localStorage !== 'undefined') ? localStorage.getItem('eco_session') : null;
     if (sessionId) {
-      let users = this.get('users');
-      if (!users || users.length === 0) {
-        users = [
-          { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
-          { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
-          { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
-          { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
-          { id: "USR-104", username: "chef", password: "password123", name: "Sze Ping", role: "Head Chef", department: "F&B", avatar: "SP" },
-          { id: "USR-105", username: "guest", password: "password123", name: "Simon Wong", role: "Guest", department: "Guest", avatar: "SW" }
-        ];
-      }
+      const users = this.getAllUsers();
       const authUser = users.find(u => u.id === sessionId);
       if (authUser) {
         sys.activeUser = authUser;
@@ -243,6 +267,12 @@ class StorageEngine {
 
   setTheme(theme) {
     this.data.system.theme = theme;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('ecohotel_theme', theme);
+      }
+    } catch (e) {}
+    this.applyCurrentTheme();
     this.saveDatabase();
     this.notify('system', this.data.system);
   }
@@ -257,6 +287,131 @@ class StorageEngine {
     }
     this.saveDatabase();
     this.notify('system', this.data.system);
+  }
+
+  // ==========================================
+  // User Profile & Password Management
+  // ==========================================
+
+  getAllUsers() {
+    let users = this.get('users');
+    if (!users || users.length === 0) {
+      users = [
+        { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC", email: "admin@ecohotel.com" },
+        { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH", email: "exec@ecohotel.com" },
+        { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB", email: "tech@ecohotel.com" },
+        { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC", email: "fac@ecohotel.com" },
+        { id: "USR-104", username: "chef", password: "password123", name: "Sze Ping", role: "Head Chef", department: "F&B", avatar: "SP", email: "chef@ecohotel.com" },
+        { id: "USR-105", username: "guest", password: "password123", name: "Simon Wong", role: "Guest", department: "Guest", avatar: "SW", email: "guest@ecohotel.com" }
+      ];
+      this.data.users = users;
+      this.saveDatabase();
+    }
+    return users;
+  }
+
+  getUserById(userId) {
+    const users = this.getAllUsers();
+    return users.find(u => u.id === userId) || null;
+  }
+
+  updateUserProfile(userId, { name, department, email, avatar }) {
+    const users = this.getAllUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return { success: false, error: 'User not found' };
+
+    if (name) users[idx].name = name.trim();
+    if (department) users[idx].department = department.trim();
+    if (email) users[idx].email = email.trim();
+    if (avatar) users[idx].avatar = avatar.trim().toUpperCase();
+
+    this.data.users = users;
+
+    const currentSession = typeof localStorage !== 'undefined' ? localStorage.getItem('eco_session') : null;
+    if (currentSession === userId && this.data.system) {
+      this.data.system.activeUser = { ...users[idx] };
+    }
+
+    this.saveDatabase();
+    this.notify('system', this.data.system);
+    this.notify('users', this.data.users);
+    return { success: true, user: users[idx] };
+  }
+
+  changeUserPassword(userId, currentPassword, newPassword) {
+    const users = this.getAllUsers();
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx === -1) return { success: false, error: 'User not found' };
+
+    if (users[idx].password !== currentPassword) {
+      return { success: false, error: 'Incorrect current password' };
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'New password must be at least 6 characters long' };
+    }
+
+    users[idx].password = newPassword;
+    this.data.users = users;
+    this.saveDatabase();
+    this.notify('users', this.data.users);
+    return { success: true };
+  }
+
+  adminResetUserPassword(targetUserId, newPassword) {
+    const users = this.getAllUsers();
+    const idx = users.findIndex(u => u.id === targetUserId);
+    if (idx === -1) return { success: false, error: 'User not found' };
+
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long' };
+    }
+
+    users[idx].password = newPassword;
+    this.data.users = users;
+    this.saveDatabase();
+    this.notify('users', this.data.users);
+    return { success: true, user: users[idx] };
+  }
+
+  adminAddUser({ username, name, role, department, password, avatar, email }) {
+    const users = this.getAllUsers();
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+      return { success: false, error: 'Username already exists' };
+    }
+
+    const newUser = {
+      id: `USR-${Date.now().toString().slice(-4)}`,
+      username: username.trim(),
+      password: password || 'password123',
+      name: name.trim(),
+      role: role || 'Staff',
+      department: department || 'General',
+      avatar: (avatar || name.slice(0, 2)).toUpperCase(),
+      email: email || `${username.trim()}@ecohotel.com`
+    };
+
+    users.push(newUser);
+    this.data.users = users;
+    this.saveDatabase();
+    this.notify('users', this.data.users);
+    return { success: true, user: newUser };
+  }
+
+  switchActiveUser(userId) {
+    const user = this.getUserById(userId);
+    if (!user) return { success: false, error: 'User not found' };
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('eco_session', user.id);
+    }
+    if (this.data.system) {
+      this.data.system.activeUser = { ...user };
+      this.data.system.activeRole = user.role;
+    }
+    this.saveDatabase();
+    this.notify('system', this.data.system);
+    return { success: true, user };
   }
 
   // --- Operational Alert Acknowledgment Methods ---
@@ -386,8 +541,12 @@ class StorageEngine {
 
   // --- Database Scenario Presets ---
   loadPreset(presetName) {
+    const preservedTheme = (typeof localStorage !== 'undefined' ? localStorage.getItem('ecohotel_theme') : null) || this.data?.system?.theme;
     if (presetName === 'default') {
       this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
+      if (preservedTheme) {
+        this.data.system.theme = preservedTheme;
+      }
     } else if (presetName === 'high_anomaly') {
       this.data = JSON.parse(JSON.stringify(INITIAL_DATA));
       // Inject 3 major utility anomalies
@@ -820,6 +979,35 @@ updateInventoryItem(id, updates) {
     return true;
   }
 
+  savePrepRecommendations(recommendations, mealPeriod = 'Breakfast', selectedDate = '2026-08-13', chefName = 'Chef Zhen Bang') {
+    if (!this.data.prepRecommendations) this.data.prepRecommendations = [];
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    this.data.prepRecommendations = this.data.prepRecommendations.filter(
+      r => !(r.date === selectedDate && r.mealPeriod === mealPeriod)
+    );
+    recommendations.forEach((rec, idx) => {
+      this.data.prepRecommendations.push({
+        id: `PR-${Date.now().toString().slice(-4)}-${idx + 1}`,
+        date: selectedDate,
+        mealPeriod,
+        dishId: rec.dishId,
+        dishName: rec.dishName,
+        station: rec.station || rec.category,
+        recommendedKg: rec.recommendedKg,
+        wave1Kg: rec.waves?.wave1?.kg || 0,
+        wave2Kg: rec.waves?.wave2?.kg || 0,
+        wave3Kg: rec.waves?.wave3?.kg || 0,
+        status: 'Finalized',
+        overridden: rec.wasteMultiplier !== 1.0,
+        finalizedBy: chefName,
+        timestamp
+      });
+    });
+    this.saveDatabase();
+    this.notify('prepRecommendations', this.data.prepRecommendations);
+    return true;
+  }
+
   // --- MODULE 4: Guest PWA & Housekeeping Schedule ---
   updateGuestPreference(roomNumber, { servicePreference, linenDelayDays = 0, towelReuse = true }) {
     const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
@@ -1097,7 +1285,10 @@ updateInventoryItem(id, updates) {
   }
 }
 
-if (!window.__ECO_DB_INSTANCE__) {
-  window.__ECO_DB_INSTANCE__ = new StorageEngine();
+if (typeof window !== 'undefined') {
+  if (!window.__ECO_DB_INSTANCE__) {
+    window.__ECO_DB_INSTANCE__ = new StorageEngine();
+  }
 }
-export const db = window.__ECO_DB_INSTANCE__;
+export const db = (typeof window !== 'undefined') ? window.__ECO_DB_INSTANCE__ : new StorageEngine();
+export { StorageEngine };

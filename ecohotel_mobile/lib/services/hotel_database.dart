@@ -40,8 +40,50 @@ class HotelDatabase extends ChangeNotifier {
     PlateWasteLog(id: 'PW-003', date: '2026-08-11', mealPeriod: 'Dinner', dishId: 'DSH-06', dishName: 'Australian Beef Striploin', discardedKg: 6.5, isAnomaly: true, anomalyReason: 'Dropped hot tray during carvery restock', photoAttached: true, note: 'Operational spill', loggedBy: 'Chef Zhen Bang'),
   ];
 
+  // Ingested 48-Hour Forecasts (Module 3 - FR_03)
+  final List<ReservationForecast> forecasts = [
+    const ReservationForecast(
+      date: '2026-08-13',
+      shift: 'Breakfast',
+      expectedCheckIns: 142,
+      totalInHouseGuests: 285,
+      nationalities: {'Malaysian': 45, 'Singaporean': 25, 'European': 18, 'MiddleEastern': 8, 'Others': 4},
+      dietaryProfiles: {'Regular': 195, 'Halal': 250, 'VeganVegetarian': 28, 'GlutenFree': 12},
+    ),
+    const ReservationForecast(
+      date: '2026-08-13',
+      shift: 'Dinner',
+      expectedCheckIns: 88,
+      totalInHouseGuests: 310,
+      nationalities: {'Malaysian': 40, 'Singaporean': 28, 'European': 20, 'MiddleEastern': 8, 'Others': 4},
+      dietaryProfiles: {'Regular': 210, 'Halal': 275, 'VeganVegetarian': 32, 'GlutenFree': 15},
+    ),
+    const ReservationForecast(
+      date: '2026-08-14',
+      shift: 'Breakfast',
+      expectedCheckIns: 65,
+      totalInHouseGuests: 340,
+      nationalities: {'Malaysian': 38, 'Singaporean': 30, 'European': 22, 'MiddleEastern': 6, 'Others': 4},
+      dietaryProfiles: {'Regular': 230, 'Halal': 290, 'VeganVegetarian': 35, 'GlutenFree': 18},
+    ),
+    const ReservationForecast(
+      date: '2026-08-14',
+      shift: 'Dinner',
+      expectedCheckIns: 50,
+      totalInHouseGuests: 355,
+      nationalities: {'Malaysian': 35, 'Singaporean': 32, 'European': 24, 'MiddleEastern': 5, 'Others': 4},
+      dietaryProfiles: {'Regular': 245, 'Halal': 300, 'VeganVegetarian': 40, 'GlutenFree': 20},
+    ),
+  ];
+
+  // Finalized Prep Recommendations Table (Module 3 - UC2 Step 7)
+  final List<PrepRecommendation> prepRecommendations = [
+    const PrepRecommendation(id: 'PR-001', date: '2026-08-13', mealPeriod: 'Breakfast', dishId: 'DSH-01', dishName: 'Traditional Nasi Lemak w/ Rendang', station: 'Hot Line', recommendedKg: 41.2, wave1Kg: 22.7, wave2Kg: 14.4, wave3Kg: 4.1, finalizedBy: 'Chef Zhen Bang', timestamp: '2026-08-12 21:00'),
+    const PrepRecommendation(id: 'PR-002', date: '2026-08-13', mealPeriod: 'Breakfast', dishId: 'DSH-02', dishName: 'Grilled Herb Atlantic Salmon', station: 'Hot Line', recommendedKg: 28.5, wave1Kg: 15.7, wave2Kg: 10.0, wave3Kg: 2.8, finalizedBy: 'Chef Zhen Bang', timestamp: '2026-08-12 21:00'),
+  ];
+
   // Users & Staff Auth (Module 1 - Mirrors Oracle USERS table and login.html)
-  final List<UserModel> users = const [
+  final List<UserModel> users = [
     UserModel(id: 'USR-100', username: 'admin', password: 'password123', name: 'Sarah Chen', role: 'Operations Director', department: 'Executive Board', avatar: 'SC'),
     UserModel(id: 'USR-101', username: 'exec', password: 'password123', name: 'Kar Hang', role: 'Sustainability Executive', department: 'Executive Board', avatar: 'KH'),
     UserModel(id: 'USR-102', username: 'tech', password: 'password123', name: 'Zhen Bang', role: 'Tech Lead', department: 'IT', avatar: 'ZB'),
@@ -49,6 +91,76 @@ class HotelDatabase extends ChangeNotifier {
     UserModel(id: 'USR-104', username: 'chef', password: 'password123', name: 'Sze Ping', role: 'Head Chef', department: 'F&B', avatar: 'SP'),
     UserModel(id: 'USR-105', username: 'guest', password: 'password123', name: 'Simon Wong', role: 'Guest', department: 'Guest', avatar: 'SW'),
   ];
+
+  // --- Staff & User Profile Management ---
+
+  bool updateUserPassword(String userId, String currentPassword, String newPassword) {
+    final idx = users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return false;
+    if (users[idx].password != currentPassword) return false;
+    if (newPassword.length < 6) return false;
+
+    users[idx].password = newPassword;
+    notifyListeners();
+    return true;
+  }
+
+  bool adminResetUserPassword(String userId, String newPassword) {
+    final idx = users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return false;
+    if (newPassword.length < 6) return false;
+
+    users[idx].password = newPassword;
+    notifyListeners();
+    return true;
+  }
+
+  bool updateUserProfile(String userId, {String? name, String? department, String? avatar}) {
+    final idx = users.indexWhere((u) => u.id == userId);
+    if (idx == -1) return false;
+
+    if (name != null && name.trim().isNotEmpty) {
+      users[idx].name = name.trim();
+    }
+    if (department != null && department.trim().isNotEmpty) {
+      users[idx].department = department.trim();
+    }
+    if (avatar != null && avatar.trim().isNotEmpty) {
+      users[idx].avatar = avatar.trim().toUpperCase();
+    }
+
+    notifyListeners();
+    return true;
+  }
+
+  bool addNewStaffUser({
+    required String username,
+    required String name,
+    required String role,
+    required String department,
+    String password = 'password123',
+    String? avatar,
+  }) {
+    if (users.any((u) => u.username.toLowerCase() == username.toLowerCase())) {
+      return false;
+    }
+
+    final newId = 'USR-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final av = (avatar ?? (name.length >= 2 ? name.substring(0, 2) : name)).toUpperCase();
+
+    users.add(UserModel(
+      id: newId,
+      username: username.trim(),
+      password: password,
+      name: name.trim(),
+      role: role.trim(),
+      department: department.trim(),
+      avatar: av,
+    ));
+
+    notifyListeners();
+    return true;
+  }
 
   // Rooms & Housekeeping (Module 4)
   final List<RoomModel> rooms = [
@@ -167,11 +279,52 @@ class HotelDatabase extends ChangeNotifier {
     if (!log.isAnomaly) {
       final dishIdx = dishes.indexWhere((d) => d.id == log.dishId);
       if (dishIdx != -1) {
-        final penalty = min(0.15, (log.discardedKg / 50.0));
-        dishes[dishIdx].wasteMultiplier = max(0.70, (dishes[dishIdx].wasteMultiplier - penalty));
+        // True Exponential Moving Average (EMA, alpha = 0.35) matching Web Engine
+        const alpha = 0.35;
+        final wasteRatio = min(0.35, log.discardedKg / 18.0);
+        final shiftMultiplier = 1.0 - wasteRatio;
+        final currentMult = dishes[dishIdx].wasteMultiplier;
+        final newMult = (alpha * shiftMultiplier) + ((1 - alpha) * currentMult);
+        dishes[dishIdx].wasteMultiplier = max(0.65, min(1.05, double.parse(newMult.toStringAsFixed(2))));
       }
     }
     notifyListeners();
+  }
+
+  void finalizePrepSheet(String mealPeriod, String chefName, List<DishItem> currentDishes, int diners) {
+    final now = DateTime.now().toIso8601String().substring(0, 16).replaceAll('T', ' ');
+    prepRecommendations.removeWhere((r) => r.date == '2026-08-13' && r.mealPeriod == mealPeriod);
+    for (int i = 0; i < currentDishes.length; i++) {
+      final dish = currentDishes[i];
+      final rawKg = (diners * (dish.basePerGuestGrams / 1000.0) * dish.wasteMultiplier) / dish.cookingYield;
+      final target = double.parse((rawKg + 1.2).toStringAsFixed(1));
+      final w1 = double.parse((target * 0.55).toStringAsFixed(1));
+      final w2 = double.parse((target * 0.35).toStringAsFixed(1));
+      final w3 = double.parse((target * 0.10).toStringAsFixed(1));
+      prepRecommendations.add(
+        PrepRecommendation(
+          id: 'PR-${Random().nextInt(900) + 100}-${i + 1}',
+          date: '2026-08-13',
+          mealPeriod: mealPeriod,
+          dishId: dish.id,
+          dishName: dish.name,
+          station: dish.station,
+          recommendedKg: target,
+          wave1Kg: w1,
+          wave2Kg: w2,
+          wave3Kg: w3,
+          status: 'Finalized',
+          overridden: dish.wasteMultiplier != 1.0,
+          finalizedBy: chefName,
+          timestamp: now,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  List<PlateWasteLog> checkOverPrepAlerts() {
+    return plateWasteLogs.where((l) => !l.isAnomaly && l.discardedKg >= 3.8).toList();
   }
 
   void updateDishMultiplier(String dishId, double newMultiplier) {

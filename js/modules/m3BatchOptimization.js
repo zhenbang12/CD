@@ -42,9 +42,63 @@ export class Module3BatchOptimizer {
   render() {
     if (this.isDestroyed) return;
     const data = BatchOptimizerEngine.generatePrepRecommendations(this.selectedDate, this.selectedShift);
-    const plateLogs = db.get('plateWasteLogs');
+    const plateLogs = db.get('plateWasteLogs') || [];
     const overPrepAlerts = BatchOptimizerEngine.checkOverPrepAlerts();
-    const dishes = db.get('dishes');
+    const dishes = db.get('dishes') || [];
+
+    // UC3 Alternative Flow A1 Step 3:
+    // If no recommendations have been generated for the selected date, display empty state message
+    if (!data.hasData || !data.recommendations || data.recommendations.length === 0) {
+      this.container.innerHTML = `
+        <div class="module-view m3-container fade-in">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Batch Optimization</h1>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-sm btn-outline" id="btn-open-user-guide">📖 User Guide</button>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 16px; margin-bottom: 20px;">
+            <div class="filter-controls" style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: flex-end;">
+              <div class="filter-item">
+                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Service Date</label>
+                <select class="form-input" id="select-prep-date" style="font-size: 13.5px; padding: 8px 12px;">
+                  <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today (13 Aug 2026)</option>
+                  <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow (14 Aug 2026)</option>
+                  <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Future Date (20 Aug 2026 - Empty State)</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Meal Service Period</label>
+                <div class="tab-pills-full grid-cols-3">
+                  <button class="tab-btn ${this.selectedShift === 'Breakfast' ? 'active' : ''}" data-shift="Breakfast">Breakfast Service</button>
+                  <button class="tab-btn ${this.selectedShift === 'Lunch' ? 'active' : ''}" data-shift="Lunch">Lunch Service</button>
+                  <button class="tab-btn ${this.selectedShift === 'Dinner' ? 'active' : ''}" data-shift="Dinner">Dinner Service</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="padding: 48px 24px; text-align: center; border: 1px dashed var(--border-subtle);">
+            <div style="font-size: 42px; margin-bottom: 12px;">📅</div>
+            <h3 style="margin-bottom: 8px; font-weight: 700; color: var(--text-main);">No prep recommendations available for this date</h3>
+            <p style="color: var(--text-muted); font-size: 13px; max-width: 480px; margin: 0 auto 20px auto;">
+              The optimization engine has not generated baseline data for ${this.selectedDate}. Please verify the selected calendar range.
+            </p>
+            <button class="btn btn-sm btn-primary" id="btn-return-today">Return to Current Service</button>
+          </div>
+        </div>
+      `;
+      const dateSelect = this.container.querySelector('#select-prep-date');
+      if (dateSelect) dateSelect.onchange = (e) => { this.selectedDate = e.target.value; this.render(); };
+      const returnBtn = this.container.querySelector('#btn-return-today');
+      if (returnBtn) returnBtn.onclick = () => { this.selectedDate = '2026-08-13'; this.render(); };
+      const guideBtn = this.container.querySelector('#btn-open-user-guide');
+      if (guideBtn) guideBtn.onclick = () => { this.container.querySelector('#user-guide-modal').style.display = 'flex'; };
+      return;
+    }
 
     // Filter recommendations by selected station
     const filteredRecs = this.selectedStation === 'ALL'
@@ -65,12 +119,21 @@ export class Module3BatchOptimizer {
           <div>
             <h1 class="view-title">Batch Optimization</h1>
           </div>
-          <div class="header-actions">
+          <div class="header-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-sm btn-outline" id="btn-open-user-guide">
               📖 User Guide
             </button>
+            <button class="btn btn-sm btn-outline" id="btn-open-algo-maintenance">
+              ⚙️ Algorithm Maintenance
+            </button>
             <button class="btn btn-sm btn-outline" id="btn-open-plate-waste-modal">
               Log Waste
+            </button>
+            <button class="btn btn-sm btn-outline" id="btn-finalize-prep-sheet" style="color: #059669; border-color: #059669;">
+              ✓ Finalize & Save Batch
+            </button>
+            <button class="btn btn-sm btn-outline" id="btn-export-pdf">
+              ⬇ Export to PDF
             </button>
             <button class="btn btn-sm btn-primary" id="btn-print-prep-sheet">
               Print Prep Sheet
@@ -78,17 +141,28 @@ export class Module3BatchOptimizer {
           </div>
         </div>
 
-        <!-- Over-Prep Warning Alert Banner (Reserved for critical issues) -->
+        <!-- UC2 Alternative Flow A1 Step 2: Warning Banner if utilizing Estimated Baseline Data -->
+        ${data.isEstimatedBaseline ? `
+          <div class="alert-banner alert-warning-strip" style="background: #fffbeb; border: 1px solid #f59e0b; color: #b45309; padding: 10px 14px; margin-bottom: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;">⚠️</span>
+            <div>
+              <strong>Warning: Utilizing Estimated Baseline Data</strong>
+              <div style="font-size: 11.5px; margin-top: 2px;">Connection to Hotel Reservation System (Oracle SQL) is currently offline. Utilizing rolling 30-day average for expected check-ins.</div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Over-Prep Warning Alert Banner (FR_09 / UC6) -->
         ${overPrepAlerts.length > 0 ? `
           <div class="alert-banner alert-warning-strip">
             <div class="alert-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="alert-content">
-              <strong>Over-Prep Attention Required:</strong>
+              <strong>Over-Prep Alert Dispatched to Management (Notification Service):</strong>
               ${overPrepAlerts.map(alt => `
                 <div style="font-size: 12px; margin-top: 2px;">
-                  • ${alt.dishName}: ${alt.message}
+                  • <strong>${alt.dishName}</strong> (${alt.severity}): ${alt.message} [Action: ${alt.actionRequired}]
                 </div>
               `).join('')}
             </div>
@@ -97,12 +171,27 @@ export class Module3BatchOptimizer {
 
         <!-- Service Period Filter & Ingested Guest Matrix Bar -->
         <div class="card" style="padding: 16px;">
+          <!-- Oracle Connection Sync Status Strip -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+              <span style="color: var(--text-muted);">Oracle SQL Hotel Reservation DB:</span>
+              <span class="status-dot ${data.oracleConnectionStatus === 'ONLINE' ? 'success' : 'danger'}"></span>
+              <strong style="color: ${data.oracleConnectionStatus === 'ONLINE' ? 'var(--primary)' : 'var(--danger)'};">
+                ${data.oracleConnectionStatus === 'ONLINE' ? 'Online (48-Hour Payload Synced)' : 'Disconnected (Data Sync Failure)'}
+              </strong>
+            </div>
+            <button class="btn btn-xs btn-outline" id="btn-toggle-oracle-sync" style="font-size: 11px;">
+              Simulate: ${data.oracleConnectionStatus === 'ONLINE' ? 'Disconnect Oracle link' : 'Reconnect Oracle link'}
+            </button>
+          </div>
+
           <div class="filter-controls" style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 14px; align-items: flex-end;">
             <div class="filter-item">
               <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Service Date</label>
               <select class="form-input" id="select-prep-date" style="font-size: 13.5px; padding: 8px 12px;">
                 <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today (13 Aug 2026)</option>
                 <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow (14 Aug 2026)</option>
+                <option value="2026-08-20" ${this.selectedDate === '2026-08-20' ? 'selected' : ''}>Future Date (20 Aug 2026 - Empty State)</option>
               </select>
             </div>
             <div class="filter-item">
@@ -406,7 +495,8 @@ export class Module3BatchOptimizer {
               </div>
               <div class="form-group">
                 <label class="form-label">Discarded Weight (kg)</label>
-                <input type="number" step="0.1" min="0.1" max="100.0" class="form-input" id="pw-weight" placeholder="e.g., 3.8" required />
+                <input type="number" step="0.1" class="form-input" id="pw-weight" placeholder="e.g., 3.8" required />
+                <div id="pw-weight-error" style="display: none; color: #dc2626; font-size: 11.5px; font-weight: 600; margin-top: 4px;">Invalid weight entry</div>
               </div>
             </div>
 
@@ -463,6 +553,60 @@ export class Module3BatchOptimizer {
           <div id="pw-photo-modal-caption" style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;"></div>
           <div class="modal-footer" style="justify-content: flex-end;">
             <button type="button" class="btn btn-sm btn-primary" id="btn-dismiss-pw-photo">Close Preview</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Algorithm Maintenance Dashboard (UC6 - System Admin Oversight) -->
+      <div class="modal-backdrop" id="algo-maintenance-modal" style="display: none; z-index: 1040;">
+        <div class="modal-card" style="max-width: 650px;">
+          <div class="modal-header" style="border-bottom: 2px solid var(--primary);">
+            <div>
+              <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+                <span>⚙️</span> Algorithm Maintenance Dashboard (UC6)
+              </h3>
+              <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Predictive Model Self-Adjustment & Statistical Waste Anomaly Control</p>
+            </div>
+            <button class="modal-close" id="btn-close-algo-maintenance">&times;</button>
+          </div>
+
+          <div style="padding: 16px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+              <div class="card" style="padding: 14px; background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Logged Plate Waste Entries</div>
+                <div style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top: 2px;">
+                  ${plateLogs.filter(l => !l.isAnomaly).length} <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">verified (${plateLogs.filter(l => l.isAnomaly).length} excluded anomalies)</span>
+                </div>
+              </div>
+              <div class="card" style="padding: 14px; background: var(--bg-card-subtle); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">High-Cost Ingredient Spikes</div>
+                <div style="font-size: 20px; font-weight: 700; color: ${overPrepAlerts.length > 0 ? '#dc2626' : '#059669'}; margin-top: 2px;">
+                  ${overPrepAlerts.length} <span style="font-size: 12px; font-weight: 400; color: var(--text-muted);">${overPrepAlerts.length > 0 ? 'Management Alert Dispatched' : 'Stable'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); margin-bottom: 14px;">
+              <strong>System Admin Control:</strong> Oversees the self-adjustment protocol. Analyzes plate waste returns to recalibrate dynamic demand multipliers and suppress future culinary over-preparation.
+            </div>
+
+            <div id="algo-maintenance-status" style="display: none; padding: 12px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 16px;"></div>
+
+            <div style="border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+              <div style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Notification Service & Management Dispatch Log</div>
+              <div style="font-size: 11.5px; color: var(--text-muted); background: var(--bg-card-subtle); padding: 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                ${overPrepAlerts.length > 0
+                  ? overPrepAlerts.map(a => `• <strong>${a.dishName}</strong> (${a.severity}): Dispatched to Executive Chef & Operations Director.`).join('<br/>')
+                  : '✓ No active over-prep alerts. All stations operating within standard prep tolerances.'}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-sm btn-outline" id="btn-cancel-algo-maintenance">Close</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-trigger-model-refinement">
+              🔄 Trigger Algorithm Refinement
+            </button>
           </div>
         </div>
       </div>
@@ -755,6 +899,15 @@ export class Module3BatchOptimizer {
       };
     }
 
+    const weightInput = this.container.querySelector('#pw-weight');
+    const weightError = this.container.querySelector('#pw-weight-error');
+    if (weightInput) {
+      weightInput.oninput = () => {
+        weightInput.style.borderColor = '';
+        if (weightError) weightError.style.display = 'none';
+      };
+    }
+
     if (form) {
       form.onsubmit = (e) => {
         e.preventDefault();
@@ -767,8 +920,17 @@ export class Module3BatchOptimizer {
         const anomalyReason = this.container.querySelector('#pw-anomaly-reason')?.value || '';
         const note = this.container.querySelector('#pw-note')?.value || '';
 
+        // UC1 Alternative Flow A1 Step 6:
+        // Highlights the field in red, displays an "Invalid weight entry" error, and halts submission
         if (discardedKg <= 0 || isNaN(discardedKg)) {
-          alert('Please enter a valid positive numeric weight.');
+          if (weightInput) {
+            weightInput.style.borderColor = '#dc2626';
+            weightInput.focus();
+          }
+          if (weightError) {
+            weightError.textContent = 'Invalid weight entry: positive numeric weight in kg required.';
+            weightError.style.display = 'block';
+          }
           return;
         }
 
@@ -789,6 +951,65 @@ export class Module3BatchOptimizer {
         resetPhotoInput();
         window.showGlobalToast?.(`Plate waste logged for ${dishName}! EMA predictive multiplier auto-recalculated.`, 'success');
       };
+    }
+
+    // Algorithm Maintenance Modal Handlers (UC6 - System Admin Oversight)
+    const algoModal = this.container.querySelector('#algo-maintenance-modal');
+    const openAlgoBtn = this.container.querySelector('#btn-open-algo-maintenance');
+    const closeAlgoBtn = this.container.querySelector('#btn-close-algo-maintenance');
+    const cancelAlgoBtn = this.container.querySelector('#btn-cancel-algo-maintenance');
+    const triggerRefineBtn = this.container.querySelector('#btn-trigger-model-refinement');
+    const algoStatus = this.container.querySelector('#algo-maintenance-status');
+
+    if (openAlgoBtn) openAlgoBtn.onclick = () => { if (algoModal) algoModal.style.display = 'flex'; };
+    if (closeAlgoBtn) closeAlgoBtn.onclick = () => { if (algoModal) algoModal.style.display = 'none'; };
+    if (cancelAlgoBtn) cancelAlgoBtn.onclick = () => { if (algoModal) algoModal.style.display = 'none'; };
+
+    if (triggerRefineBtn) {
+      triggerRefineBtn.onclick = () => {
+        const result = BatchOptimizerEngine.refinePredictiveModel(this.selectedDate, this.selectedShift);
+        if (algoStatus) {
+          algoStatus.style.display = 'block';
+          if (result.success) {
+            algoStatus.style.background = '#ecfdf5';
+            algoStatus.style.border = '1px solid #10b981';
+            algoStatus.style.color = '#047857';
+            algoStatus.innerHTML = `<strong>✓ ${result.status}:</strong> ${result.message}`;
+            window.showGlobalToast?.(result.message, 'success');
+          } else {
+            // UC6 Alternative Flow A1 Step 2: "Insufficient new data to refine model"
+            algoStatus.style.background = '#fef2f2';
+            algoStatus.style.border = '1px solid #ef4444';
+            algoStatus.style.color = '#b91c1c';
+            algoStatus.innerHTML = `<strong>⚠️ ${result.status}:</strong> ${result.message}`;
+          }
+        }
+      };
+    }
+
+    // Oracle Connection Link Toggle Handler (UC2 A1 / UC5 A1)
+    const toggleOracleBtn = this.container.querySelector('#btn-toggle-oracle-sync');
+    if (toggleOracleBtn) {
+      toggleOracleBtn.onclick = () => {
+        const status = BatchOptimizerEngine.toggleOracleConnection();
+        window.showGlobalToast?.(`Oracle SQL DB link switched to ${status}. Baseline updated.`, status === 'ONLINE' ? 'success' : 'warning');
+        this.render();
+      };
+    }
+
+    // Finalize & Save Prep Sheet to PREP_RECOMMENDATIONS Table (UC2 Step 7)
+    const finalizeBtn = this.container.querySelector('#btn-finalize-prep-sheet');
+    if (finalizeBtn) {
+      finalizeBtn.onclick = () => {
+        db.savePrepRecommendations(data.recommendations, this.selectedShift, this.selectedDate, 'Chef Zhen Bang');
+        window.showGlobalToast?.(`✓ Batch recommendations finalized & saved to PREP_RECOMMENDATIONS table for ${this.selectedDate} (${this.selectedShift})!`, 'success');
+      };
+    }
+
+    // Export Prep Sheet to PDF (FR_08 / UC3 Step 6)
+    const exportPdfBtn = this.container.querySelector('#btn-export-pdf');
+    if (exportPdfBtn) {
+      exportPdfBtn.onclick = () => this.printPrepSheet(data, true);
     }
 
     // Photo Inspection Modal Handlers
@@ -889,13 +1110,14 @@ export class Module3BatchOptimizer {
     });
   }
 
-  printPrepSheet(data) {
+  printPrepSheet(data, isPdf = false) {
     const printWindow = window.open('', '_blank', 'width=950,height=750');
+    const docTitle = isPdf ? `EcoHotel_Prep_Sheet_${data.shift}_${data.date}.pdf` : `Kitchen Station Prep Sheet - ${data.shift}`;
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Kitchen Station Prep Sheet - ${data.shift}</title>
+        <title>${docTitle}</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #18181b; background: #ffffff; }
           .header { border-bottom: 3px solid #059669; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }

@@ -18,23 +18,57 @@ export class BatchOptimizerEngine {
     { id: 'BAKERY', name: 'Bakery & Pastry', icon: '🥐' }
   ];
 
+  static oracleConnectionStatus = 'ONLINE'; // 'ONLINE' | 'OFFLINE' (Simulates Oracle SQL DB link)
+
   /**
    * Generates optimized prep recommendations for a given date, meal shift, and optional demographic simulation overrides.
    */
   static generatePrepRecommendations(selectedDate = '2026-08-13', selectedShift = 'Breakfast', simulationOverrides = null) {
-    const forecasts = db.get('reservationForecast');
-    const dishes = db.get('dishes');
-    const inventory = db.get('inventory');
-    const plateLogs = db.get('plateWasteLogs');
+    const forecasts = db.get('reservationForecast') || [];
+    const dishes = db.get('dishes') || [];
+    const inventory = db.get('inventory') || [];
+    const plateLogs = db.get('plateWasteLogs') || [];
 
-    const baseForecast = forecasts.find(f => f.date === selectedDate && f.shift === selectedShift) || forecasts[0] || {
-      date: selectedDate,
-      shift: selectedShift,
-      expectedCheckIns: 142,
-      totalInHouseGuests: 285,
-      nationalities: { Malaysian: 45, Singaporean: 25, European: 18, MiddleEastern: 8, Others: 4 },
-      dietaryProfiles: { Regular: 195, Halal: 250, VeganVegetarian: 28, GlutenFree: 12 }
-    };
+    const isOracleOffline = this.oracleConnectionStatus === 'OFFLINE';
+
+    // UC2 Alternative Flow A1 Step 2:
+    // If connection to Hotel Reservation System is lost, utilizes rolling 30-day average
+    let baseForecast;
+    if (isOracleOffline) {
+      baseForecast = {
+        date: selectedDate,
+        shift: selectedShift,
+        expectedCheckIns: 120, // Rolling 30-day average
+        totalInHouseGuests: 250,
+        nationalities: { Malaysian: 40, Singaporean: 25, European: 20, MiddleEastern: 10, Others: 5 },
+        dietaryProfiles: { Regular: 175, Halal: 220, VeganVegetarian: 25, GlutenFree: 10 },
+        isEstimatedBaseline: true
+      };
+    } else {
+      const match = forecasts.find(f => f.date === selectedDate && f.shift === selectedShift);
+      if (!match) {
+        // UC3 Alternative Flow A1: Date with no data
+        if (selectedDate !== '2026-08-13' && selectedDate !== '2026-08-14') {
+          return {
+            hasData: false,
+            date: selectedDate,
+            shift: selectedShift,
+            recommendations: [],
+            ingredientSummary: []
+          };
+        }
+        baseForecast = forecasts[0] || {
+          date: selectedDate,
+          shift: selectedShift,
+          expectedCheckIns: 142,
+          totalInHouseGuests: 285,
+          nationalities: { Malaysian: 45, Singaporean: 25, European: 18, MiddleEastern: 8, Others: 4 },
+          dietaryProfiles: { Regular: 195, Halal: 250, VeganVegetarian: 28, GlutenFree: 12 }
+        };
+      } else {
+        baseForecast = match;
+      }
+    }
 
     // Apply simulation overrides if passed (e.g. from What-If sliders)
     const forecast = simulationOverrides ? {
@@ -145,6 +179,9 @@ export class BatchOptimizerEngine {
     const ingredientSummary = this.calculateIngredientRequirements(recommendations, inventory);
 
     return {
+      hasData: true,
+      isEstimatedBaseline: !!baseForecast.isEstimatedBaseline,
+      oracleConnectionStatus: this.oracleConnectionStatus,
       date: selectedDate,
       shift: selectedShift,
       forecast,
@@ -261,12 +298,60 @@ export class BatchOptimizerEngine {
           mealPeriod: log.mealPeriod,
           severity: isCritical ? 'Critical Waste Spike' : 'Demand Advisory',
           actionRequired: isCritical ? 'Sous Chef Taste & Temperature Inspection Required' : 'Prep Multiplier Adjusted Downward (-8%)',
-          message: `Statistical waste spike: ${log.dishName} had ${log.discardedKg} kg discarded during ${log.mealPeriod}. Algorithm auto-decayed future batch target.`
+          notificationSentTo: 'Executive Chef & Operations Director (Notification Service)',
+          message: `Statistical waste spike: ${log.dishName} had ${log.discardedKg} kg discarded during ${log.mealPeriod}. Dispatched over-prep alert to management.`
         });
       }
     });
 
     return alerts;
+  }
+
+  /**
+   * System Admin Algorithm Oversight & Refinement Protocol (UC6)
+   */
+  static refinePredictiveModel(selectedDate = '2026-08-13', selectedShift = 'Dinner') {
+    const plateLogs = db.get('plateWasteLogs') || [];
+    const validLogs = plateLogs.filter(l => !l.isAnomaly);
+    
+    // UC6 Alternative Flow A1 Step 2:
+    // If insufficient new data (e.g. no plate waste logged for the day), abort with status message
+    if (validLogs.length === 0) {
+      return {
+        success: false,
+        status: 'Insufficient new data to refine model',
+        message: 'No plate waste was logged for this service period. Aborting algorithm refinement.'
+      };
+    }
+
+    const dishes = db.get('dishes') || [];
+    const dynamicMultipliers = this.calculateEmaWasteMultipliers(dishes, validLogs);
+
+    // Apply refined multipliers to dish baseline matrix
+    dishes.forEach(d => {
+      if (dynamicMultipliers[d.id] !== undefined) {
+        db.updateDishOverride(d.id, dynamicMultipliers[d.id]);
+      }
+    });
+
+    const highCostSpikes = this.checkOverPrepAlerts();
+
+    return {
+      success: true,
+      status: 'Predictive Model Successfully Refined',
+      refinedDishesCount: Object.keys(dynamicMultipliers).length,
+      highCostSpikesCount: highCostSpikes.length,
+      alertsDispatched: highCostSpikes.length > 0,
+      message: `Predictive model updated across ${dishes.length} buffet dishes based on ${validLogs.length} verified plate waste entries.`
+    };
+  }
+
+  /**
+   * Toggles simulated Oracle SQL PMS connection for testing UC2 A1 & UC5 A1
+   */
+  static toggleOracleConnection() {
+    this.oracleConnectionStatus = this.oracleConnectionStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+    return this.oracleConnectionStatus;
   }
 }
 
