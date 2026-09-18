@@ -6,47 +6,37 @@ export class Module1Department {
     this.container = container;
     this.selectedDepartment = '';
     this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
     this.unsubs.push(
-      db.subscribe('system', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('baselines', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('plateWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('foodWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('utilityMeters', () => { if (!this.isDestroyed) this.render(); })
+      db.subscribe('system', () => this.render()),
+      db.subscribe('baselines', () => this.render()),
+      db.subscribe('plateWasteLogs', () => this.render()),
+      db.subscribe('foodWasteLogs', () => this.render()),
+      db.subscribe('utilityMeters', () => this.render())
     );
   }
 
   destroy() {
-    this.isDestroyed = true;
     if (this.unsubs) {
       this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
+        try { unsub(); } catch(e) {}
       });
       this.unsubs = [];
     }
   }
 
   render() {
-    if (this.isDestroyed) return;
     let departmentPerformance = null;
-    let isAuthorized = false;
 
     try {
       const databaseError = db.getLastDatabaseError();
       if (databaseError) throw databaseError;
 
-      const system = db.getSystem();
-      const role = system?.activeUser?.role || '';
-      
-      // Allow Operations Director and Executive roles
-      isAuthorized = role === 'Operations Director' || role.includes('Executive');
-
-      if (isAuthorized && this.selectedDepartment) {
+      if (this.selectedDepartment) {
         departmentPerformance = ComplianceEngine.getDepartmentPerformance(this.selectedDepartment);
       }
     } catch (error) {
@@ -82,13 +72,13 @@ export class Module1Department {
       <div class="module-view m1-container fade-in">
         <div class="view-header">
           <div>
-            <h1 class="view-title">Executive Sustainability Analytics</h1>
+            <h1 class="view-title">Department Sustainability Analytics</h1>
             <p class="view-subtitle">Departmental performance, spoilage logs and utility anomalies.</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-sm btn-outline" id="btn-export-m1-pdf">
+            <button class="btn btn-sm btn-primary" id="btn-export-m1-pdf">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Generate Sustainability Compliance Report
+              Generate Department Report
             </button>
           </div>
         </div>
@@ -106,23 +96,38 @@ export class Module1Department {
                 </div>
               </div>
 
-              ${!isAuthorized ? `
-                <p class="text-muted">Operations Director or Executive access is required.</p>
+              ${!this.selectedDepartment ? `
+                ${(() => {
+                  const departments = [
+                    { id: 'kitchen', name: 'Kitchen', icon: '🍽️' },
+                    { id: 'housekeeping', name: 'Housekeeping', icon: '🧹' },
+                    { id: 'laundry', name: 'Laundry', icon: '🧺' },
+                    { id: 'facilities', name: 'Facilities', icon: '⚙️' },
+                    { id: 'front-office', name: 'Front Office', icon: '🛎️' }
+                  ];
+                  return `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                      ${departments.map(dept => `
+                        <div class="card dept-card" data-id="${dept.id}" style="padding: 30px 15px; cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-card); text-align: center; border-radius: var(--radius-lg); box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: transform 0.2s, box-shadow 0.2s;">
+                          <div style="font-size: 32px; margin-bottom: 12px;">${dept.icon}</div>
+                          <h4 style="margin: 0; font-size: 16px; font-weight: 600;">${dept.name}</h4>
+                        </div>
+                      `).join('')}
+                    </div>
+                  `;
+                })()}
               ` : `
-                <select class="form-input form-input-sm" id="department-selector" style="max-width: 300px; margin-bottom: 15px;">
-                  <option value="">Select a department</option>
-                  <option value="kitchen">Kitchen</option>
-                  <option value="housekeeping">Housekeeping</option>
-                  <option value="laundry">Laundry</option>
-                  <option value="facilities">Facilities</option>
-                  <option value="front-office">Front Office</option>
-                </select>
-              
-                ${!this.selectedDepartment
-                  ? '<p class="text-muted">Select a department to review.</p>'
-                  : !departmentPerformance?.hasData
-                    ? `<p class="text-danger">${departmentPerformance.message}</p>`
-                    : this.renderDepartmentBreakdown(departmentPerformance)
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+                  <button class="btn btn-sm btn-outline" id="btn-back-departments">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Back to Departments
+                  </button>
+                  <h3 style="margin: 0; font-size: 18px; text-transform: capitalize;">${this.selectedDepartment.replace('-', ' ')} Department</h3>
+                </div>
+                
+                ${!departmentPerformance?.hasData
+                  ? `<p class="text-danger">${departmentPerformance.message}</p>`
+                  : this.renderDepartmentBreakdown(departmentPerformance)
                 }
               `}
             </div>
@@ -198,95 +203,135 @@ export class Module1Department {
   }
 
   exportComplianceReportPDF() {
-    const compliance = ComplianceEngine.calculateLiveScore();
-    
-    if (!compliance.dataComplete) {
-      window.showGlobalToast('PDF export failed. Please try again later. Data incomplete. A compliance grade cannot be calculated.', 'error');
+    if (!this.selectedDepartment) {
+      window.showGlobalToast('Please select a department first before generating a report.', 'error');
       return;
     }
 
+    const perf = ComplianceEngine.getDepartmentPerformance(this.selectedDepartment);
+    
+    if (!perf.hasData) {
+      window.showGlobalToast(`Cannot generate report: ${perf.message}`, 'error');
+      return;
+    }
+
+    db.recordAuditLog({
+      action: 'GENERATE_DEPARTMENT_REPORT',
+      targetKey: this.selectedDepartment.replace('-', ' ').toUpperCase(),
+      previousValue: 'N/A',
+      newValue: 'PDF Exported',
+      reason: `User generated a Department Performance Report for ${this.selectedDepartment}`
+    });
+
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
-      window.showGlobalToast('PDF export failed. Please try again later.', 'error');
+      window.showGlobalToast('PDF export failed. Please check popup blockers.', 'error');
       return;
     }
     
+    const deptName = this.selectedDepartment.replace('-', ' ').toUpperCase();
+    const currentDate = new Date().toLocaleDateString();
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Sustainability Compliance Report</title>
+        <title>${deptName} - Performance Report</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #18181b; background: #ffffff; }
-          .header { border-bottom: 2px solid #059669; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
-          .title { font-size: 20px; font-weight: 800; color: #18181b; margin: 0; }
-          .subtitle { color: #71717a; margin-top: 5px; font-size: 12px; }
-          .seal { border: 1.5px solid #059669; color: #059669; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; text-align: center; }
+          .header { border-bottom: 2px solid var(--primary, #059669); padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .title { font-size: 24px; font-weight: 800; color: #18181b; margin: 0; text-transform: uppercase; }
+          .subtitle { color: #71717a; margin-top: 5px; font-size: 13px; }
+          .seal { border: 1.5px solid var(--primary, #059669); color: var(--primary, #059669); padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; text-align: center; }
           .score-box { background: #f9fafb; border: 1px solid #e4e4e7; border-radius: 8px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-          .score-num { font-size: 44px; font-weight: 800; color: #059669; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e4e4e7; font-size: 12px; }
-          th { background: #f4f4f5; font-size: 10px; text-transform: uppercase; color: #71717a; }
-          .footer { margin-top: 40px; font-size: 11px; color: #71717a; border-top: 1px solid #e4e4e7; padding-top: 15px; display: flex; justify-content: space-between; }
+          .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+          .card { background: #ffffff; border: 1px solid #e4e4e7; border-radius: 8px; padding: 15px; }
+          .card h4 { margin: 0 0 10px 0; color: #71717a; font-size: 12px; text-transform: uppercase; }
+          .card .val { font-size: 24px; font-weight: 700; color: #18181b; margin: 0; }
+          .table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+          .table th { text-align: left; padding: 10px; background: #f4f4f5; border-bottom: 2px solid #e4e4e7; color: #3f3f46; }
+          .table td { padding: 10px; border-bottom: 1px solid #e4e4e7; color: #18181b; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e4e4e7; font-size: 11px; color: #a1a1aa; text-align: center; }
+          .text-danger { color: #ef4444; font-weight: 600; }
+          @media print { .no-print { display: none !important; } }
         </style>
       </head>
       <body>
+        <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+          <button onclick="window.print()" style="background: var(--primary, #059669); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Save as PDF
+          </button>
+        </div>
         <div class="header">
           <div>
-            <div class="title">SUSTAINABILITY COMPLIANCE AUDIT REPORT</div>
-            <div class="subtitle">Property: Grand Bay Eco-Resort & Spa • Date: ${new Date().toLocaleDateString()}</div>
+            <h1 class="title">${deptName} DEPARTMENT</h1>
+            <div class="subtitle">Operational Performance & Compliance Analytics</div>
           </div>
-          <div class="seal">
-            Report Data<br/>${compliance.label}
+          <div>
+            <div class="seal">VM2026 Audit Ready</div>
+            <div style="font-size: 11px; color: #71717a; text-align: right; margin-top: 8px;">Date: ${currentDate}</div>
           </div>
         </div>
+
         <div class="score-box">
           <div>
-            <h3 style="margin: 0 0 4px 0; font-size: 16px;">Overall Environmental Conformance Grade</h3>
-            <p style="margin: 0; color: #18181b; font-weight: 600;">${compliance.grade}</p>
-            <p style="margin: 4px 0 0 0; color: #71717a; font-size: 11px;">GHG Avoided: ${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} metric tons CO2e • Net Operational Cost Savings: RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()}</p>
+            <div style="font-size: 12px; color: #71717a; text-transform: uppercase; font-weight: 600;">Status Overview</div>
+            <div style="font-size: 18px; font-weight: 700; margin-top: 5px; color: ${perf.flags.length > 0 ? '#ef4444' : '#059669'};">
+              ${perf.flags.length > 0 ? 'Action Required (Anomalies Detected)' : 'Nominal Operation (Within Baseline limits)'}
+            </div>
           </div>
-          <div class="score-num">${compliance.score} / 100</div>
         </div>
-        <h3>Cumulative Month-to-Date Resource Savings</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Resource Metric</th>
-              <th>Month-to-Date Conserved</th>
-              <th>Status vs Baseline Target</th>
-              <th>CO2e Offset</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>F&B Spoilage & Prep Waste Prevented</td>
-              <td>${compliance.metrics.foodWasteSavedMTD} kg</td>
-              <td>+18.4% (Optimized Batching)</td>
-              <td>${(compliance.metrics.foodWasteSavedMTD * 2.5).toFixed(0)} kg CO2e</td>
-            </tr>
-            <tr>
-              <td>Water Recovered & Conserved</td>
-              <td>${(compliance.metrics.waterSavedMTD / 1000).toFixed(1)} kL</td>
-              <td>+12.1% (Aerator Flow Calibration)</td>
-              <td>${(compliance.metrics.waterSavedMTD / 1000 * 0.3).toFixed(1)} kg CO2e</td>
-            </tr>
-            <tr>
-              <td>Energy Optimization Yield</td>
-              <td>${compliance.metrics.energySavedMTD.toLocaleString()} kWh</td>
-              <td>+8.5% (Smart HVAC Throttling)</td>
-              <td>${(compliance.metrics.energySavedMTD * 0.4).toFixed(0)} kg CO2e</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="grid">
+          <div class="card">
+            <h4>Energy Usage</h4>
+            <div class="val">${perf.metrics.energy.toFixed(1)} kWh</div>
+          </div>
+          <div class="card">
+            <h4>Water Usage</h4>
+            <div class="val">${(perf.metrics.water / 1000).toFixed(1)} kL</div>
+          </div>
+          <div class="card">
+            <h4>Waste Logged</h4>
+            <div class="val">${perf.metrics.waste.toFixed(1)} kg</div>
+          </div>
+        </div>
+        
+        <h3 style="font-size: 14px; text-transform: uppercase; color: #3f3f46; border-bottom: 1px solid #e4e4e7; padding-bottom: 5px; margin-top: 30px;">Anomalies & Flags</h3>
+        ${perf.utilityAnomalies.length > 0 ? `
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date / Time</th>
+                <th>Meter ID</th>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${perf.utilityAnomalies.map(anom => `
+                <tr>
+                  <td>${anom.lastReadingTime || anom.lastUpdated || '-'}</td>
+                  <td>${anom.id || anom.meterId}</td>
+                  <td>${anom.type || anom.category}</td>
+                  <td class="text-danger">${anom.status}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `<p style="color: #71717a; font-size: 13px; padding: 15px; background: #f9fafb; border-radius: 6px; border: 1px dashed #d4d4d8;">No system anomalies detected for this department during the current period.</p>`}
+
         <div class="footer">
-          <div>Generated by EcoHotel OS Validation Engine • User ID: ADMIN_EXEC_01</div>
-          <div>Page 1 of 1</div>
+          EcoHotel OS Department Analytics System &bull; Confidential &bull; Generated ${currentDate}
         </div>
       </body>
       </html>
     `);
+
     printWindow.document.close();
+    printWindow.focus();
+
   }
 
   attachEventListeners() {
@@ -302,11 +347,28 @@ export class Module1Department {
       };
     });
 
-    const departmentSelector = this.container.querySelector('#department-selector');
-    if (departmentSelector) {
-      departmentSelector.value = this.selectedDepartment;
-      departmentSelector.onchange = event => {
-        this.selectedDepartment = event.target.value;
+    this.container.querySelectorAll('.dept-card').forEach(card => {
+      card.onclick = () => {
+        this.selectedDepartment = card.dataset.id;
+        this.render();
+      };
+      card.onmouseover = () => {
+        card.style.transform = 'translateY(-4px)';
+        card.style.boxShadow = '0 8px 12px rgba(0,0,0,0.3)';
+        card.style.borderColor = 'var(--primary)';
+      };
+      card.onmouseout = () => {
+        card.style.transform = 'translateY(0)';
+        card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)';
+        card.style.borderColor = 'var(--border-color)';
+      };
+    });
+
+    const backBtn = this.container.querySelector('#btn-back-departments');
+    if (backBtn) {
+      backBtn.onclick = () => {
+        this.selectedDepartment = '';
+    this.unsubs = [];
         this.render();
       };
     }

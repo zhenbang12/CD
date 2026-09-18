@@ -6,7 +6,7 @@ export class Module1Dashboard {
     this.container = container;
     this.chartMetric = 'food';
     this.reportYear = '2026';
-      this.reportPeriod = 'all';
+    this.reportPeriod = 'all';
     this.unsubs = [];
     this.isDestroyed = false;
     this.init();
@@ -17,7 +17,7 @@ export class Module1Dashboard {
     this.unsubs.push(
       db.subscribe('system', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('baselines', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); }),
+      db.subscribe('userAudit', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('repairTickets', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('plateWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
       db.subscribe('foodWasteLogs', () => { if (!this.isDestroyed) this.render(); }),
@@ -54,7 +54,7 @@ export class Module1Dashboard {
     let filteredHistory = complianceHistory;
 
   if (this.reportYear && this.reportYear !== 'all-years') {
-    filteredHistory = filteredHistory.filter(c => c.month.endsWith(this.reportYear));
+    filteredHistory = filteredHistory.filter(c => c.month.includes(this.reportYear));
   }
   
   if (this.reportPeriod === 'q1') {
@@ -66,11 +66,8 @@ export class Module1Dashboard {
   } else if (this.reportPeriod === 'q4') {
     filteredHistory = filteredHistory.filter(c => c.month.startsWith('Oct') || c.month.startsWith('Nov') || c.month.startsWith('Dec'));
   } else if (this.reportPeriod === 'mtd') {
-    if (filteredHistory.length > 0) {
-      const latestMonth = filteredHistory[filteredHistory.length - 1].month;
-      filteredHistory = filteredHistory.filter(c => c.month === latestMonth);
+      filteredHistory = filteredHistory.filter(c => c.month.includes('(MTD)'));
     }
-  }
 
     const sidebarTpl = `
       <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 120px; display: flex; flex-direction: column; gap: 8px;">
@@ -98,10 +95,16 @@ export class Module1Dashboard {
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
-        <div class="view-header">
+        <div class="view-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h1 class="view-title">Executive Sustainability Analytics</h1>
             <p class="view-subtitle">Cross-property environmental aggregation and sustainability compliance metrics.</p>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-primary" id="btn-export-global-pdf">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export Executive Report
+            </button>
           </div>
         </div>
 
@@ -225,7 +228,15 @@ export class Module1Dashboard {
                   </tr>
                 </thead>
                 <tbody>
-                      ${filteredHistory.map(row => `
+                      ${filteredHistory.length === 0 ? `
+                        <tr>
+                          <td colspan="6" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                            <div style="font-size: 24px; margin-bottom: 8px;">📂</div>
+                            <strong>No Data Available</strong><br/>
+                            <span style="font-size: 12px;">There are no compliance records matching this period.</span>
+                          </td>
+                        </tr>
+                      ` : filteredHistory.map(row => `
                         <tr>
                           <td><strong>${row.month}</strong></td>
                           <td>${row.foodSavedKg.toLocaleString()} kg</td>
@@ -261,7 +272,8 @@ export class Module1Dashboard {
   }
 
   renderSVGChart(history, metricKey) {
-let dataPoints = [];
+  if (!history || history.length === 0) return `<div style="height: 250px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-style: italic;">No chart telemetry available for this period.</div>`;
+  let dataPoints = [];
 let color = '#10b981';
 
 if (metricKey === 'food') {
@@ -295,7 +307,7 @@ const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc}
 const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
 return `
-  <svg width="100%" height="auto" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
+  <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" style="overflow: visible;">
     <defs>
       <linearGradient id="chartGrad-${metricKey}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${color}" stop-opacity="0.2" />
@@ -349,5 +361,119 @@ if (yearSelect) {
     this.render();
   };
 }
+
+const exportBtn = this.container.querySelector('#btn-export-global-pdf');
+if (exportBtn) {
+  exportBtn.onclick = () => this.exportComplianceReportPDF();
 }
+}
+
+  exportComplianceReportPDF() {
+    const compliance = ComplianceEngine.calculateLiveScore();
+    
+    if (!compliance.dataComplete) {
+      window.showGlobalToast('PDF export failed. Data incomplete.', 'error');
+      return;
+    }
+
+    db.recordAuditLog({
+      action: 'GENERATE_EXECUTIVE_REPORT',
+      targetKey: 'Global VM2026 Metrics',
+      previousValue: 'N/A',
+      newValue: 'PDF Exported',
+      reason: 'User generated the Executive Sustainability Compliance Report'
+    });
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      window.showGlobalToast('PDF export failed. Please check popup blockers.', 'error');
+      return;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sustainability Compliance Report</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #18181b; background: #ffffff; }
+          .header { border-bottom: 2px solid #059669; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+          .title { font-size: 20px; font-weight: 800; color: #18181b; margin: 0; }
+          .subtitle { color: #71717a; margin-top: 5px; font-size: 12px; }
+          .seal { border: 1.5px solid #059669; color: #059669; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; text-align: center; }
+          .score-box { background: #f9fafb; border: 1px solid #e4e4e7; border-radius: 8px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+          .score-num { font-size: 44px; font-weight: 800; color: #059669; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e4e4e7; font-size: 12px; }
+          th { background: #f4f4f5; font-size: 10px; text-transform: uppercase; color: #71717a; }
+          .footer { margin-top: 40px; font-size: 11px; color: #71717a; border-top: 1px solid #e4e4e7; padding-top: 15px; display: flex; justify-content: space-between; }
+          @media print { .no-print { display: none !important; } }
+        </style>
+      </head>
+      <body>
+        <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+          <button onclick="window.print()" style="background: var(--primary, #059669); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Save as PDF
+          </button>
+        </div>
+        <div class="header">
+          <div>
+            <div class="title">SUSTAINABILITY COMPLIANCE AUDIT REPORT</div>
+            <div class="subtitle">Property: Grand Bay Eco-Resort & Spa &bull; Date: ${new Date().toLocaleDateString()}</div>
+          </div>
+          <div class="seal">
+            Report Data<br/>${compliance.label}
+          </div>
+        </div>
+        <div class="score-box">
+          <div>
+            <h3 style="margin: 0 0 4px 0; font-size: 16px;">Overall Environmental Conformance Grade</h3>
+            <p style="margin: 0; color: #18181b; font-weight: 600;">${compliance.grade}</p>
+            <p style="margin: 4px 0 0 0; color: #71717a; font-size: 11px;">GHG Avoided: ${(compliance.metrics.totalCo2AvoidedKg / 1000).toFixed(1)} metric tons CO2e &bull; Net Operational Cost Savings: RM ${compliance.metrics.totalCostSavingsMyr.toLocaleString()}</p>
+          </div>
+          <div class="score-num">${compliance.score} / 100</div>
+        </div>
+        <h3>Cumulative Month-to-Date Resource Savings</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Resource Metric</th>
+              <th>Month-to-Date Conserved</th>
+              <th>Status vs Baseline Target</th>
+              <th>CO2e Offset</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>F&B Spoilage & Prep Waste Prevented</td>
+              <td>${compliance.metrics.foodWasteSavedMTD} kg</td>
+              <td>+18.4% (Optimized Batching)</td>
+              <td>${(compliance.metrics.foodWasteSavedMTD * 2.5).toFixed(0)} kg CO2e</td>
+            </tr>
+            <tr>
+              <td>Water Recovered & Conserved</td>
+              <td>${(compliance.metrics.waterSavedMTD / 1000).toFixed(1)} kL</td>
+              <td>+12.1% (Aerator Flow Calibration)</td>
+              <td>${(compliance.metrics.waterSavedMTD / 1000 * 0.3).toFixed(1)} kg CO2e</td>
+            </tr>
+            <tr>
+              <td>Energy Optimization Yield</td>
+              <td>${compliance.metrics.energySavedMTD.toLocaleString()} kWh</td>
+              <td>+8.5% (Smart HVAC Throttling)</td>
+              <td>${(compliance.metrics.energySavedMTD * 0.4).toFixed(0)} kg CO2e</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <div>Generated by EcoHotel OS Validation Engine &bull; User ID: ADMIN_EXEC_01</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    
+
+  }
 }

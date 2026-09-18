@@ -3,40 +3,24 @@ import { db } from '../db/storage.js';
 export class Module1Audit {
   constructor(container) {
     this.container = container;
-    this.auditFilters = { date: '', user: '', action: '', baseline: '' };
-    this.unsubs = [];
-    this.isDestroyed = false;
+    this.auditFilters = { date: '', user: '', action: '' };
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('auditLogs', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('userAudit', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
-    let auditLogs = [];
+    let userAudit = [];
     try {
-      const allLogs = db.get('auditLogs') || [];
-      auditLogs = allLogs.filter(log => {
+      const allLogs = db.get('userAudit') || [];
+      userAudit = allLogs.filter(log => {
         let matches = true;
         if (this.auditFilters.date && !(log.timestamp || '').includes(this.auditFilters.date) && !(log.effectiveDate || '').includes(this.auditFilters.date)) matches = false;
         if (this.auditFilters.user && !(log.userName || '').toLowerCase().includes(this.auditFilters.user.toLowerCase()) && !(log.userId || '').toLowerCase().includes(this.auditFilters.user.toLowerCase())) matches = false;
         if (this.auditFilters.action && !(log.action || '').toLowerCase().includes(this.auditFilters.action.toLowerCase())) matches = false;
-        if (this.auditFilters.baseline && !(log.targetKey || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase()) && !(log.transactionRef || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase())) matches = false;
         return matches;
       });
     } catch (error) {
@@ -86,20 +70,19 @@ export class Module1Audit {
               <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
                 <div>
                   <h3 class="card-title">System Log & Parameter Adjustments</h3>
-                  <p class="card-subtitle">Filter by Date, User, Action, or Target</p>
+                  <p class="card-subtitle">Filter by Date, User, or Action</p>
                 </div>
                 <div class="filter-group" style="display: flex; gap: 10px; align-items: center;">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-date" placeholder="Date (YYYY-MM-DD)" value="${this.auditFilters.date}">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-user" placeholder="User ID / Name" value="${this.auditFilters.user}">
                   <input type="text" class="form-input form-input-sm" id="audit-filter-action" placeholder="Action" value="${this.auditFilters.action}">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-baseline" placeholder="Baseline ID" value="${this.auditFilters.baseline}">
                   <button class="btn btn-sm btn-outline" id="btn-audit-search">Filter</button>
                 </div>
               </div>
               <div class="audit-stream">
-                ${auditLogs.length === 0 ? `
+                ${userAudit.length === 0 ? `
                   <div class="text-danger text-center py-3">No audit records match the selected filters.</div>
-                ` : auditLogs.slice(0, 20).map(log => {
+                ` : userAudit.slice(0, 20).map(log => {
                   const displayTxn = log.transactionRef || ('TXN-80' + log.id.replace(/\D/g, '').substring(0, 3) + 'X');
                   return `
                   <div class="audit-entry">
@@ -153,7 +136,7 @@ export class Module1Audit {
           date: this.container.querySelector('#audit-filter-date').value,
           user: this.container.querySelector('#audit-filter-user').value,
           action: this.container.querySelector('#audit-filter-action').value,
-          baseline: this.container.querySelector('#audit-filter-baseline').value,
+          
         };
         this.render();
       };

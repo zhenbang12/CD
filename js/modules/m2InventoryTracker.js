@@ -11,31 +11,16 @@ export class Module2Inventory {
     this.container = container;
     this.activeFilter = 'ALL'; // 'ALL' | 'EXPIRING' | 'Meat' | 'Seafood' | 'Produce' | 'Grains' | 'Dairy'
     this.searchQuery = '';
-    this.unsubs = [];
-    this.isDestroyed = false;
     this.init();
   }
 
   init() {
     this.render();
-    this.unsubs.push(
-      db.subscribe('inventory', () => { if (!this.isDestroyed) this.render(); }),
-      db.subscribe('foodWasteLogs', () => { if (!this.isDestroyed) this.render(); })
-    );
-  }
-
-  destroy() {
-    this.isDestroyed = true;
-    if (this.unsubs) {
-      this.unsubs.forEach(unsub => {
-        try { unsub(); } catch (err) { /* ignore */ }
-      });
-      this.unsubs = [];
-    }
+    db.subscribe('inventory', () => this.render());
+    db.subscribe('foodWasteLogs', () => this.render());
   }
 
   render() {
-    if (this.isDestroyed) return;
     const inventory = db.get('inventory');
     const wasteLogs = db.get('foodWasteLogs');
     const currentDate = new Date('2026-08-13');

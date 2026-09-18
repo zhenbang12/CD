@@ -24,7 +24,7 @@ export class ComplianceEngine {
 
     // Helper to extract baseline values dynamically
     function getBaselineValue(key, fallback) {
-      const b = baselinesList.find(x => x.id === key);
+      const b = baselinesList.find(x => x.key === key);
       return b ? b.value : fallback;
     }
 
@@ -34,8 +34,9 @@ export class ComplianceEngine {
 
     // 1. Water Score Calculation (Dynamic Baselines)
     const waterMeters = utilityMeters.filter(m => m.type === 'Water' && m.lastReading !== undefined);
-    const targetRoomWater = getBaselineValue('water_per_room', 350); // Liters per room
-    const totalWaterBaseline = occupiedRooms * targetRoomWater;
+    
+    // The total hotel water baseline is now dynamically aggregated from all granular zone baselines!
+    const totalWaterBaseline = baselinesList.filter(b => b.category === 'Water').reduce((acc, curr) => acc + curr.value, 0) || (occupiedRooms * 350);
     
     let totalWaterActual = 0;
     waterMeters.forEach(m => {
@@ -44,8 +45,9 @@ export class ComplianceEngine {
 
     // 2. Electricity Score Calculation (Dynamic Baselines)
     const eleMeters = utilityMeters.filter(m => m.type === 'Electricity' && m.lastReading !== undefined);
-    const targetRoomEnergy = getBaselineValue('power_per_room', 45); // kWh per room
-    const totalEleBaseline = occupiedRooms * targetRoomEnergy;
+    
+    // The total hotel electricity baseline is now dynamically aggregated from all granular zone baselines!
+    const totalEleBaseline = baselinesList.filter(b => b.category === 'Electricity').reduce((acc, curr) => acc + curr.value, 0) || (occupiedRooms * 45);
     
     let totalEleActual = 0;
     eleMeters.forEach(m => {
