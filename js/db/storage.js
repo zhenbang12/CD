@@ -821,6 +821,31 @@ updateInventoryItem(id, updates) {
   }
 
   // --- MODULE 4: Guest PWA & Housekeeping Schedule ---
+  logGuestAccess(roomNumber, source = 'QR_CODE_SCAN') {
+    const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
+    if (!room) return false;
+
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const existing = this.data.guestInteractions.find(i =>
+      i.roomNumber === roomNumber &&
+      i.action === 'PWA_ACCESS' &&
+      i.timestamp.substring(0, 16) === now.substring(0, 16)
+    );
+    if (!existing) {
+      this.data.guestInteractions.unshift({
+        id: `GIL-${Date.now().toString().slice(-4)}`,
+        roomNumber: roomNumber,
+        timestamp: now,
+        action: 'PWA_ACCESS',
+        details: `Guest ${room.guestName} accessed in-room terminal via ${source} (Token: ${room.qrToken || 'RM' + roomNumber})`,
+        pointsEarned: 0
+      });
+      this.saveDatabase();
+      this.notify('guestInteractions', this.data.guestInteractions);
+    }
+    return true;
+  }
+
   updateGuestPreference(roomNumber, { servicePreference, linenDelayDays = 0, towelReuse = true }) {
     const room = this.data.rooms.find(r => r.roomNumber === roomNumber);
     if (!room) return false;
