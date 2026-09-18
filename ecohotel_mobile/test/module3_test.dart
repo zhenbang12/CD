@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ecohotel_mobile/main.dart';
@@ -176,4 +177,41 @@ void main() {
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('ExecutiveScreen: Resource analytics layout and hit testing without overflow', (WidgetTester tester) async {
+    // Test exact viewport reported by user: 423 x 1000
+    tester.view.physicalSize = const Size(423, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final db = HotelDatabase();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ExecutiveScreen(db: db),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify sections render without overflow
+    expect(find.text('RESOURCE CONSUMPTION ANALYTICS'), findsOneWidget);
+    expect(find.text('Water Consumption'), findsOneWidget);
+    expect(find.text('Electricity Consumption'), findsOneWidget);
+
+    // Simulate mouse pointer hover across the widgets (verifies hitTest and mouse tracker stability)
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await gesture.addPointer(location: Offset.zero);
+    addTearDown(gesture.removePointer);
+
+    await gesture.moveTo(tester.getCenter(find.text('Water Consumption')));
+    await tester.pump();
+
+    await gesture.moveTo(tester.getCenter(find.text('Electricity Consumption')));
+    await tester.pump();
+
+    // Also test narrow width (360px) to verify tight constraint resilience
+    tester.view.physicalSize = const Size(360, 800);
+    await tester.pumpAndSettle();
+    expect(find.text('Water Consumption'), findsOneWidget);
+  });
 }
+
