@@ -14,10 +14,12 @@ export class Module2Inventory {
     this.init();
   }
 
-  // Module 2 - Check whether the current user is an Admin
+  // Module 2 - Check whether the current user is an authorized staff
   isAdmin() {
     const system = db.getSystem();
-    return system.activeUser?.username === 'admin';
+    const username = system.activeUser?.username;
+
+    return username === 'admin' || username === 'chef';
   }
 
   init() {
@@ -34,9 +36,9 @@ export class Module2Inventory {
     const inventory = db.get('inventory');
     const wasteLogs = db.get('foodWasteLogs');
     const currentDate = new Date('2026-08-13');
-    
 
-  
+
+
 
     // Process Shelf-life & Expiry Alerts
     const inventoryWithStatus = inventory.map(item => {
@@ -197,8 +199,8 @@ export class Module2Inventory {
                 ${filteredInventory.length === 0 ? `
                   <tr><td colspan="10" class="text-center py-4" style="color: var(--text-muted);">No inventory records match the selected filter.</td></tr>
                 ` : filteredInventory.map(item => {
-                  const isExpiring = item.statusClass && item.statusClass.includes('danger');
-                  return `
+      const isExpiring = item.statusClass && item.statusClass.includes('danger');
+      return `
                     <tr>
                       <td><code>${item.id}</code></td>
                       <td><strong>${item.name}</strong></td>
@@ -225,7 +227,7 @@ export class Module2Inventory {
                      </td>
                     </tr>
                   `;
-                }).join('')}
+    }).join('')}
               </tbody>
             </table>
           </div>
@@ -861,7 +863,7 @@ export class Module2Inventory {
           // Check Admin permission
           if (!this.isAdmin()) {
             window.showGlobalToast?.(
-              'Admin access is required to edit inventory details.',
+              'Authorized staff access is required to edit inventory details.',
               'error'
             );
             return;
@@ -1020,5 +1022,5 @@ export class Module2Inventory {
         );
       };
     }
-}
+  }
 }
