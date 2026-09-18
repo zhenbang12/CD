@@ -6,7 +6,7 @@
 export const INITIAL_DATA = {
   // Production Authentication Directory
   users: [
-    { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Operations Director", department: "Executive Board", avatar: "SC" },
+    { id: "USR-100", username: "admin", password: "password123", name: "Sarah Chen", role: "Hotel Manager", department: "Executive Board", avatar: "SC" },
     { id: "USR-101", username: "exec", password: "password123", name: "Kar Hang", role: "Sustainability Executive", department: "Executive Board", avatar: "KH" },
     { id: "USR-102", username: "tech", password: "password123", name: "Zhen Bang", role: "Tech Lead", department: "IT", avatar: "ZB" },
     { id: "USR-103", username: "fac", password: "password123", name: "Wan Ching", role: "Facilities Manager", department: "Engineering", avatar: "WC" },
@@ -269,46 +269,16 @@ export const INITIAL_DATA = {
   ],
 
   // System Immutable Audit Trail (Security & Baseline Modifications)
-  auditLogs: [
-    {
-      id: "AUD-9001",
-      timestamp: "2026-08-01 10:00:14",
-      userId: "USR-102",
-      userName: "Zhen Bang (Tech Lead)",
-      action: "UPDATE_OPERATIONAL_BASELINE",
-      targetKey: "water_per_room",
-      previousValue: "200 L/room/day",
-      newValue: "180 L/room/day",
-      reason: "Calibrated for new high-efficiency low-flow aerators installed across Tower A."
-    },
-    {
-      id: "AUD-9002",
-      timestamp: "2026-08-02 09:30:22",
-      userId: "USR-103",
-      userName: "Wan Ching (Facilities Dir)",
-      action: "UPDATE_OPERATIONAL_BASELINE",
-      targetKey: "kitchen_power",
-      previousValue: "420 kWh/day",
-      newValue: "380 kWh/day",
-      reason: "Induction cooktop upgrade in main banquet kitchen completed."
-    },
-    {
-      id: "AUD-9003",
-      timestamp: "2026-08-03 14:15:08",
-      userId: "USR-104",
-      userName: "Sze Ping (Head Chef)",
-      action: "UPDATE_OPERATIONAL_BASELINE",
-      targetKey: "buffet_food_waste",
-      previousValue: "0.15 kg/guest",
-      newValue: "0.12 kg/guest",
-      reason: "Stricter VM2026 culinary prep guidelines adopted."
-    },
-    { timestamp: "2026-08-01 10:15", userId: "USR-101", userName: "Kar Hang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "185", newValue: "180", effectiveDate: "2026-08-01", reason: "Installed new aerator standard", transactionRef: "TXN-90231A" },
-    { timestamp: "2026-08-02 09:30", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_water", previousValue: "4800", newValue: "4500", effectiveDate: "2026-08-02", reason: "Quarterly efficiency review", transactionRef: "TXN-90235C" },
-    { timestamp: "2026-08-03 14:15", userId: "USR-103", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15", newValue: "0.12", effectiveDate: "2026-08-03", reason: "Buffet tray optimization initiative", transactionRef: "TXN-90288X" },
-    { timestamp: "2026-08-05 11:20", userId: "USR-102", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "hvac_chiller_power", previousValue: "900", newValue: "850", effectiveDate: "2026-08-06", reason: "New chiller firmware update", transactionRef: "TXN-90312D" },
-    { timestamp: "2026-08-10 16:45", userId: "USR-101", userName: "Kar Hang", action: "SYSTEM_REPORT_GEN", targetKey: "compliance_pdf", previousValue: "N/A", newValue: "Exported", effectiveDate: "2026-08-10", reason: "Weekly management reporting", transactionRef: "TXN-90401B" },
-    { timestamp: "2026-08-11 08:20", userId: "USR-104", userName: "System Scheduler", action: "AUTO_ANOMALY_SCAN", targetKey: "utilityMeters", previousValue: "Scan Run", newValue: "3 Alerts Found", effectiveDate: "2026-08-11", reason: "Daily morning scan", transactionRef: "TXN-90455S" },
-    { timestamp: "2026-08-12 13:10", userId: "USR-101", userName: "Kar Hang", action: "ROLE_PERMISSION_GRANT", targetKey: "USR-108", previousValue: "Staff", newValue: "Facilities Manager", effectiveDate: "2026-08-12", reason: "Promotion applied in HR system", transactionRef: "TXN-90512H" }
+  userAudit: [
+    { id: "AUD-9001", timestamp: "2026-08-01 10:00:12", userId: "USR-102", userName: "Zhen Bang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "200 L/room/day", newValue: "180 L/room/day", effectiveDate: "2026-08-01", reason: "Calibrated for new high-efficiency low-flow aerators installed across Tower A.", transactionRef: "TXN-90100A" },
+    { id: "AUD-9002", timestamp: "2026-08-02 09:30:11", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_power", previousValue: "420 kWh/day", newValue: "380 kWh/day", effectiveDate: "2026-08-02", reason: "Induction cooktop upgrade in main banquet kitchen completed.", transactionRef: "TXN-90150B" },
+    { id: "AUD-9003", timestamp: "2026-08-03 14:15:32", userId: "USR-104", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15 kg/guest", newValue: "0.12 kg/guest", effectiveDate: "2026-08-03", reason: "Stricter VM2026 culinary prep guidelines adopted.", transactionRef: "TXN-90200C" },
+    { id: "AUD-9004", timestamp: "2026-08-01 10:15:12", userId: "USR-101", userName: "Kar Hang", action: "BASELINE_CALIBRATION", targetKey: "water_per_room", previousValue: "185", newValue: "180", effectiveDate: "2026-08-01", reason: "Installed new aerator standard", transactionRef: "TXN-90231A" },
+    { id: "AUD-9005", timestamp: "2026-08-02 09:30:14", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "kitchen_water", previousValue: "4800", newValue: "4500", effectiveDate: "2026-08-02", reason: "Quarterly efficiency review", transactionRef: "TXN-90235C" },
+    { id: "AUD-9006", timestamp: "2026-08-03 14:15:14", userId: "USR-104", userName: "Sze Ping", action: "BASELINE_CALIBRATION", targetKey: "buffet_food_waste", previousValue: "0.15", newValue: "0.12", effectiveDate: "2026-08-03", reason: "Buffet tray optimization initiative", transactionRef: "TXN-90288X" },
+    { id: "AUD-9007", timestamp: "2026-08-05 11:20:43", userId: "USR-103", userName: "Wan Ching", action: "BASELINE_CALIBRATION", targetKey: "hvac_chiller_power", previousValue: "900", newValue: "850", effectiveDate: "2026-08-06", reason: "New chiller firmware update", transactionRef: "TXN-90312D" },
+    { id: "AUD-9008", timestamp: "2026-08-10 16:45:23", userId: "USR-101", userName: "Kar Hang", action: "SYSTEM_REPORT_GEN", targetKey: "compliance_pdf", previousValue: "N/A", newValue: "Exported", effectiveDate: "2026-08-10", reason: "Weekly management reporting", transactionRef: "TXN-90401B" },
+    { id: "AUD-9009", timestamp: "2026-08-11 08:20:32", userId: "USR-106", userName: "System Scheduler", action: "AUTO_ANOMALY_SCAN", targetKey: "utilityMeters", previousValue: "Scan Run", newValue: "3 Alerts Found", effectiveDate: "2026-08-11", reason: "Daily morning scan", transactionRef: "TXN-90455S" },
+    { id: "AUD-9010", timestamp: "2026-08-12 13:10:52", userId: "USR-101", userName: "Kar Hang", action: "ROLE_PERMISSION_GRANT", targetKey: "USR-108", previousValue: "Staff", newValue: "Facilities Manager", effectiveDate: "2026-08-12", reason: "Promotion applied in HR system", transactionRef: "TXN-90512H" }
   ]
 };

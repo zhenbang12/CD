@@ -60,7 +60,7 @@ class StorageEngine {
     }
 
     // Force sync new items from INITIAL_DATA without overwriting existing data (Idempotent)
-    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'auditLogs', 'complianceLogs'];
+    const mergeArrays = ['users', 'foodWasteLogs', 'plateWasteLogs', 'userAudit', 'complianceLogs'];
     mergeArrays.forEach(key => {
       if (INITIAL_DATA[key]) {
         if (!this.data[key]) this.data[key] = [];
@@ -429,7 +429,7 @@ class StorageEngine {
       this.data.foodWasteLogs = [];
       this.data.plateWasteLogs = [];
       this.data.repairTickets = [];
-      this.data.auditLogs = [];
+      this.data.userAudit = [];
       this.data.guestInteractions = [];
       this.data.ecoVouchers = [];
     }
@@ -499,8 +499,8 @@ class StorageEngine {
       'repair_tickets': 'repairTickets',
       'repairtickets': 'repairTickets',
       'technicians': 'technicians',
-      'user_audit': 'auditLogs',
-      'auditlogs': 'auditLogs',
+      'user_audit': 'userAudit',
+      'userAudit': 'userAudit',
       'guest_interaction_log': 'guestInteractions',
       'guestinteractions': 'guestInteractions'
     };
@@ -621,7 +621,7 @@ class StorageEngine {
     return true;
   }
 
-  updateBaseline(id, newValue, reason = 'Operational adjustment') {
+  updateBaseline(id, newValue, effectiveDate, reason = 'Operational adjustment') {
     const item = this.data.baselines.find(b => b.id === id);
     if (!item) return { success: false, error: 'Baseline not found.' };
 
@@ -687,9 +687,9 @@ class StorageEngine {
       newValue,
       reason
     };
-    this.data.auditLogs.unshift(newLog);
+    this.data.userAudit.unshift(newLog);
     this.saveDatabase();
-    this.notify('auditLogs', this.data.auditLogs);
+    this.notify('userAudit', this.data.userAudit);
     return newLog;
   }
 

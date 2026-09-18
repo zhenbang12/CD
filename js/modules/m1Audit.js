@@ -3,25 +3,24 @@ import { db } from '../db/storage.js';
 export class Module1Audit {
   constructor(container) {
     this.container = container;
-    this.auditFilters = { date: '', user: '', action: '', baseline: '' };
+    this.auditFilters = { date: '', user: '', action: '' };
     this.init();
   }
 
   init() {
     this.render();
-    db.subscribe('auditLogs', () => this.render());
+    db.subscribe('userAudit', () => this.render());
   }
 
   render() {
-    let auditLogs = [];
+    let userAudit = [];
     try {
-      const allLogs = db.get('auditLogs') || [];
-      auditLogs = allLogs.filter(log => {
+      const allLogs = db.get('userAudit') || [];
+      userAudit = allLogs.filter(log => {
         let matches = true;
         if (this.auditFilters.date && !(log.timestamp || '').includes(this.auditFilters.date) && !(log.effectiveDate || '').includes(this.auditFilters.date)) matches = false;
         if (this.auditFilters.user && !(log.userName || '').toLowerCase().includes(this.auditFilters.user.toLowerCase()) && !(log.userId || '').toLowerCase().includes(this.auditFilters.user.toLowerCase())) matches = false;
         if (this.auditFilters.action && !(log.action || '').toLowerCase().includes(this.auditFilters.action.toLowerCase())) matches = false;
-        if (this.auditFilters.baseline && !(log.targetKey || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase()) && !(log.transactionRef || '').toLowerCase().includes(this.auditFilters.baseline.toLowerCase())) matches = false;
         return matches;
       });
     } catch (error) {
@@ -82,9 +81,9 @@ export class Module1Audit {
                 </div>
               </div>
               <div class="audit-stream">
-                ${auditLogs.length === 0 ? `
+                ${userAudit.length === 0 ? `
                   <div class="text-danger text-center py-3">No audit records match the selected filters.</div>
-                ` : auditLogs.slice(0, 20).map(log => {
+                ` : userAudit.slice(0, 20).map(log => {
                   const displayTxn = log.transactionRef || ('TXN-80' + log.id.replace(/\D/g, '').substring(0, 3) + 'X');
                   return `
                   <div class="audit-entry">
@@ -138,7 +137,7 @@ export class Module1Audit {
           date: this.container.querySelector('#audit-filter-date').value,
           user: this.container.querySelector('#audit-filter-user').value,
           action: this.container.querySelector('#audit-filter-action').value,
-          baseline: this.container.querySelector('#audit-filter-baseline').value,
+          
         };
         this.render();
       };

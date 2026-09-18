@@ -30,7 +30,7 @@ export class DbSchemaView {
     const meters = db.get('utilityMeters');
     const tickets = db.get('repairTickets');
     const technicians = db.get('technicians');
-    const auditLogs = db.get('auditLogs');
+    const userAudit = db.get('userAudit');
     const interactions = db.get('guestInteractions');
 
     const tableCounts = {
@@ -44,7 +44,7 @@ export class DbSchemaView {
       'utilityMeters': meters.length,
       'repairTickets': tickets.length,
       'technicians': technicians.length,
-      'auditLogs': auditLogs.length,
+      'userAudit': userAudit.length,
       'guestInteractions': interactions.length
     };
 
@@ -97,7 +97,7 @@ export class DbSchemaView {
             <button class="btn btn-xs btn-outline btn-sql-preset" data-sql="SELECT * FROM rooms WHERE servicePreference = 'OPT_OUT_CLEANING'">
               Guest Opt-Outs
             </button>
-            <button class="btn btn-xs btn-outline btn-sql-preset" data-sql="SELECT * FROM auditLogs ORDER BY timestamp DESC LIMIT 5">
+            <button class="btn btn-xs btn-outline btn-sql-preset" data-sql="SELECT * FROM userAudit ORDER BY timestamp DESC LIMIT 5">
               Recent Audit Logs
             </button>
           </div>
