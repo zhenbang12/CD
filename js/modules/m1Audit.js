@@ -44,83 +44,71 @@ export class Module1Audit {
       return;
     }
 
-    const sidebarTpl = `
-      <aside style="width: 240px; flex-shrink: 0; position: sticky; top: 120px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
-          <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding-left: 4px; letter-spacing: 0.05em;">Executive Analytics</h4>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-dashboard" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">📊</span> Sustainability Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-department" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🏢</span> Department Dashboard
-          </button>
-          
-          <button class="btn btn-sm btn-outline btn-block sidebar-nav-btn" data-target="m1-baselines" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🎯</span> Operational Baselines
-          </button>
-          
-          <button class="btn btn-sm btn-primary btn-block sidebar-nav-btn" data-target="m1-audit" style="justify-content: flex-start; padding-left: 12px;">
-            <span style="margin-right: 6px;">🛡️</span> System Audit Log
-          </button>
-        </div>
-      </aside>
+    const subNavTpl = `
+      <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-dashboard">
+          <span>📊</span> Sustainability Dashboard
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-department">
+          <span>🏢</span> Department Breakdown
+        </button>
+        <button class="tab-btn sidebar-nav-btn" data-target="m1-baselines">
+          <span>🎯</span> Operational Baselines
+        </button>
+        <button class="tab-btn sidebar-nav-btn active" data-target="m1-audit">
+          <span>🛡️</span> System Audit Log
+        </button>
+      </div>
     `;
 
     this.container.innerHTML = `
       <div class="module-view m1-container fade-in">
         <div class="view-header">
           <div>
-            <h1 class="view-title">Executive Sustainability Analytics</h1>
-            <p class="view-subtitle">Timestamped ledger recording administrative calibration changes.</p>
+            <h1 class="view-title">Executive Analytics</h1>
           </div>
         </div>
 
-        <div style="display: flex; gap: 24px; align-items: flex-start; margin-top: 10px;">
-          ${sidebarTpl}
+        ${subNavTpl}
 
-          <!-- Main Content Area -->
-          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0;">
-            <div class="card">
-              <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
-                <div>
-                  <h3 class="card-title">System Log & Parameter Adjustments</h3>
-                  <p class="card-subtitle">Filter by Date, User, Action, or Target</p>
-                </div>
-                <div class="filter-group" style="display: flex; gap: 10px; align-items: center;">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-date" placeholder="Date (YYYY-MM-DD)" value="${this.auditFilters.date}">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-user" placeholder="User ID / Name" value="${this.auditFilters.user}">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-action" placeholder="Action" value="${this.auditFilters.action}">
-                  <input type="text" class="form-input form-input-sm" id="audit-filter-baseline" placeholder="Baseline ID" value="${this.auditFilters.baseline}">
-                  <button class="btn btn-sm btn-outline" id="btn-audit-search">Filter</button>
-                </div>
-              </div>
-              <div class="audit-stream">
-                ${auditLogs.length === 0 ? `
-                  <div class="text-danger text-center py-3">No audit records match the selected filters.</div>
-                ` : auditLogs.slice(0, 20).map(log => `
-                  <div class="audit-entry">
-                    <div class="audit-icon">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <div class="audit-content">
-                      <div class="audit-top">
-                        <span class="audit-action"><code>${log.action}</code></span>
-                        <span class="audit-time text-muted">${log.timestamp}</span>
-                        ${log.transactionRef ? `<span class="badge badge-secondary" style="font-size: 9px;">${log.transactionRef}</span>` : ''}
-                      </div>
-                      <div class="audit-desc">
-                        <strong>${log.userName}</strong> adjusted <code>${log.targetKey}</code>
-                        ${log.effectiveDate ? ` (Effective: ${log.effectiveDate})` : ''}:
-                        <span class="audit-diff text-danger">${log.previousValue}</span> ➔ <span class="audit-diff text-success">${log.newValue}</span>
-                      </div>
-                      <div class="audit-reason text-muted"><em>Reason: ${log.reason}</em></div>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
+        <!-- Main Content Area - Full Widescreen Width -->
+        <div class="card">
+          <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 class="card-title">System Audit Log</h3>
+              <p class="card-subtitle">Immutable trail of baseline calibrations, overrides, and administrative modifications.</p>
             </div>
+            <div class="filter-group" style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-date" placeholder="Date (YYYY-MM-DD)" value="${this.auditFilters.date}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-user" placeholder="User ID / Name" value="${this.auditFilters.user}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-action" placeholder="Action" value="${this.auditFilters.action}">
+              <input type="text" class="form-input form-input-sm" id="audit-filter-baseline" placeholder="Baseline ID" value="${this.auditFilters.baseline}">
+              <button class="btn btn-sm btn-outline" id="btn-audit-search">Filter</button>
+            </div>
+          </div>
+          <div class="audit-stream">
+            ${auditLogs.length === 0 ? `
+              <div class="text-danger text-center py-3">No audit records match the selected filters.</div>
+            ` : auditLogs.slice(0, 20).map(log => `
+              <div class="audit-entry">
+                <div class="audit-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="audit-content">
+                  <div class="audit-top">
+                    <span class="audit-action"><code>${log.action}</code></span>
+                    <span class="audit-time text-muted">${log.timestamp}</span>
+                    ${log.transactionRef ? `<span class="badge badge-secondary" style="font-size: 9px;">${log.transactionRef}</span>` : ''}
+                  </div>
+                  <div class="audit-desc">
+                    <strong>${log.userName}</strong> adjusted <code>${log.targetKey}</code>
+                    ${log.effectiveDate ? ` (Effective: ${log.effectiveDate})` : ''}:
+                    <span class="audit-diff text-danger">${log.previousValue}</span> ➔ <span class="audit-diff text-success">${log.newValue}</span>
+                  </div>
+                  <div class="audit-reason text-muted"><em>Reason: ${log.reason}</em></div>
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
       </div>

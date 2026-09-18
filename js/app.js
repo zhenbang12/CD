@@ -13,7 +13,7 @@ import { Module1Baselines } from './modules/m1Baselines.js?v=3.0';
 import { Module1Audit } from './modules/m1Audit.js?v=3.0';
 import { Module2Inventory } from './modules/m2InventoryTracker.js?v=3.0';
 import { Module3BatchOptimizer } from './modules/m3BatchOptimization.js?v=3.0';
-import { Module4GuestPWA } from './modules/m4GuestPWA.js?v=3.0';
+import { Module4GuestPWA } from './modules/m4GuestPWA.js?v=3.3';
 import { Module5Facilities } from './modules/m5FacilitiesUtility.js?v=3.0';
 import { DbSchemaView } from './modules/dbSchemaView.js?v=3.0';
 
@@ -53,10 +53,12 @@ class App {
 
   applyInitialTheme() {
     const sys = db.getSystem();
-    if (sys.theme === 'light') {
-      document.body.classList.add('theme-light');
-    } else {
+    if (sys.theme === 'dark') {
+      document.body.classList.add('theme-dark');
       document.body.classList.remove('theme-light');
+    } else {
+      document.body.classList.remove('theme-dark');
+      document.body.classList.add('theme-light');
     }
   }
 
@@ -99,43 +101,28 @@ class App {
     const appContainer = document.getElementById('app');
 
     appContainer.innerHTML = `
-      <!-- Top Navigation & Header Bar -->
+      <!-- Clean Minimal Top Header Bar -->
       <header class="app-header">
         <div class="header-left">
           <div class="brand-logo" id="brand-home-link">
             <span class="logo-mark">🌿</span>
             <div class="brand-text">
               <span class="brand-name">EcoHotel OS</span>
-              <span class="brand-sub">Hospitality Management</span>
             </div>
           </div>
           
-          <div class="hotel-pill">
-            <span class="hotel-dot"></span>
-            <span>Grand Bay Eco-Resort & Spa</span>
+          <div class="hotel-pill" style="font-size: 12px; color: var(--text-muted);">
+            <span>Grand Bay Eco-Resort</span>
           </div>
 
-          <!-- Live Operational System Clock -->
-          <div class="live-clock-pill" title="Live Operational Clock">
+          <div class="live-clock-pill" title="System Clock" style="font-size: 12px; padding: 4px 10px;">
             <span class="clock-dot"></span>
             <span id="live-clock-display">Loading...</span>
           </div>
         </div>
 
         <div class="header-right">
-          <!-- User Profile & Logout -->
-          <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-surface); padding: 4px 12px 4px 4px; border-radius: 20px; border: 1px solid var(--border-color);">
-            <div style="width: 32px; height: 32px; border-radius: 16px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
-              ${system.activeUser?.avatar || 'SC'}
-            </div>
-            <div style="display: flex; flex-direction: column; line-height: 1.2;">
-              <span style="font-size: 13px; font-weight: 600;">${system.activeUser?.name || 'Sarah Chen'}</span>
-              <span style="font-size: 10px; color: var(--text-muted);">${system.activeUser?.role || 'Operations Director'}</span>
-            </div>
-            <button id="btn-logout" class="btn btn-sm btn-outline" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;">Logout</button>
-          </div>
-
-          <!-- Notification Counter Pill -->
+          <!-- Notification Pill -->
           <div class="nav-alert-pill" id="global-alert-pill" title="Active Alerts">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span id="alert-count-badge">0 Alerts</span>
@@ -143,12 +130,21 @@ class App {
 
           <!-- Light / Dark Theme Switcher -->
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme">
-            ${system.theme === 'light' ? '🌙' : '☀️'}
+            ${system.theme === 'dark' ? '☀️' : '🌙'}
           </button>
+
+          <!-- Streamlined User Profile & Logout -->
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: 4px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
+              ${system.activeUser?.avatar || 'SC'}
+            </div>
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-main);">${system.activeUser?.name || 'Sarah Chen'}</span>
+            <button id="btn-logout" class="btn btn-xs btn-outline" style="margin-left: 4px; padding: 2px 6px;">Logout</button>
+          </div>
         </div>
       </header>
 
-      <!-- Main Navigation Tab Bar -->
+      <!-- Minimal Navigation Tab Bar -->
       <nav class="main-navbar">
         <div class="nav-tabs-container">
           <button class="nav-tab ${this.activeTab && this.activeTab.startsWith('m1') ? 'active' : ''}" data-tab="m1-dashboard">

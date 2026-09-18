@@ -40,6 +40,16 @@ class HotelDatabase extends ChangeNotifier {
     PlateWasteLog(id: 'PW-003', date: '2026-08-11', mealPeriod: 'Dinner', dishId: 'DSH-06', dishName: 'Australian Beef Striploin', discardedKg: 6.5, isAnomaly: true, anomalyReason: 'Dropped hot tray during carvery restock', photoAttached: true, note: 'Operational spill', loggedBy: 'Chef Zhen Bang'),
   ];
 
+  // Users & Staff Auth (Module 1 - Mirrors Oracle USERS table and login.html)
+  final List<UserModel> users = const [
+    UserModel(id: 'USR-100', username: 'admin', password: 'password123', name: 'Sarah Chen', role: 'Operations Director', department: 'Executive Board', avatar: 'SC'),
+    UserModel(id: 'USR-101', username: 'exec', password: 'password123', name: 'Kar Hang', role: 'Sustainability Executive', department: 'Executive Board', avatar: 'KH'),
+    UserModel(id: 'USR-102', username: 'tech', password: 'password123', name: 'Zhen Bang', role: 'Tech Lead', department: 'IT', avatar: 'ZB'),
+    UserModel(id: 'USR-103', username: 'fac', password: 'password123', name: 'Wan Ching', role: 'Facilities Manager', department: 'Engineering', avatar: 'WC'),
+    UserModel(id: 'USR-104', username: 'chef', password: 'password123', name: 'Sze Ping', role: 'Head Chef', department: 'F&B', avatar: 'SP'),
+    UserModel(id: 'USR-105', username: 'guest', password: 'password123', name: 'Simon Wong', role: 'Guest', department: 'Guest', avatar: 'SW'),
+  ];
+
   // Rooms & Housekeeping (Module 4)
   final List<RoomModel> rooms = [
     RoomModel(roomNumber: '101', floor: 1, type: 'Deluxe Ocean Suite', guestName: 'Tan Sri Jeffrey Cheah', status: 'Occupied', servicePreference: 'STANDARD', cleaningStatus: 'Active Clean List', qrToken: 'RM101-SEC-771'),
@@ -48,7 +58,7 @@ class HotelDatabase extends ChangeNotifier {
     RoomModel(roomNumber: '202', floor: 2, type: 'Premier Sunset Villa', guestName: 'Dr. Farouk Abdullah', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 2, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 30, qrToken: 'RM202-SEC-512'),
     RoomModel(roomNumber: '301', floor: 3, type: 'Presidential Eco Suite', guestName: 'Hans Zimmer & Family', status: 'Occupied', servicePreference: 'STANDARD', towelReuse: true, cleaningStatus: 'Active Clean List', ecoPointsEarned: 5, qrToken: 'RM301-SEC-901'),
     RoomModel(roomNumber: '302', floor: 3, type: 'Deluxe Ocean Suite', guestName: 'Vacant Ready', status: 'Vacant Ready', servicePreference: 'STANDARD', cleaningStatus: 'Inspection Passed', qrToken: 'RM302-SEC-110'),
-    RoomModel(roomNumber: '304', floor: 3, type: 'Executive Seaview Room', guestName: 'Simon Wong (Demo Tourist)', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 25, qrToken: 'RM304-SEC-426'),
+    RoomModel(roomNumber: '304', floor: 3, type: 'Executive Seaview Room', guestName: 'Simon Wong', status: 'Occupied', servicePreference: 'OPT_OUT_CLEANING', optOutDays: 1, linenDelayDays: 2, towelReuse: true, cleaningStatus: 'Skipped (Opt-Out)', ecoPointsEarned: 25, qrToken: 'RM304-SEC-426'),
   ];
 
   // Track if room 304 submitted today

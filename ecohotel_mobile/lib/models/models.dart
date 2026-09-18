@@ -275,3 +275,23 @@ class Technician {
     required this.phone,
   });
 }
+
+class UserModel {
+  final String id;
+  final String username;
+  final String password;
+  final String name;
+  final String role;
+  final String department;
+  final String avatar;
+
+  const UserModel({
+    required this.id,
+    required this.username,
+    required this.password,
+    required this.name,
+    required this.role,
+    required this.department,
+    required this.avatar,
+  });
+}

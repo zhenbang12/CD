@@ -71,230 +71,171 @@ export class Module5Facilities {
         <!-- View Header -->
         <div class="view-header">
           <div>
-            <h1 class="view-title">Facilities Utility Audit & Maintenance Log</h1>
-            <p class="view-subtitle">Zone-level sub-meter telemetry monitoring, anomaly detection, and repair work order management.</p>
+            <h1 class="view-title">Facilities & Maintenance</h1>
           </div>
           <div class="header-actions">
             <button class="btn btn-sm btn-outline" id="btn-open-defect-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-              Report Facility Defect
+              Report Defect
             </button>
             <button class="btn btn-sm btn-primary" id="btn-open-meter-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
               Log Meter Reading
             </button>
           </div>
         </div>
 
-        <!-- Metric KPI Cards -->
+        <!-- Metric KPI Cards - Linear / Vercel Minimalist Format -->
         <div class="grid grid-4 kpi-row">
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Sub-Meters Monitored</span>
-              <span class="badge badge-secondary">${meters.length} Zones</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg">${meters.length} <span class="kpi-unit">Meters</span></div>
-              <div class="kpi-desc">Water & Electricity sub-meters</div>
-            </div>
+            <span class="kpi-label">Sub-Meters Monitored</span>
+            <div class="kpi-value-lg">${meters.length} <span class="kpi-unit">Zones</span></div>
+            <span class="kpi-trend neutral">Water & electricity telemetry</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Utility Anomalies (&ge;15%)</span>
-              <span class="badge ${anomaliesCount > 0 ? 'badge-danger' : 'badge-success'}">${anomaliesCount} Active</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-danger">${anomaliesCount} <span class="kpi-unit">Spikes</span></div>
-              <div class="kpi-desc">Auto-triggers High-Priority Ticket</div>
-            </div>
+            <span class="kpi-label">Utility Anomalies</span>
+            <div class="kpi-value-lg ${anomaliesCount > 0 ? 'text-danger' : 'text-primary'}">${anomaliesCount} <span class="kpi-unit">Spikes</span></div>
+            <span class="kpi-trend ${anomaliesCount > 0 ? 'negative' : 'positive'}">${anomaliesCount > 0 ? 'Requires attention' : 'All within baseline'}</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Ongoing Resource Loss (Active Tickets)</span>
-              <span class="badge badge-warning">Active</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-danger">${totalWaterLossDaily.toLocaleString()} <span class="kpi-unit">L / day</span></div>
-              <div class="kpi-value-lg text-danger" style="font-size: 16px; margin-top: 2px;">${totalEleLossDaily.toLocaleString()} <span class="kpi-unit">kWh / day</span></div>
-              <div class="kpi-desc">Sum of estimated loss from all non-completed repair tickets, split by resource type</div>
-            </div>
+            <span class="kpi-label">Active Resource Loss</span>
+            <div class="kpi-value-lg text-danger">${totalWaterLossDaily.toLocaleString()} <span class="kpi-unit">L/day</span></div>
+            <span class="kpi-trend negative">${totalEleLossDaily.toLocaleString()} kWh/day electricity</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Maintenance Technicians</span>
-              <span class="badge badge-info">On Duty</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-primary">${technicians.filter(t => t.status === 'Available').length}/${technicians.length} <span class="kpi-unit">Available</span></div>
-              <div class="kpi-desc">Auto-assigned via FIFO queue</div>
-            </div>
+            <span class="kpi-label">Technicians on Duty</span>
+            <div class="kpi-value-lg text-primary">${technicians.filter(t => t.status === 'Available').length}/${technicians.length} <span class="kpi-unit">Available</span></div>
+            <span class="kpi-trend positive">Ready for auto-dispatch</span>
           </div>
         </div>
 
-        <!-- Section 1: Hotel Zone Visualizer -->
+        <!-- Section 1: Streamlined Sensor Nodes & Telemetry Overview -->
         <div class="card">
           <div class="card-header">
-            <div>
-              <h3 class="card-title">Zone Telemetry & Sensor Nodes</h3>
-              <p class="card-subtitle">Live sensor nodes with anomaly detection flags (Click pin to inspect or update)</p>
-            </div>
-            <span class="badge badge-secondary">Telemetry</span>
+            <h3 class="card-title">Sensor Nodes & Sub-Meters</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">${meters.length} active telemetry streams</span>
           </div>
           
-          <div style="background: var(--bg-card-subtle); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); padding: 16px; position: relative; min-height: 180px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-around; align-items: center;">
-            ${meters.map(m => {
-      const isAnomaly = m.status.includes('Anomaly');
-      // Any reading above baseline gets the red outline treatment,
-      // even if it hasn't crossed the +15% "Spike Flag" threshold
-      // that triggers an auto-ticket. Exceeding baseline at all is
-      // still worth calling out visually here.
-      const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
-      const flagRed = isAnomaly || overBaseline;
-      const badgeLabel = isAnomaly ? 'Spike Flag' : (overBaseline ? 'Above Baseline' : 'Normal');
-      return `
-                <div class="zone-pin-card" style="background: var(--bg-card); border: 1px solid ${flagRed ? 'var(--danger)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 10px 14px; min-width: 180px; cursor: pointer; transition: all 0.15s;" data-meter-id="${m.meterId}">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 14px;">${m.icon || '⚡'}</span>
-                    <span class="badge ${flagRed ? 'badge-danger' : 'badge-success'}">${badgeLabel}</span>
-                  </div>
-                  <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">${m.zone}</div>
-                  <div style="font-size: 10.5px; color: var(--text-muted);">${m.meterId} (${m.type})</div>
-                  <div style="margin-top: 6px; font-size: 13px; font-weight: 700; color: ${flagRed ? 'var(--danger)' : 'var(--primary)'};">
-                    ${m.lastReading || '—'} <small style="font-size: 10px; color: var(--text-muted);">${m.unit}</small>
-                  </div>
-                  <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">Baseline: ${m.baselineDaily} ${m.unit}</div>
-                </div>
-              `;
-    }).join('')}
-          </div>
-        </div>
-
-        <!-- Section 2: Meter Telemetry Table -->
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <h3 class="card-title">Zone Utility Sub-Meters</h3>
-              <p class="card-subtitle">Daily meter readouts compared against calibrated baseline standards</p>
-            </div>
-            <span class="badge badge-secondary">Telemetry Logs</span>
-          </div>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Meter ID</th>
+                  <th>Meter</th>
                   <th>Zone</th>
                   <th>Type</th>
-                  <th>Baseline Target</th>
-                  <th>Latest Reading</th>
+                  <th class="col-number">Baseline Target</th>
+                  <th class="col-number">Current Reading</th>
                   <th>Last Inspected</th>
                   <th>Status</th>
-                  <th>Quick Action</th>
+                  <th class="col-action">Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${meters.map(m => {
-      const isAnomaly = m.status.includes('Anomaly');
-      const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
-      const flagRed = isAnomaly || overBaseline;
-      const displayStatus = isAnomaly ? m.status : (overBaseline ? 'Above Baseline' : m.status);
-      return `
-                  <tr>
-                    <td><code>${m.meterId}</code></td>
-                    <td><strong>${m.zone}</strong></td>
-                    <td><span class="badge ${m.type === 'Water' ? 'badge-info' : 'badge-warning'}">${m.type}</span></td>
-                    <td>${m.baselineDaily} ${m.unit}</td>
-                    <td><strong class="font-lg ${flagRed ? 'text-danger' : 'text-primary'}">${m.lastReading || '—'}</strong> ${m.unit}</td>
-                    <td><small class="text-muted">${m.lastReadingTime}</small></td>
-                    <td>
-                      <span class="badge ${flagRed ? 'badge-danger' : 'badge-success'}">
-                        ${displayStatus}
-                      </span>
-                    </td>
-                    <td>
-                      <button class="btn btn-xs btn-outline btn-quick-meter" data-id="${m.meterId}">
-                        Update
-                      </button>
-                    </td>
-                  </tr>
-                `;
-    }).join('')}
+                  const isAnomaly = m.status.includes('Anomaly');
+                  const overBaseline = typeof m.lastReading === 'number' && m.lastReading > m.baselineDaily;
+                  const flagRed = isAnomaly || overBaseline;
+                  const displayStatus = isAnomaly ? 'Spike Anomaly' : (overBaseline ? 'Above Baseline' : 'Normal');
+                  return `
+                    <tr class="zone-pin-card" data-meter-id="${m.meterId}" style="cursor: pointer;">
+                      <td><code>${m.meterId}</code></td>
+                      <td><strong>${m.zone}</strong></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${m.type}</span></td>
+                      <td class="col-number">${m.baselineDaily} ${m.unit}</td>
+                      <td class="col-number">
+                        <span style="font-weight: 600; color: ${flagRed ? 'var(--danger)' : 'var(--primary)'};">
+                          ${m.lastReading || '—'}
+                        </span>
+                        <span style="font-size: 11px; color: var(--text-muted);">${m.unit}</span>
+                      </td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${m.lastReadingTime}</span></td>
+                      <td>
+                        <span class="status-dot-wrap" style="color: ${flagRed ? 'var(--danger)' : 'var(--primary)'};">
+                          <span class="status-dot ${flagRed ? 'danger' : 'success'}"></span>
+                          ${displayStatus}
+                        </span>
+                      </td>
+                      <td class="col-action">
+                        <button class="btn btn-xs btn-outline btn-quick-meter row-action-hover" data-id="${m.meterId}">
+                          Update
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Section 3: Repair Tickets Lifecycle & Dispatch Queue -->
+        <!-- Section 2: Repair Tickets Lifecycle & Dispatch Queue -->
+        <div class="tab-pills-full grid-cols-4" style="margin-bottom: 16px;">
+          <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All Tickets (${tickets.length})</button>
+          <button class="tab-btn ${this.activeFilter === 'HIGH' ? 'active' : ''}" data-filter="HIGH">High Priority (${tickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length})</button>
+          <button class="tab-btn ${this.activeFilter === 'IN_PROGRESS' ? 'active' : ''}" data-filter="IN_PROGRESS">In Progress</button>
+          <button class="tab-btn ${this.activeFilter === 'COMPLETED' ? 'active' : ''}" data-filter="COMPLETED">Completed</button>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <div>
-              <h3 class="card-title">Repair Ticket Lifecycle & Dispatch Queue</h3>
-              <p class="card-subtitle">Dispatched tasks, resource loss rates, and technician resolution status</p>
+              <h3 class="card-title">Repair Ticket Queue</h3>
+              <p class="card-subtitle">${filteredTickets.length} work orders monitored with SLA countdowns.</p>
             </div>
-            <div class="tab-pills">
-              <button class="tab-btn ${this.activeFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">All (${tickets.length})</button>
-              <button class="tab-btn ${this.activeFilter === 'HIGH' ? 'active' : ''}" data-filter="HIGH">High Priority (${tickets.filter(t => t.priority === 'High' && t.status !== 'Completed').length})</button>
-              <button class="tab-btn ${this.activeFilter === 'IN_PROGRESS' ? 'active' : ''}" data-filter="IN_PROGRESS">In Progress</button>
-              <button class="tab-btn ${this.activeFilter === 'COMPLETED' ? 'active' : ''}" data-filter="COMPLETED">Completed</button>
-            </div>
+            <span class="badge badge-secondary">Ground Operations</span>
           </div>
 
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Ticket #</th>
-                  <th>Location / Zone</th>
-                  <th>Defect Category</th>
-                  <th>Loss Rate</th>
+                  <th>Ticket</th>
+                  <th>Zone</th>
+                  <th>Category</th>
+                  <th class="col-number">Loss Rate</th>
                   <th>Priority</th>
-                  <th>Assigned Technician</th>
+                  <th>Assigned</th>
                   <th>Status</th>
-                  <th>Evidence</th>
-                  <th>Action</th>
+                  <th class="col-action">Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredTickets.length === 0 ? `
-                  <tr><td colspan="9" class="text-center py-4">No repair tickets match the selected filter.</td></tr>
+                  <tr><td colspan="8" class="text-center py-4" style="color: var(--text-muted);">No repair tickets match the selected filter.</td></tr>
                 ` : filteredTickets.map(t => `
                   <tr>
                     <td><code>${t.ticketNumber}</code></td>
                     <td><strong>${t.zone}</strong></td>
-                    <td>${t.defectCategory}</td>
-                    <td><strong class="text-danger">${t.estimatedLossRate}</strong></td>
-                    <td><span class="badge ${t.priority === 'High' ? 'badge-danger' : 'badge-secondary'}">${t.priority}</span></td>
-                    <td><small><strong>${t.assignedTechnician}</strong></small></td>
+                    <td><span style="font-size: 12px; color: var(--text-muted);">${t.defectCategory}</span></td>
+                    <td class="col-number"><span style="font-weight: 600; color: var(--danger);">${t.estimatedLossRate}</span></td>
                     <td>
-                      <span class="status-pill ${t.status === 'Completed' ? 'pill-completed' : t.status === 'In Progress' ? 'pill-progress' : 'pill-assigned'}">
+                      <span class="status-dot-wrap" style="color: ${t.priority === 'High' ? 'var(--danger)' : 'var(--text-muted)'};">
+                        <span class="status-dot ${t.priority === 'High' ? 'danger' : 'neutral'}"></span>
+                        ${t.priority}
+                      </span>
+                    </td>
+                    <td><span style="font-size: 12px;">${t.assignedTechnician}</span></td>
+                    <td>
+                      <span class="status-dot-wrap">
+                        <span class="status-dot ${t.status === 'Completed' ? 'success' : t.status === 'In Progress' ? 'warning' : 'neutral'}"></span>
                         ${t.status}
                       </span>
                     </td>
-                    <td>
-                      ${t.photoDataUrl ? `
-                        <button type="button" class="btn btn-xs btn-outline btn-view-photo" data-id="${t.id}">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:3px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                          View Photo
-                        </button>
-                      ` : `<small class="text-muted">—</small>`}
-                    </td>
-                    <td>
+                    <td class="col-action">
                       ${t.status !== 'Completed' ? `
-                        <div class="btn-group-xs">
+                        <div class="btn-group-xs row-action-hover" style="justify-content: flex-end;">
                           ${t.status !== 'In Progress' ? `
                             <button class="btn btn-xs btn-outline btn-status-progress" data-id="${t.id}">
                               Start
                             </button>
                           ` : ''}
-                          <button class="btn btn-xs btn-success btn-status-complete" data-id="${t.id}" data-ticket="${t.ticketNumber}">
-                            Fix
+                          <button class="btn btn-xs btn-primary btn-status-complete" data-id="${t.id}" data-ticket="${t.ticketNumber}">
+                            Resolve
                           </button>
                         </div>
                       ` : `
-                        <small class="text-muted">Resolved on ${t.completedAt || 'Today'}</small>
+                        <span style="font-size: 11px; color: var(--text-muted);">Done</span>
                       `}
                     </td>
                   </tr>

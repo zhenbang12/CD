@@ -75,163 +75,128 @@ export class Module3BatchOptimizer {
         <!-- Header & Action Ribbon -->
         <div class="view-header">
           <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <h1 class="view-title">Predictive F&B Batch Optimization Engine</h1>
-              <span class="badge badge-primary">F&B Operations</span>
-            </div>
-            <p class="view-subtitle">Multi-factor algorithmic batching matching 48h guest influx, recipe BOM yields, and decayed plate-waste feedback loops.</p>
+            <h1 class="view-title">Batch Optimization</h1>
           </div>
           <div class="header-actions">
-            <button class="btn btn-sm btn-outline" id="btn-open-user-guide" style="border-color: var(--primary); color: var(--primary);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              📖 User & Ops Guide
+            <button class="btn btn-sm btn-outline" id="btn-open-user-guide">
+              📖 User Guide
             </button>
             <button class="btn btn-sm btn-outline" id="btn-open-plate-waste-modal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Log Plate Waste
+              Log Waste
             </button>
             <button class="btn btn-sm btn-primary" id="btn-print-prep-sheet">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              Print Station Prep Sheet
+              Print Prep Sheet
             </button>
           </div>
         </div>
 
-        <!-- Over-Prep Warning Alert Banner -->
+        <!-- Over-Prep Warning Alert Banner (Reserved for critical issues) -->
         ${overPrepAlerts.length > 0 ? `
           <div class="alert-banner alert-warning-strip">
             <div class="alert-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="alert-content">
-              <strong>Automated Over-Prep & Plate Waste Radar:</strong>
+              <strong>Over-Prep Attention Required:</strong>
               ${overPrepAlerts.map(alt => `
                 <div style="font-size: 12px; margin-top: 2px;">
-                  • <strong>${alt.dishName}</strong>: ${alt.message} <span class="badge badge-danger">${alt.actionRequired}</span>
+                  • ${alt.dishName}: ${alt.message}
                 </div>
               `).join('')}
             </div>
           </div>
         ` : ''}
 
-
-
         <!-- Service Period Filter & Ingested Guest Matrix Bar -->
-        <div class="card filter-bar-card">
-          <div class="filter-controls" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;">
+        <div class="card" style="padding: 16px;">
+          <div class="filter-controls" style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 14px; align-items: flex-end;">
             <div class="filter-item">
-              <label class="form-label">Service Date (Oracle 48h Window)</label>
-              <select class="form-input" id="select-prep-date">
-                <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today: 13 Aug 2026</option>
-                <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow: 14 Aug 2026</option>
+              <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Service Date</label>
+              <select class="form-input" id="select-prep-date" style="font-size: 13.5px; padding: 8px 12px;">
+                <option value="2026-08-13" ${this.selectedDate === '2026-08-13' ? 'selected' : ''}>Today (13 Aug 2026)</option>
+                <option value="2026-08-14" ${this.selectedDate === '2026-08-14' ? 'selected' : ''}>Tomorrow (14 Aug 2026)</option>
               </select>
             </div>
             <div class="filter-item">
-              <label class="form-label">Meal Service Period</label>
-              <div class="tab-pills">
-                <button class="tab-btn ${this.selectedShift === 'Breakfast' ? 'active' : ''}" data-shift="Breakfast">Breakfast Buffet</button>
+              <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Meal Service Period</label>
+              <div class="tab-pills-full grid-cols-3">
+                <button class="tab-btn ${this.selectedShift === 'Breakfast' ? 'active' : ''}" data-shift="Breakfast">Breakfast Service</button>
                 <button class="tab-btn ${this.selectedShift === 'Lunch' ? 'active' : ''}" data-shift="Lunch">Lunch Service</button>
-                <button class="tab-btn ${this.selectedShift === 'Dinner' ? 'active' : ''}" data-shift="Dinner">Dinner Buffet</button>
+                <button class="tab-btn ${this.selectedShift === 'Dinner' ? 'active' : ''}" data-shift="Dinner">Dinner Service</button>
               </div>
             </div>
           </div>
 
-          <div style="background: var(--bg-card-subtle); padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="background: var(--bg-card-subtle); padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Oracle Reservation Sync</span>
-              <div style="font-size: 15px; font-weight: 800;">${data.forecast.totalInHouseGuests} In-House <span class="badge badge-success">+${data.forecast.expectedCheckIns} Check-Ins</span></div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Reservations</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 1px;">${data.forecast.totalInHouseGuests} In-House <span style="font-size: 12px; color: var(--primary); font-weight: 500;">(+${data.forecast.expectedCheckIns})</span></div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Capture Rate (${data.captureRate}%)</span>
-              <div style="font-size: 15px; font-weight: 800; color: var(--primary);">${data.estimatedDiners} Expected Diners</div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Expected Diners (${data.captureRate}%)</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 1px;">${data.estimatedDiners} Diners</div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Cultural Demographics</span>
-              <div style="font-size: 12px;">MY/SG: <strong>${data.forecast.nationalities.Malaysian + data.forecast.nationalities.Singaporean}%</strong> • EU: <strong>${data.forecast.nationalities.European}%</strong> • ME: <strong>${data.forecast.nationalities.MiddleEastern}%</strong></div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Demographics</div>
+              <div style="font-size: 13px; color: var(--text-main); margin-top: 1px;">MY/SG: ${data.forecast.nationalities.Malaysian + data.forecast.nationalities.Singaporean}% • EU: ${data.forecast.nationalities.European}% • ME: ${data.forecast.nationalities.MiddleEastern}%</div>
             </div>
             <div>
-              <span class="text-muted" style="font-size: 10px; text-transform: uppercase; font-weight: 600;">Dietary Profiles</span>
-              <div style="font-size: 12px;">Halal: <strong>${data.forecast.dietaryProfiles.Halal}</strong> • Vegan: <strong>${data.forecast.dietaryProfiles.VeganVegetarian}</strong> • GF: <strong>${data.forecast.dietaryProfiles.GlutenFree}</strong></div>
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Dietary Profiles</div>
+              <div style="font-size: 13px; color: var(--text-main); margin-top: 1px;">Halal: ${data.forecast.dietaryProfiles.Halal} • Vegan: ${data.forecast.dietaryProfiles.VeganVegetarian} • GF: ${data.forecast.dietaryProfiles.GlutenFree}</div>
             </div>
           </div>
         </div>
 
-        <!-- Metric KPI Cards -->
+        <!-- Metric KPI Cards - Linear / Vercel Minimalist Format -->
         <div class="grid grid-4 kpi-row">
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Optimized Prep Target</span>
-              <span class="badge badge-primary">Smart Batch</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg">${totalRecommendedKg.toFixed(1)} <span class="kpi-unit">kg Total</span></div>
-              <div class="kpi-desc">Across all live kitchen stations</div>
-            </div>
+            <span class="kpi-label">Optimized Prep Target</span>
+            <div class="kpi-value-lg">${totalRecommendedKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <span class="kpi-trend neutral">Across all live kitchen stations</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Over-Prep Avoided</span>
-              <span class="badge badge-success">+${((totalFoodSavedKg / (totalRecommendedKg + totalFoodSavedKg || 1)) * 100).toFixed(1)}% Waste Cut</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg text-success">${totalFoodSavedKg.toFixed(1)} <span class="kpi-unit">kg Saved</span></div>
-              <div class="kpi-desc">RM ${totalCostSavedMyr.toFixed(0)} avoided cost impact</div>
-            </div>
+            <span class="kpi-label">Over-Prep Avoided</span>
+            <div class="kpi-value-lg text-primary">${totalFoodSavedKg.toFixed(1)} <span class="kpi-unit">kg</span></div>
+            <span class="kpi-trend positive">↑ ${((totalFoodSavedKg / (totalRecommendedKg + totalFoodSavedKg || 1)) * 100).toFixed(1)}% reduction</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">Avoided Carbon (CO2e)</span>
-              <span class="badge badge-secondary">VM2026 Direct</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg" style="color: #059669;">${totalCo2AvoidedKg.toFixed(1)} <span class="kpi-unit">kg CO2e</span></div>
-              <div class="kpi-desc">M1 Compliance Score contribution</div>
-            </div>
+            <span class="kpi-label">Avoided Carbon (CO2e)</span>
+            <div class="kpi-value-lg text-primary">${totalCo2AvoidedKg.toFixed(1)} <span class="kpi-unit">kg CO₂e</span></div>
+            <span class="kpi-trend positive">↑ RM ${totalCostSavedMyr.toFixed(0)} saved</span>
           </div>
 
           <div class="card kpi-card">
-            <div class="kpi-header">
-              <span class="kpi-label">M2 Stock Reconciliation</span>
-              <span class="badge ${shortages.length > 0 ? 'badge-warning' : 'badge-success'}">${shortages.length > 0 ? `${shortages.length} Shortages` : '100% In Stock'}</span>
-            </div>
-            <div class="kpi-body">
-              <div class="kpi-value-lg ${shortages.length > 0 ? 'text-warning' : 'text-primary'}">${data.ingredientSummary.length - shortages.length}/${data.ingredientSummary.length} <span class="kpi-unit">Ready</span></div>
-              <div class="kpi-desc">${shortages.length > 0 ? `Reorder cost: RM ${totalShortageCost.toFixed(0)}` : 'Chiller inventory verified'}</div>
-            </div>
+            <span class="kpi-label">Stock Reconciliation</span>
+            <div class="kpi-value-lg ${shortages.length > 0 ? 'text-warning' : 'text-primary'}">${data.ingredientSummary.length - shortages.length}/${data.ingredientSummary.length} <span class="kpi-unit">Ready</span></div>
+            <span class="kpi-trend ${shortages.length > 0 ? 'negative' : 'positive'}">${shortages.length > 0 ? `${shortages.length} items short` : 'All ingredients verified'}</span>
           </div>
         </div>
 
-        <!-- Station Filter & View Switcher Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-          <!-- Station Tabs -->
-          <div class="tab-pills" style="margin-bottom: 0;">
-            ${(STATIONS || BatchOptimizerEngine?.STATIONS || FALLBACK_STATIONS).map(st => `
-              <button class="tab-btn ${this.selectedStation === st.id ? 'active' : ''}" data-station="${st.id}">
-                ${st.icon} ${st.name}
-              </button>
-            `).join('')}
-          </div>
+        <!-- Station Filter Tabs - Full Width Distributed -->
+        <div class="tab-pills-full grid-cols-5" style="margin-bottom: 12px;">
+          ${(STATIONS || BatchOptimizerEngine?.STATIONS || FALLBACK_STATIONS).map(st => `
+            <button class="tab-btn ${this.selectedStation === st.id ? 'active' : ''}" data-station="${st.id}">
+              ${st.name}
+            </button>
+          `).join('')}
+        </div>
 
-          <!-- Section Mode Switcher -->
-          <div class="tab-pills" style="margin-bottom: 0;">
-            <button class="tab-btn ${this.activeViewTab === 'recommendations' ? 'active' : ''}" data-view-tab="recommendations">📋 Master Prep Targets</button>
-            <button class="tab-btn ${this.activeViewTab === 'waves' ? 'active' : ''}" data-view-tab="waves">⏱️ Staggered 3-Wave Timeline</button>
-            <button class="tab-btn ${this.activeViewTab === 'requisition' ? 'active' : ''}" data-view-tab="requisition">📦 Recipe BOM & Requisition</button>
-            <button class="tab-btn ${this.activeViewTab === 'plateLogs' ? 'active' : ''}" data-view-tab="plateLogs">🍽️ Plate Waste Returns (${plateLogs.length})</button>
-          </div>
+        <!-- Section Mode Switcher - Full Width Distributed -->
+        <div class="tab-pills-full grid-cols-4" style="margin-bottom: 20px;">
+          <button class="tab-btn ${this.activeViewTab === 'recommendations' ? 'active' : ''}" data-view-tab="recommendations">🎯 Production Prep Targets</button>
+          <button class="tab-btn ${this.activeViewTab === 'waves' ? 'active' : ''}" data-view-tab="waves">🌊 3-Wave Staggered Schedule</button>
+          <button class="tab-btn ${this.activeViewTab === 'requisition' ? 'active' : ''}" data-view-tab="requisition">📋 Recipe Ingredients BOM</button>
+          <button class="tab-btn ${this.activeViewTab === 'plateLogs' ? 'active' : ''}" data-view-tab="plateLogs">🍽️ Plate Waste Log (${plateLogs.length})</button>
         </div>
 
         <!-- View Tab 1: Master Prep Targets Table -->
         ${this.activeViewTab === 'recommendations' ? `
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Optimized Prep Recommendations (${this.selectedShift} Service)</h3>
-                <p class="card-subtitle">Synthesizes cultural weights, declared diets, recipe yield loss, and decayed plate-waste feedback</p>
-              </div>
-              <span class="badge badge-secondary">${filteredRecs.length} Dishes Shown</span>
+              <h3 class="card-title">Prep Recommendations (${this.selectedShift})</h3>
+              <span style="font-size: 12px; color: var(--text-muted);">${filteredRecs.length} items</span>
             </div>
             <div class="table-responsive">
               <table class="data-table">
@@ -239,40 +204,37 @@ export class Module3BatchOptimizer {
                   <tr>
                     <th>Dish Name</th>
                     <th>Station</th>
-                    <th>Base (g)</th>
-                    <th>Demographic Factor</th>
-                    <th>EMA Waste Multiplier</th>
-                    <th>Yield</th>
-                    <th>Unoptimized</th>
-                    <th>Optimized Prep Target</th>
-                    <th>Prevented Waste</th>
-                    <th>Chef Action</th>
+                    <th class="col-number">Base</th>
+                    <th class="col-center">Demographic</th>
+                    <th class="col-center">Waste Adj</th>
+                    <th class="col-number">Yield</th>
+                    <th class="col-number">Unoptimized</th>
+                    <th class="col-number">Target</th>
+                    <th class="col-number">Prevented</th>
+                    <th class="col-action">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${filteredRecs.map(rec => `
                     <tr>
                       <td>
-                        <strong>${rec.dishName}</strong>
-                        <div style="font-size: 10px; color: var(--text-muted);">${rec.ingredientRefs.join(' • ')}</div>
+                        <div style="font-weight: 600; color: var(--text-main);">${rec.dishName}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">${rec.ingredientRefs.join(' • ')}</div>
                       </td>
-                      <td><span class="badge badge-secondary">${rec.category}</span></td>
-                      <td>${rec.baseGrams}g</td>
-                      <td><code>${rec.culturalFactor}x</code> ${rec.dietaryFactor > 1.0 ? `<small class="badge badge-success">Diet ${rec.dietaryFactor}x</small>` : ''}</td>
-                      <td>
-                        <span class="badge ${rec.wasteMultiplier < 0.90 ? 'badge-warning' : 'badge-secondary'}">
-                          ${rec.wasteMultiplier}x (${((1 - rec.wasteMultiplier) * 100).toFixed(0)}% cut)
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${rec.category}</span></td>
+                      <td class="col-number">${rec.baseGrams}g</td>
+                      <td class="col-center"><code>${rec.culturalFactor}x</code></td>
+                      <td class="col-center">
+                        <span style="font-size: 12px; ${rec.wasteMultiplier < 0.90 ? 'color: var(--warning); font-weight: 500;' : 'color: var(--text-muted);'}">
+                          ${rec.wasteMultiplier}x
                         </span>
                       </td>
-                      <td><small>${(rec.cookingYield * 100).toFixed(0)}%</small></td>
-                      <td><span class="text-muted strike">${rec.unoptimizedKg} kg</span></td>
-                      <td><strong class="text-primary font-lg font-bold">${rec.recommendedKg} kg</strong></td>
-                      <td>
-                        <span class="text-success font-bold">-${rec.foodSavedKg} kg</span>
-                        <div style="font-size: 9px; color: var(--text-muted);">RM ${rec.costSavedMyr}</div>
-                      </td>
-                      <td>
-                        <button class="btn btn-xs btn-outline btn-chef-override" data-dish-id="${rec.dishId}" data-dish-name="${rec.dishName}" data-multiplier="${rec.wasteMultiplier}">
+                      <td class="col-number">${(rec.cookingYield * 100).toFixed(0)}%</td>
+                      <td class="col-number" style="color: var(--text-muted); text-decoration: line-through;">${rec.unoptimizedKg} kg</td>
+                      <td class="col-number"><strong style="color: var(--primary); font-size: 14px;">${rec.recommendedKg} kg</strong></td>
+                      <td class="col-number" style="color: var(--primary); font-weight: 500;">-${rec.foodSavedKg} kg</td>
+                      <td class="col-action">
+                        <button class="btn btn-xs btn-outline btn-chef-override row-action-hover" data-dish-id="${rec.dishId}" data-dish-name="${rec.dishName}" data-multiplier="${rec.wasteMultiplier}">
                           Override
                         </button>
                       </td>
@@ -288,47 +250,44 @@ export class Module3BatchOptimizer {
         ${this.activeViewTab === 'waves' ? `
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Staggered Multi-Batch Prep Waves (Just-In-Time Cooking)</h3>
-                <p class="card-subtitle">Prevents food degradation by scheduling 3 timed cooking waves rather than 1 massive opening batch</p>
-              </div>
-              <span class="badge badge-primary">3-Wave Cadence</span>
+              <h3 class="card-title">Staggered Prep Waves</h3>
+              <span style="font-size: 12px; color: var(--text-muted);">Just-in-time preparation</span>
             </div>
-            <div class="grid grid-3" style="gap: 16px; margin-top: 10px;">
-              <div class="card" style="border-left: 4px solid #059669; background: var(--bg-card-subtle);">
-                <div style="font-weight: 800; font-size: 14px; color: #059669;">🌊 WAVE 1: OPENING PREP (55%)</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave1.time || '06:30 AM'} • Buffet opening readiness</div>
+            <div class="grid grid-3" style="gap: 16px;">
+              <div class="card" style="border: 1px solid var(--border-subtle); padding: 14px;">
+                <div style="font-weight: 600; font-size: 13px; color: var(--primary);">Wave 1: Opening (55%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">${filteredRecs[0]?.waves.wave1.time || '06:30 AM'}</div>
                 <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
                   ${filteredRecs.map(r => `
-                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
                       <span>${r.dishName}</span>
-                      <strong class="text-primary">${r.waves.wave1.kg} kg</strong>
+                      <strong style="color: var(--text-main);">${r.waves.wave1.kg} kg</strong>
                     </li>
                   `).join('')}
                 </ul>
               </div>
 
-              <div class="card" style="border-left: 4px solid #3b82f6; background: var(--bg-card-subtle);">
-                <div style="font-weight: 800; font-size: 14px; color: #3b82f6;">🌊 WAVE 2: RUSH REPLENISHMENT (35%)</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave2.time || '08:00 AM'} • Peak guest check-in rush</div>
+              <div class="card" style="border: 1px solid var(--border-subtle); padding: 14px;">
+                <div style="font-weight: 600; font-size: 13px; color: var(--secondary);">Wave 2: Replenishment (35%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">${filteredRecs[0]?.waves.wave2.time || '08:00 AM'}</div>
                 <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
                   ${filteredRecs.map(r => `
-                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
                       <span>${r.dishName}</span>
-                      <strong style="color: #3b82f6;">${r.waves.wave2.kg} kg</strong>
+                      <strong style="color: var(--text-main);">${r.waves.wave2.kg} kg</strong>
                     </li>
                   `).join('')}
                 </ul>
               </div>
 
-              <div class="card" style="border-left: 4px solid #f59e0b; background: var(--bg-card-subtle);">
-                <div style="font-weight: 800; font-size: 14px; color: #f59e0b;">🌊 WAVE 3: ON-DEMAND FINALE (10%)</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Scheduled: ${filteredRecs[0]?.waves.wave3.time || '09:15 AM'} • Live counter top-up</div>
+              <div class="card" style="border: 1px solid var(--border-subtle); padding: 14px;">
+                <div style="font-weight: 600; font-size: 13px; color: var(--text-muted);">Wave 3: Finale (10%)</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">${filteredRecs[0]?.waves.wave3.time || '09:15 AM'}</div>
                 <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px;">
                   ${filteredRecs.map(r => `
-                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle);">
+                    <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-subtle);">
                       <span>${r.dishName}</span>
-                      <strong style="color: #f59e0b;">${r.waves.wave3.kg} kg</strong>
+                      <strong style="color: var(--text-main);">${r.waves.wave3.kg} kg</strong>
                     </li>
                   `).join('')}
                 </ul>
@@ -341,41 +300,42 @@ export class Module3BatchOptimizer {
         ${this.activeViewTab === 'requisition' ? `
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Kitchen Recipe Bill of Materials (BOM) & Inventory Reconciliation</h3>
-                <p class="card-subtitle">Cross-referenced with Module 2 Inventory to auto-detect shortages and generate purchase orders</p>
-              </div>
+              <h3 class="card-title">Recipe Bill of Materials (BOM)</h3>
               ${shortages.length > 0 ? `
-                <button class="btn btn-sm btn-warning" id="btn-generate-po">
-                  ⚡ Auto-Create Purchase Requisition (RM ${totalShortageCost.toFixed(0)})
+                <button class="btn btn-xs btn-outline" id="btn-generate-po" style="color: var(--warning); border-color: var(--warning);">
+                  Create Requisition (RM ${totalShortageCost.toFixed(0)})
                 </button>
-              ` : '<span class="badge badge-success">All Chiller Stock Ready</span>'}
+              ` : '<span style="font-size: 12px; color: var(--primary);">Stock Verified</span>'}
             </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
                     <th>Raw Ingredient Name</th>
-                    <th>Supplier Reference</th>
-                    <th>Required for Shift</th>
-                    <th>Chiller Stock (M2)</th>
-                    <th>Unit Cost</th>
-                    <th>Requisition Status</th>
+                    <th>Supplier</th>
+                    <th class="col-number">Required</th>
+                    <th class="col-number">In Stock (M2)</th>
+                    <th class="col-number">Unit Cost</th>
+                    <th class="col-action" style="width: 140px;">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${data.ingredientSummary.map(ing => `
                     <tr>
                       <td><strong>${ing.ingredientName}</strong></td>
-                      <td><small class="text-muted">${ing.supplier}</small></td>
-                      <td><strong>${ing.needed}</strong> ${ing.unit}</td>
-                      <td>${ing.inStock} ${ing.unit}</td>
-                      <td>RM ${ing.unitPrice.toFixed(2)} / ${ing.unit}</td>
-                      <td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${ing.supplier}</span></td>
+                      <td class="col-number">${ing.needed} ${ing.unit}</td>
+                      <td class="col-number">${ing.inStock} ${ing.unit}</td>
+                      <td class="col-number">RM ${ing.unitPrice.toFixed(2)}</td>
+                      <td class="col-action">
                         ${ing.isShortage ? `
-                          <span class="badge badge-danger">Shortage: -${ing.shortageAmount} ${ing.unit} (RM ${ing.prCostImpact})</span>
+                          <span class="status-dot-wrap" style="color: var(--danger);">
+                            <span class="status-dot danger"></span> Shortage (-${ing.shortageAmount})
+                          </span>
                         ` : `
-                          <span class="badge badge-success">Sufficient Stock</span>
+                          <span class="status-dot-wrap" style="color: var(--primary);">
+                            <span class="status-dot success"></span> In Stock
+                          </span>
                         `}
                       </td>
                     </tr>
@@ -390,44 +350,40 @@ export class Module3BatchOptimizer {
         ${this.activeViewTab === 'plateLogs' ? `
           <div class="card">
             <div class="card-header">
-              <div>
-                <h3 class="card-title">Plate Waste Feedback Ledger & Trend Radar</h3>
-                <p class="card-subtitle">End-of-shift buffet table returns that refine future Exponential Moving Average demand multipliers</p>
-              </div>
-              <button class="btn btn-sm btn-primary" id="btn-open-plate-waste-modal-2">+ Log Shift Return</button>
+              <h3 class="card-title">Plate Waste Returns</h3>
+              <button class="btn btn-xs btn-primary" id="btn-open-plate-waste-modal-2">+ Log Return</button>
             </div>
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
                     <th>Date & Shift</th>
-                    <th>Dish Logged</th>
-                    <th>Discarded Weight</th>
-                    <th>Classification & Evidence</th>
-                    <th>Audit Note</th>
-                    <th>Logged By</th>
+                    <th>Dish Name</th>
+                    <th class="col-number">Discarded</th>
+                    <th>Classification</th>
+                    <th>Notes</th>
+                    <th>Staff</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${plateLogs.map(log => `
                     <tr>
-                      <td>${log.date} <small class="text-muted">(${log.mealPeriod})</small></td>
+                      <td>${log.date} <span style="font-size: 11px; color: var(--text-muted);">(${log.mealPeriod})</span></td>
                       <td><strong>${log.dishName}</strong></td>
-                      <td><span class="font-bold text-danger">${log.discardedKg} kg</span></td>
+                      <td class="col-number"><span style="font-weight: 600; color: var(--danger);">${log.discardedKg} kg</span></td>
                       <td>
-                        ${log.isAnomaly ? `
-                          <span class="badge badge-warning" title="${log.anomalyReason}">Accident</span>
-                        ` : `
-                          <span class="badge badge-secondary">Buffet Return</span>
-                        `}
+                        <span class="status-dot-wrap">
+                          <span class="status-dot ${log.isAnomaly ? 'warning' : 'neutral'}"></span>
+                          ${log.isAnomaly ? 'Accident' : 'Buffet Return'}
+                        </span>
                         ${log.photoDataUrl ? `
-                          <button class="btn btn-xs btn-outline btn-view-pw-photo" data-photo="${log.id}" style="margin-left: 4px; padding: 1px 6px; font-size: 10px;">
-                            📷 Photo
+                          <button class="btn btn-xs btn-outline btn-view-pw-photo" data-photo="${log.id}" style="margin-left: 6px; padding: 1px 5px; font-size: 10px;">
+                            Photo
                           </button>
                         ` : ''}
                       </td>
-                      <td><small>${log.note || log.anomalyReason || 'Normal buffet table return'}</small></td>
-                      <td><small class="text-muted">${log.loggedBy || 'Ground Kitchen Staff'}</small></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${log.note || log.anomalyReason || 'Normal return'}</span></td>
+                      <td><span style="font-size: 12px; color: var(--text-muted);">${log.loggedBy || 'Staff'}</span></td>
                     </tr>
                   `).join('')}
                 </tbody>
