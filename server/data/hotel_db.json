@@ -397,6 +397,18 @@
   ],
   "inventory": [
     {
+      "id": "ING-238156",
+      "name": "ciken",
+      "category": "Produce",
+      "quantity": 12,
+      "unit": "kg",
+      "batchNumber": "BCH-20260919-DD",
+      "deliveryDate": "2026-09-19",
+      "expiryDate": "2026-09-24",
+      "storageLocation": "Fridge",
+      "costPerKg": 15
+    },
+    {
       "id": "ING-001",
       "name": "Fresh Farm Poultry (Chicken Breast)",
       "category": "Meat & Poultry",
@@ -1408,23 +1420,23 @@
       "notes": "Defect verified resolved by ground technician."
     },
     {
-      "id": "TCK-8959",
+      "id": "TCK-4324",
       "ticketNumber": "TK-2026-09-19-001",
       "zone": "Room 201",
-      "defectCategory": "Bathroom Toilet Flapper Leak",
-      "description": "Reported by ground team.",
-      "severity": "High",
-      "estimatedLossRate": "280 Liters / day",
+      "defectCategory": "HVAC / Aircon Thermostat Stuck",
+      "description": "No AC",
+      "severity": "Normal",
+      "estimatedLossRate": "25 kWh / day",
       "estimatedDailyLossNum": 280,
-      "resourceType": "Water",
-      "priority": "High",
+      "resourceType": "Electricity",
+      "priority": "Normal",
       "assignedTechnician": "Faizal Rahim",
       "status": "Completed",
       "createdAt": "2026-08-13 08:30",
       "completedAt": "2026-08-13 08:30",
       "photoAttached": false,
       "photoDataUrl": null,
-      "notes": "Defect verified resolved by ground technician."
+      "notes": "Defect verified resolved by ground technician. | Technician arrived on site with repair tools."
     },
     {
       "id": "TCK-8801",
