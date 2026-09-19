@@ -121,6 +121,50 @@ class StorageEngine {
               }
               this.saveDatabase(this.data, false);
               this.notify('inventory', this.data.inventory);
+            } else if (event.type === 'food_waste_created' || event.type === 'food_waste_updated') {
+              this.data.foodWasteLogs = this.data.foodWasteLogs || [];
+              const payload = event.payload;
+              const idx = this.data.foodWasteLogs.findIndex(i => i.id === payload.id);
+              if (idx !== -1) {
+                Object.assign(this.data.foodWasteLogs[idx], payload);
+              } else {
+                this.data.foodWasteLogs.unshift(payload);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('foodWasteLogs', this.data.foodWasteLogs);
+            } else if (event.type === 'plate_waste_created' || event.type === 'plate_waste_updated') {
+              this.data.plateWasteLogs = this.data.plateWasteLogs || [];
+              const payload = event.payload;
+              const idx = this.data.plateWasteLogs.findIndex(i => i.id === payload.id);
+              if (idx !== -1) {
+                Object.assign(this.data.plateWasteLogs[idx], payload);
+              } else {
+                this.data.plateWasteLogs.unshift(payload);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('plateWasteLogs', this.data.plateWasteLogs);
+            } else if (event.type === 'dish_created' || event.type === 'dish_updated') {
+              this.data.dishes = this.data.dishes || [];
+              const payload = event.payload;
+              const idx = this.data.dishes.findIndex(i => i.id === payload.id);
+              if (idx !== -1) {
+                Object.assign(this.data.dishes[idx], payload);
+              } else {
+                this.data.dishes.unshift(payload);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('dishes', this.data.dishes);
+            } else if (event.type === 'prep_created' || event.type === 'prep_updated') {
+              this.data.prepRecommendations = this.data.prepRecommendations || [];
+              const payload = event.payload;
+              const idx = this.data.prepRecommendations.findIndex(i => i.id === payload.id);
+              if (idx !== -1) {
+                Object.assign(this.data.prepRecommendations[idx], payload);
+              } else {
+                this.data.prepRecommendations.unshift(payload);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('prepRecommendations', this.data.prepRecommendations);
             } else if (event.type === 'defect_created' && event.payload) {
               this.data.repairTickets = this.data.repairTickets || [];
               const payload = event.payload;
@@ -1154,8 +1198,15 @@ class StorageEngine {
       quantity: parseFloat(log.quantity)
     };
     this.data.foodWasteLogs.unshift(newLog);
-    this.saveDatabase();
+    this.saveDatabase(this.data, false);
     this.notify('foodWasteLogs', this.data.foodWasteLogs);
+
+    fetch(getBackendUrl('/api/waste/food'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    }).catch(() => {});
+
     return newLog;
   }
 
@@ -1180,9 +1231,27 @@ class StorageEngine {
       }
     }
 
-    this.saveDatabase();
+    this.saveDatabase(this.data, false);
     this.notify('plateWasteLogs', this.data.plateWasteLogs);
     this.notify('dishes', this.data.dishes);
+
+    fetch(getBackendUrl('/api/waste/plate'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLog)
+    }).catch(() => {});
+
+    if (!newLog.isAnomaly && newLog.dishId) {
+      const dish = this.data.dishes.find(d => d.id === newLog.dishId);
+      if (dish) {
+        fetch(getBackendUrl('/api/dishes'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dish)
+        }).catch(() => {});
+      }
+    }
+
     return newLog;
   }
 
@@ -1190,8 +1259,59 @@ class StorageEngine {
     const dish = this.data.dishes.find(d => d.id === dishId);
     if (!dish) return false;
     dish.wasteMultiplier = parseFloat(customMultiplier);
-    this.saveDatabase();
+    this.saveDatabase(this.data, false);
     this.notify('dishes', this.data.dishes);
+
+    fetch(getBackendUrl('/api/dishes'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dish)
+    }).catch(() => {});
+
+    return true;
+  }
+
+  updateDishPrepStatus(dishId, status) {
+    const dish = this.data.dishes.find(d => d.id === dishId);
+    if (!dish) return false;
+    dish.prepStatus = status;
+    this.saveDatabase(this.data, false);
+    this.notify('dishes', this.data.dishes);
+
+    fetch(getBackendUrl('/api/dishes'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dish)
+    }).catch(() => {});
+
+    return true;
+  }
+
+  updatePrepRecommendation(id, updates) {
+    const rec = this.data.prepRecommendations.find(r => r.id === id);
+    if (!rec) return false;
+    Object.assign(rec, updates);
+
+    // If there is an alert, log an audit
+    if (updates.actionTaken) {
+      const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      this.data.userAudit.unshift({
+        id: `LOG-${Date.now().toString().slice(-5)}`,
+        user: this.data.system.activeUser?.name || 'System',
+        action: 'AI_RECOMMENDATION_OVERRIDE',
+        details: `Adjusted prep batch for ${rec.dishName}: ${updates.actionTaken} at ${updates.overriddenByTime || timestamp}`,
+        timestamp
+      });
+    }
+    this.saveDatabase(this.data, false);
+    this.notify('prepRecommendations', this.data.prepRecommendations);
+
+    fetch(getBackendUrl('/api/prep'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec)
+    }).catch(() => {});
+
     return true;
   }
 

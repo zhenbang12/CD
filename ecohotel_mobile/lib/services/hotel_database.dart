@@ -602,18 +602,14 @@ class HotelDatabase extends ChangeNotifier {
     if (index >= 0 && index < inventory.length) {
       inventory[index] = item;
       notifyListeners();
-      _asyncPost('/api/sync', {
-        'inventory': inventory.map((i) => i.toJson()).toList(),
-      });
+      _asyncPost('/api/inventory', item.toJson());
     }
   }
 
   void addFoodWasteLog(FoodWasteLog log) {
     foodWasteLogs.insert(0, log);
     notifyListeners();
-    _asyncPost('/api/sync', {
-      'foodWasteLogs': foodWasteLogs.map((f) => f.toJson()).toList(),
-    });
+    _asyncPost('/api/waste/food', log.toJson());
   }
 
   // ================= MODULE 3 METHODS =================
@@ -629,13 +625,11 @@ class HotelDatabase extends ChangeNotifier {
         final currentMult = dishes[dishIdx].wasteMultiplier;
         final newMult = (alpha * shiftMultiplier) + ((1 - alpha) * currentMult);
         dishes[dishIdx].wasteMultiplier = max(0.65, min(1.05, double.parse(newMult.toStringAsFixed(2))));
+        _asyncPost('/api/dishes', dishes[dishIdx].toJson());
       }
     }
     notifyListeners();
-    _asyncPost('/api/sync', {
-      'plateWasteLogs': plateWasteLogs.map((p) => p.toJson()).toList(),
-      'dishes': dishes.map((d) => d.toJson()).toList(),
-    });
+    _asyncPost('/api/waste/plate', log.toJson());
   }
 
   void finalizePrepSheet(String mealPeriod, String chefName, List<DishItem> currentDishes, int diners) {
@@ -648,29 +642,26 @@ class HotelDatabase extends ChangeNotifier {
       final w1 = double.parse((target * 0.55).toStringAsFixed(1));
       final w2 = double.parse((target * 0.35).toStringAsFixed(1));
       final w3 = double.parse((target * 0.10).toStringAsFixed(1));
-      prepRecommendations.add(
-        PrepRecommendation(
-          id: 'PR-${Random().nextInt(900) + 100}-${i + 1}',
-          date: '2026-08-13',
-          mealPeriod: mealPeriod,
-          dishId: dish.id,
-          dishName: dish.name,
-          station: dish.station,
-          recommendedKg: target,
-          wave1Kg: w1,
-          wave2Kg: w2,
-          wave3Kg: w3,
-          status: 'Finalized',
-          overridden: dish.wasteMultiplier != 1.0,
-          finalizedBy: chefName,
-          timestamp: now,
-        ),
+      final rec = PrepRecommendation(
+        id: 'PR-${Random().nextInt(900) + 100}-${i + 1}',
+        date: '2026-08-13',
+        mealPeriod: mealPeriod,
+        dishId: dish.id,
+        dishName: dish.name,
+        station: dish.station,
+        recommendedKg: target,
+        wave1Kg: w1,
+        wave2Kg: w2,
+        wave3Kg: w3,
+        status: 'Finalized',
+        overridden: dish.wasteMultiplier != 1.0,
+        finalizedBy: chefName,
+        timestamp: now,
       );
+      prepRecommendations.add(rec);
+      _asyncPost('/api/prep', rec.toJson());
     }
     notifyListeners();
-    _asyncPost('/api/sync', {
-      'prepRecommendations': prepRecommendations.map((p) => p.toJson()).toList(),
-    });
   }
 
   List<PlateWasteLog> checkOverPrepAlerts() {
@@ -682,9 +673,7 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       dishes[idx].wasteMultiplier = newMultiplier;
       notifyListeners();
-      _asyncPost('/api/sync', {
-        'dishes': dishes.map((d) => d.toJson()).toList(),
-      });
+      _asyncPost('/api/dishes', dishes[idx].toJson());
     }
   }
 
@@ -693,9 +682,7 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       dishes[idx].prepStatus = status;
       notifyListeners();
-      _asyncPost('/api/sync', {
-        'dishes': dishes.map((d) => d.toJson()).toList(),
-      });
+      _asyncPost('/api/dishes', dishes[idx].toJson());
     }
   }
 

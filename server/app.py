@@ -148,6 +148,14 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             self.handle_voucher_redeem(body)
         elif path == '/api/inventory':
             self.handle_inventory(body)
+        elif path == '/api/waste/food':
+            self.handle_food_waste(body)
+        elif path == '/api/waste/plate':
+            self.handle_plate_waste(body)
+        elif path == '/api/dishes':
+            self.handle_dishes(body)
+        elif path == '/api/prep':
+            self.handle_prep(body)
         elif path == '/api/defects':
             self.handle_create_defect(body)
         elif path == '/api/defects/status':
@@ -515,6 +523,85 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             broadcast_event(event_name, item)
             
         self.send_json_response(200, {"success": True, "item": item})
+
+    def handle_food_waste(self, body):
+        with db_lock:
+            logs = db_state.setdefault('foodWasteLogs', [])
+            log_id = body.get('id')
+            existing = next((l for l in logs if log_id and l.get('id') == log_id), None)
+            if existing:
+                existing.update(body)
+                log = existing
+                event_name = 'food_waste_updated'
+            else:
+                log = dict(body)
+                if 'id' not in log:
+                    log['id'] = f"FWL-{int(time.time() * 1000) % 100000}"
+                logs.insert(0, log)
+                event_name = 'food_waste_created'
+            save_db()
+            broadcast_event(event_name, log)
+        self.send_json_response(200, {"success": True, "log": log})
+
+    def handle_plate_waste(self, body):
+        with db_lock:
+            logs = db_state.setdefault('plateWasteLogs', [])
+            log_id = body.get('id')
+            existing = next((l for l in logs if log_id and l.get('id') == log_id), None)
+            if existing:
+                existing.update(body)
+                log = existing
+                event_name = 'plate_waste_updated'
+            else:
+                log = dict(body)
+                if 'id' not in log:
+                    log['id'] = f"PWL-{int(time.time() * 1000) % 100000}"
+                logs.insert(0, log)
+                event_name = 'plate_waste_created'
+            save_db()
+            broadcast_event(event_name, log)
+        self.send_json_response(200, {"success": True, "log": log})
+
+    def handle_dishes(self, body):
+        with db_lock:
+            dishes = db_state.setdefault('dishes', [])
+            dish_id = body.get('id')
+            existing = next((d for d in dishes if dish_id and d.get('id') == dish_id), None)
+            if existing:
+                existing.update(body)
+                dish = existing
+                event_name = 'dish_updated'
+            else:
+                dish = dict(body)
+                if 'id' not in dish:
+                    dish['id'] = f"DSH-{int(time.time() * 1000) % 100000}"
+                dishes.insert(0, dish)
+                event_name = 'dish_created'
+            save_db()
+            broadcast_event(event_name, dish)
+        self.send_json_response(200, {"success": True, "dish": dish})
+
+    def handle_prep(self, body):
+        with db_lock:
+            preps = db_state.setdefault('prepRecommendations', [])
+            prep_id = body.get('id')
+            # For prep recommendations, they are often keyed by 'dayOfWeek' in the UI, but let's allow 'id' matching or fallback to 'dayOfWeek'
+            day_of_week = body.get('dayOfWeek')
+            existing = next((p for p in preps if (prep_id and p.get('id') == prep_id) or (day_of_week and p.get('dayOfWeek') == day_of_week)), None)
+            
+            if existing:
+                existing.update(body)
+                prep = existing
+                event_name = 'prep_updated'
+            else:
+                prep = dict(body)
+                if 'id' not in prep:
+                    prep['id'] = f"PRP-{int(time.time() * 1000) % 100000}"
+                preps.insert(0, prep)
+                event_name = 'prep_created'
+            save_db()
+            broadcast_event(event_name, prep)
+        self.send_json_response(200, {"success": True, "prep": prep})
 
     def handle_update_defect_status(self, body):
         ticket_id = body.get('id')
