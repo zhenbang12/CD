@@ -110,6 +110,17 @@ class StorageEngine {
               if (v) v.isRedeemed = true;
               this.saveDatabase(this.data, false);
               this.notify('ecoVouchers', this.data.ecoVouchers);
+            } else if (event.type === 'inventory_created' || event.type === 'inventory_updated') {
+              this.data.inventory = this.data.inventory || [];
+              const payload = event.payload;
+              const idx = this.data.inventory.findIndex(i => i.id === payload.id);
+              if (idx !== -1) {
+                Object.assign(this.data.inventory[idx], payload);
+              } else {
+                this.data.inventory.unshift(payload);
+              }
+              this.saveDatabase(this.data, false);
+              this.notify('inventory', this.data.inventory);
             } else if (event.type === 'defect_created' && event.payload) {
               this.data.repairTickets = this.data.repairTickets || [];
               const payload = event.payload;
@@ -1065,8 +1076,15 @@ class StorageEngine {
       quantity: parseFloat(item.quantity)
     };
     this.data.inventory.unshift(newItem);
-    this.saveDatabase();
+    this.saveDatabase(this.data, false);
     this.notify('inventory', this.data.inventory);
+
+    fetch(getBackendUrl('/api/inventory'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    }).catch(() => {});
+
     return newItem;
   }
 
@@ -1074,56 +1092,49 @@ class StorageEngine {
     const item = this.data.inventory.find(i => i.id === id);
     if (!item) return false;
     item.quantity = Math.max(0, parseFloat(newQty));
-    this.saveDatabase();
+    this.saveDatabase(this.data, false);
     this.notify('inventory', this.data.inventory);
+
+    fetch(getBackendUrl('/api/inventory'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    }).catch(() => {});
+
     return true;
   }
 
   // Update inventory details
-updateInventoryItem(id, updates) {
-  const item = this.data.inventory.find(i => i.id === id);
+  updateInventoryItem(id, updates) {
+    const item = this.data.inventory.find(i => i.id === id);
 
-  if (!item) {
-    return false;
-  }
-
-  // Update editable fields only
-  if (updates.name !== undefined) {
-    item.name = updates.name;
-  }
-
-  if (updates.category !== undefined) {
-    item.category = updates.category;
-  }
-
-  if (updates.quantity !== undefined) {
-    const quantity = parseFloat(updates.quantity);
-
-    if (isNaN(quantity) || quantity < 0) {
+    if (!item) {
       return false;
     }
 
-    item.quantity = quantity;
+    // Merge updates
+    if (updates.name !== undefined) item.name = updates.name;
+    if (updates.category !== undefined) item.category = updates.category;
+    if (updates.quantity !== undefined) item.quantity = parseFloat(updates.quantity);
+    if (updates.unit !== undefined) item.unit = updates.unit;
+    if (updates.batchNumber !== undefined) item.batchNumber = updates.batchNumber;
+    if (updates.storageLocation !== undefined) item.storageLocation = updates.storageLocation;
+    if (updates.costPerKg !== undefined) item.costPerKg = parseFloat(updates.costPerKg);
+    if (updates.deliveryDate !== undefined) item.deliveryDate = updates.deliveryDate;
+    if (updates.expiryDate !== undefined) item.expiryDate = updates.expiryDate;
+
+    // Save and refresh inventory
+    this.saveDatabase(this.data, false);
+    this.notify('inventory', this.data.inventory);
+
+    fetch(getBackendUrl('/api/inventory'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    }).catch(() => {});
+
+    return true;
   }
-
-  if (updates.unit !== undefined) {
-    item.unit = updates.unit;
-  }
-
-  if (updates.storageLocation !== undefined) {
-    item.storageLocation = updates.storageLocation;
-  }
-
-  if (updates.expiryDate !== undefined) {
-    item.expiryDate = updates.expiryDate;
-  }
-
-  // Save and refresh inventory
-  this.saveDatabase();
-  this.notify('inventory', this.data.inventory);
-
-  return true;
-}
 
   deleteInventoryItem(id) {
     const idx = this.data.inventory.findIndex(i => i.id === id);

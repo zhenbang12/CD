@@ -146,6 +146,8 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             self.handle_voucher_claim(body)
         elif path == '/api/vouchers/redeem':
             self.handle_voucher_redeem(body)
+        elif path == '/api/inventory':
+            self.handle_inventory(body)
         elif path == '/api/defects':
             self.handle_create_defect(body)
         elif path == '/api/defects/status':
@@ -492,6 +494,27 @@ class EcoHotelHandler(SimpleHTTPRequestHandler):
             broadcast_event('technicians_updated', db_state.get('technicians', []))
 
         self.send_json_response(200, {"success": True, "ticket": ticket})
+
+    def handle_inventory(self, body):
+        with db_lock:
+            inventory = db_state.setdefault('inventory', [])
+            item_id = body.get('id')
+            existing = next((i for i in inventory if i.get('id') == item_id), None)
+            if existing:
+                existing.update(body)
+                item = existing
+                event_name = 'inventory_updated'
+            else:
+                item = dict(body)
+                if 'id' not in item:
+                    item['id'] = f"ING-{int(time.time() * 1000) % 100000}"
+                inventory.insert(0, item)
+                event_name = 'inventory_created'
+                
+            save_db()
+            broadcast_event(event_name, item)
+            
+        self.send_json_response(200, {"success": True, "item": item})
 
     def handle_update_defect_status(self, body):
         ticket_id = body.get('id')

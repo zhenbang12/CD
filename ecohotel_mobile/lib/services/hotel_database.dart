@@ -586,9 +586,7 @@ class HotelDatabase extends ChangeNotifier {
   void addInventoryItem(InventoryItem item) {
     inventory.insert(0, item);
     notifyListeners();
-    _asyncPost('/api/sync', {
-      'inventory': inventory.map((i) => i.toJson()).toList(),
-    });
+    _asyncPost('/api/inventory', item.toJson());
   }
 
   void updateInventoryQty(String id, double newQty) {
@@ -596,9 +594,7 @@ class HotelDatabase extends ChangeNotifier {
     if (idx != -1) {
       inventory[idx].quantity = max(0, newQty);
       notifyListeners();
-      _asyncPost('/api/sync', {
-        'inventory': inventory.map((i) => i.toJson()).toList(),
-      });
+      _asyncPost('/api/inventory', inventory[idx].toJson());
     }
   }
 
